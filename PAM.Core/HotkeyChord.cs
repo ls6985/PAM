@@ -170,8 +170,17 @@ public sealed class HotkeyChord : IEquatable<HotkeyChord>
             return false;
         }
 
+        if (!IsSupportedKey(chord.VirtualKey))
+        {
+            error = "不支持该按键，请换一个字母、数字或功能键。";
+            return false;
+        }
+
         return true;
     }
+
+    /// <summary>是否在可写入 settings.json 并被托盘正确解析的按键表内。</summary>
+    public static bool IsSupportedKey(int virtualKey) => KeyDisplayNames.ContainsKey(virtualKey);
 
     /// <summary>
     /// Windows 系统独占的组合。返回中文原因；没有冲突时返回 null。

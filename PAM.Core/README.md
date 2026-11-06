@@ -1,19 +1,58 @@
 # PAM.Core (核心逻辑)
 
-无任何 UI 依赖的类库。
+无 UI 依赖的类库，负责所有数据格式、配置与跨进程共享逻辑。三个项目都引用它。
 
-- `Models/AliasEntry.cs`：别名数据模型，包含 `Name`、`Path`、`Remark` 及删除确认状态 `DeletePending`。
-- `AppSettings.cs`：应用设置模型（热键 `Hotkey`、终端类型 `TerminalType`（`pwsh` / `powershell`）、`AutoLaunchTerminal`），为设置页与自定义命令预留。
-- `SettingsService.cs`：把 `AppSettings` 读写到 `%AppData%\PAM\settings.json`（camelCase、缩进）；文件不存在或损坏时回退默认值。
-- `ProfileService.cs`：`$PROFILE` 定位与读写。
-  - 定位：调用 `powershell -NoProfile -Command "$PROFILE"`。
-  - 读写：解析特定格式，保留编码与 BOM。
-  - 受控区块：读取和清理别名时都会跳过 `#region PAM-Custom` 区块。
-  - 启动：`LaunchPowerShell` 使用 `wt.exe` 拉起终端。
-- `ProfileFileStore.cs`：`$PROFILE` 底层文件读写的共享实现（编码/BOM 识别、换行风格、临时文件原子替换），别名与自定义命令共用。
-- `PamCustomRegion.cs`：识别 `#region PAM-Custom` 受控区块（含未闭合区块的容错）。
-- `CustomCommandService.cs`：受控区块内自定义命令的读写。
-  - 区块格式：`# @pam-custom <名称> [备注]` 头 + `# @pam-custom-state disabled`（可选）+ 代码 + `# @pam-custom-end`。
-  - 禁用命令写为逐行注释，读取时自动还原；同名命令以最后一条为准。
-  - `TryValidateName` 校验命令名可作为 PowerShell 函数名使用。
-- `Models/CustomCommandEntry.cs`：自定义命令模型（`Name`、`Code`、`Remark`、`IsEnabled`、`DeletePending`）。
+## `$PROFILE` 数据格式
+
+### 别名
+
+```powershell
+# @alias-meta blbl 打开哔哩哔哩
+Set-Alias -Name blbl -Value "C:\Program Files\App\app.exe"
+```
+
+备注写在上一行的 `# @alias-meta` 注释里。读取兼容单双引号，保存统一双引号并转义；只识别和清理上述格式，其余配置原样保留。
+
+### 自定义命令（受控区块）
+
+由 PAM 独占维护，用 `#region PAM-Custom` / `#endregion` 包裹：
+
+```powershell
+#region PAM-Custom
+# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。
+
+# @pam-custom hello 打招呼
+function hello {
+    Write-Host "hi"
+}
+# @pam-custom-end
+
+# @pam-custom gpr 拉取并变基
+# @pam-custom-state disabled
+# function gpr {
+#     git pull --rebase
+# }
+# @pam-custom-end
+#endregion
+```
+
+- 每条命令以 `# @pam-custom <名称> [备注]` 开头、`# @pam-custom-end` 结束，名称是唯一键；同名以最后一条为准。
+- 禁用时写 `# @pam-custom-state disabled` 并把代码逐行注释为 `# 原行`（空行写 `#`），重新启用后原样还原，缩进与空行不丢失。
+- 保存时只重写该区块；区块外的配置、别名、编码、BOM 与换行风格原样保留。别名保存也会跳过该区块，两种写入互不破坏。
+- 区块不存在时自动创建；列表清空后保存会整体移除区块。
+
+## 文件
+
+| 文件 | 职责 |
+| --- | --- |
+| `AppSettings.cs` | 设置模型（`Hotkey`、`TerminalType`、`Theme`、`Language`、`KeepTrayOnClose`、`AutoLaunchTerminal`）；`Normalize()` 修正手工改坏的值 |
+| `SettingsService.cs` | 读写 `%AppData%\PAM\settings.json`（camelCase、临时文件原子替换，避免托盘读到半截 JSON）；损坏时回退默认值 |
+| `ProfileService.cs` | 定位 `$PROFILE`（`ResolveProfilePath` 按终端解析并回报是否回退）、读写别名、`OpenProfileFile` 创建并打开配置文件、`LaunchPowerShell` 按终端启动 shell 并 dot-source 刚写入的配置 |
+| `ProfileFileStore.cs` | 底层文件读写：编码 / BOM、换行风格、原子替换，别名与自定义命令共用 |
+| `PamCustomRegion.cs` | 识别受控区块（含未闭合区块容错）与行掩码 |
+| `CustomCommandService.cs` | 受控区块内自定义命令的读写与名称校验 |
+| `Models/` | `AliasEntry`、`CustomCommandEntry`（状态文案经本地化服务翻译） |
+| `HotkeyChord.cs` | 与 UI 无关的全局热键模型（修饰键 + Win32 VK）、`Ctrl+Alt+T` 风格文本解析、系统保留组合表、常见软件快捷键提示 |
+| `ShellResolver.cs` | `pwsh` / `powershell` / `auto` → 实际 shell，并判断是否安装 PowerShell 7 |
+| `TrayBridge.cs` | App 与 Tray 之间的命名事件（设置变更 / 请求退出）、托盘进程探测与启动 |
+| `LocalizationService.cs` | 中文原文 → 英文词表，支持精确匹配与带 `{0}` 占位符的动态消息匹配；切换语言时广播事件 |

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using PAM.App;
 using PAM.Core;
 using PAM.Core.Models;
 
@@ -13,18 +14,19 @@ public enum StatusType { Info, Saved, Dirty, Written, Warning, Error }
 public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly ProfileService _profileService = new();
-    private readonly SettingsService _settingsService = new();
 
     private string _searchText = string.Empty;
+    private string _profilePathRaw = "正在读取 $PROFILE…";
     private string _profilePath = "正在读取 $PROFILE…";
+    private bool _hasProfilePath;
     private bool _hasUnsavedChanges;
+    private string _statusMessageRaw = "正在启动…";
     private string _statusMessage = "正在启动…";
     private StatusType _statusType = StatusType.Info;
 
     // 初始为 true：数据加载完成前不显示空状态，避免空文字闪现覆盖列表。
     private bool _isLoading = true;
     private bool _isListEmpty = true;
-    private AppSettings _appSettings;
 
     private bool _isEditorOpen;
     private bool _isNewEntry;
@@ -33,7 +35,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _editorPath = string.Empty;
     private string _editorRemark = string.Empty;
     private bool _isAliasFieldEnabled = true;
+    private string _editorErrorTextRaw = string.Empty;
     private string _editorErrorText = string.Empty;
+    private string _editorPathHintTextRaw = string.Empty;
     private string _editorPathHintText = string.Empty;
     private bool _isConfirmEnabled;
     private bool _isExecutionPolicyRestricted;
@@ -42,10 +46,56 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     /// <summary>“自定义命令”页签的数据源，与别名页共用同一个 $PROFILE。</summary>
     public CustomCommandsViewModel CustomCommands { get; }
+
+    /// <summary>“设置”页签的数据源。</summary>
+    public SettingsViewModel Settings { get; }
+
     public string SearchText { get => _searchText; set { if (_searchText == value) return; _searchText = value ?? ""; OnPropertyChanged(); } }
-    public string ProfilePath { get => _profilePath; set { if (_profilePath == value) return; _profilePath = value; OnPropertyChanged(); } }
+
+    /// <summary>
+    /// 当前管理的 $PROFILE 路径。加载中/失败时是一句提示文字，由本地化服务翻译；
+    /// 是否为真实路径请用 <see cref="HasProfilePath"/> 判断，不要靠字符串内容猜测。
+    /// </summary>
+    public string ProfilePath
+    {
+        get => _profilePath;
+        set
+        {
+            var raw = value ?? string.Empty;
+            if (_profilePathRaw == raw) return;
+            _profilePathRaw = raw;
+            _profilePath = Loc.T(raw);
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>未经本地化处理的原始路径，供读写文件、复制与启动终端使用。</summary>
+    public string ProfilePathRaw => _profilePathRaw;
+
+    /// <summary>是否已经拿到可用的 $PROFILE 完整路径。</summary>
+    public bool HasProfilePath
+    {
+        get => _hasProfilePath;
+        private set { if (_hasProfilePath == value) return; _hasProfilePath = value; OnPropertyChanged(); }
+    }
+
     public bool HasUnsavedChanges { get => _hasUnsavedChanges; set { if (_hasUnsavedChanges == value) return; _hasUnsavedChanges = value; OnPropertyChanged(); } }
-    public string StatusMessage { get => _statusMessage; set { if (_statusMessage == value) return; _statusMessage = value; OnPropertyChanged(); } }
+
+    /// <summary>状态栏文本：保存中文原文，写入界面时按当前语言翻译。</summary>
+    public string StatusMessage
+    {
+        get => _statusMessage;
+        set
+        {
+            var raw = value ?? string.Empty;
+            _statusMessageRaw = raw;
+            var translated = Loc.T(raw);
+            if (_statusMessage == translated) return;
+            _statusMessage = translated;
+            OnPropertyChanged();
+        }
+    }
+
     public StatusType StatusType { get => _statusType; set { if (_statusType == value) return; _statusType = value; OnPropertyChanged(); } }
 
     /// <summary>是否正在加载数据：为 true 时隐藏空状态与列表，避免加载闪烁。</summary>
@@ -54,59 +104,88 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// <summary>列表当前是否为空（含搜索无匹配），由窗口在刷新视图后更新。</summary>
     public bool IsListEmpty { get => _isListEmpty; set { if (_isListEmpty == value) return; _isListEmpty = value; OnPropertyChanged(); } }
 
-    /// <summary>应用设置（由 <see cref="SettingsService"/> 从 %AppData%\PAM\settings.json 载入），为设置页预留。</summary>
-    public AppSettings AppSettings { get => _appSettings; set { if (ReferenceEquals(_appSettings, value)) return; _appSettings = value ?? new AppSettings(); OnPropertyChanged(); } }
-
     public bool IsEditorOpen { get => _isEditorOpen; set { if (_isEditorOpen == value) return; _isEditorOpen = value; OnPropertyChanged(); } }
     public bool IsNewEntry { get => _isNewEntry; set { if (_isNewEntry == value) return; _isNewEntry = value; OnPropertyChanged(); OnPropertyChanged(nameof(EditorTitle)); } }
     public AliasEntry? EditingEntry { get => _editingEntry; set { if (ReferenceEquals(_editingEntry, value)) return; _editingEntry = value; OnPropertyChanged(); OnPropertyChanged(nameof(EditorTitle)); } }
-    public string EditorTitle => IsNewEntry || EditingEntry is null ? "新建别名" : $"编辑别名 · {EditingEntry.Name}";
+    public string EditorTitle => IsNewEntry || EditingEntry is null ? Loc.T("新建别名") : Loc.T($"编辑别名 · {EditingEntry.Name}");
     public string EditorAlias { get => _editorAlias; set { if (_editorAlias == value) return; _editorAlias = value ?? ""; OnPropertyChanged(); UpdateValidation(); } }
     public string EditorPath { get => _editorPath; set { if (_editorPath == value) return; _editorPath = value ?? ""; OnPropertyChanged(); UpdateValidation(); } }
     public string EditorRemark { get => _editorRemark; set { if (_editorRemark == value) return; _editorRemark = value ?? ""; OnPropertyChanged(); } }
     public bool IsAliasFieldEnabled { get => _isAliasFieldEnabled; set { if (_isAliasFieldEnabled == value) return; _isAliasFieldEnabled = value; OnPropertyChanged(); } }
-    public string EditorErrorText { get => _editorErrorText; set { if (_editorErrorText == value) return; _editorErrorText = value; OnPropertyChanged(); } }
-    public string EditorPathHintText { get => _editorPathHintText; set { if (_editorPathHintText == value) return; _editorPathHintText = value; OnPropertyChanged(); } }
+
+    public string EditorErrorText
+    {
+        get => _editorErrorText;
+        set
+        {
+            _editorErrorTextRaw = value ?? string.Empty;
+            var translated = Loc.T(_editorErrorTextRaw);
+            if (_editorErrorText == translated) return;
+            _editorErrorText = translated;
+            OnPropertyChanged();
+        }
+    }
+
+    public string EditorPathHintText
+    {
+        get => _editorPathHintText;
+        set
+        {
+            _editorPathHintTextRaw = value ?? string.Empty;
+            var translated = Loc.T(_editorPathHintTextRaw);
+            if (_editorPathHintText == translated) return;
+            _editorPathHintText = translated;
+            OnPropertyChanged();
+        }
+    }
+
     public bool IsConfirmEnabled { get => _isConfirmEnabled; set { if (_isConfirmEnabled == value) return; _isConfirmEnabled = value; OnPropertyChanged(); } }
 
     /// <summary>执行策略是否受限（由窗口在检查后同步），保存时据此决定是否拉起终端。</summary>
     public bool IsExecutionPolicyRestricted { get => _isExecutionPolicyRestricted; set { if (_isExecutionPolicyRestricted == value) return; _isExecutionPolicyRestricted = value; OnPropertyChanged(); } }
 
-    // --- 初始化与保存（从 Window 移入） ---
+    // --- 初始化与保存 ---
 
     public MainViewModel()
     {
-        // 预留：设置页数据源，加载失败时 SettingsService 会回退默认值。
-        _appSettings = _settingsService.Load();
         CustomCommands = new CustomCommandsViewModel(this);
+        Settings = new SettingsViewModel();
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
     }
 
     public async Task InitializeAsync()
     {
         IsLoading = true;
-        StatusMessage = "正在读取 $PROFILE…";
-        StatusType = StatusType.Info;
+        SetStatus(StatusType.Info, "正在读取 $PROFILE…");
+        HasProfilePath = false;
 
         try
         {
-            ProfilePath = await Task.Run(_profileService.GetProfilePath);
-            var result = await Task.Run(() => _profileService.Load(ProfilePath));
+            var terminalType = AppServices.Settings.TerminalType;
+            var path = await Task.Run(() => _profileService.GetProfilePath(terminalType));
+            ProfilePath = path;
+            HasProfilePath = true;
+
+            var result = await Task.Run(() => _profileService.Load(path));
 
             Aliases.Clear();
             foreach (var entry in result.Entries) Aliases.Add(entry);
 
             HasUnsavedChanges = false;
-            StatusMessage = result.FileExists ? $"已保存 · 共 {Aliases.Count} 个别名" : "配置文件不存在，点击“保存并生效”时将自动创建。";
-            StatusType = result.FileExists ? StatusType.Saved : StatusType.Warning;
+            SetStatus(
+                result.FileExists ? StatusType.Saved : StatusType.Warning,
+                result.FileExists
+                    ? $"已保存 · 共 {Aliases.Count} 个别名"
+                    : "配置文件不存在，点击“保存并生效”时将自动创建。");
 
             // 同一个 $PROFILE，别名读完后接着加载受控区块里的自定义命令。
-            await CustomCommands.InitializeAsync(ProfilePath);
+            await CustomCommands.InitializeAsync(path);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"错误：读取 $PROFILE 失败：{ex.Message}";
-            StatusType = StatusType.Error;
+            SetStatus(StatusType.Error, $"错误：读取 $PROFILE 失败：{ex.Message}");
             ProfilePath = "无法读取 $PROFILE 路径";
+            HasProfilePath = false;
         }
         finally
         {
@@ -118,34 +197,37 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         if (IsEditorOpen && !TryCommitEditor()) return false;
 
-        if (!Path.IsPathRooted(ProfilePath))
+        if (!HasProfilePath)
         {
-            try { ProfilePath = await Task.Run(_profileService.GetProfilePath); }
+            try
+            {
+                var terminalType = AppServices.Settings.TerminalType;
+                var path = await Task.Run(() => _profileService.GetProfilePath(terminalType));
+                ProfilePath = path;
+                HasProfilePath = true;
+            }
             catch (Exception ex)
             {
-                StatusMessage = $"错误：无法定位 $PROFILE：{ex.Message}";
-                StatusType = StatusType.Error;
+                SetStatus(StatusType.Error, $"错误：无法定位 $PROFILE：{ex.Message}");
                 return false;
             }
         }
 
-        StatusMessage = "正在写入 $PROFILE…";
-        StatusType = StatusType.Info;
+        SetStatus(StatusType.Info, "正在写入 $PROFILE…");
 
         try
         {
             var snapshot = Aliases.ToList();
-            var result = await Task.Run(() => _profileService.Save(ProfilePath, snapshot));
+            var result = await Task.Run(() => _profileService.Save(_profilePathRaw, snapshot));
 
             HasUnsavedChanges = false;
-            
-            // 返回 true 表示写入成功，窗口可以启动 Powershell 了
+
+            // 返回 true 表示写入成功，窗口可以启动 PowerShell 了
             return true;
         }
         catch (Exception ex)
         {
-            StatusMessage = $"错误：写入失败：{ex.Message}";
-            StatusType = StatusType.Error;
+            SetStatus(StatusType.Error, $"错误：写入失败：{ex.Message}");
             return false;
         }
     }
@@ -246,6 +328,21 @@ public sealed class MainViewModel : INotifyPropertyChanged
         return entry.Name.Contains(text, StringComparison.OrdinalIgnoreCase) ||
                entry.Path.Contains(text, StringComparison.OrdinalIgnoreCase) ||
                entry.Remark.Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>语言切换后按中文原文重新翻译所有由代码生成的文本。</summary>
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        StatusMessage = _statusMessageRaw;
+        var translatedPath = Loc.T(_profilePathRaw);
+        if (_profilePath != translatedPath)
+        {
+            _profilePath = translatedPath;
+            OnPropertyChanged(nameof(ProfilePath));
+        }
+        EditorErrorText = _editorErrorTextRaw;
+        EditorPathHintText = _editorPathHintTextRaw;
+        OnPropertyChanged(nameof(EditorTitle));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

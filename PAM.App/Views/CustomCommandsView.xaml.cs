@@ -358,16 +358,22 @@ public partial class CustomCommandsView : UserControl
 
         if (_viewModel.Commands.Count == 0)
         {
-            EmptyTitleText.Text = "还没有自定义命令";
-            EmptyDescriptionText.Text = "点击右上角“新建命令”，把常用函数或脚本片段写进 $PROFILE 的受控区块。";
+            UiLocalizer.SetTranslated(EmptyTitleText, TextBlock.TextProperty, "还没有自定义命令");
+            UiLocalizer.SetTranslated(
+                EmptyDescriptionText,
+                TextBlock.TextProperty,
+                "点击右上角“新建命令”，把常用函数或脚本片段写进 $PROFILE 的受控区块。");
             _viewModel.IsListEmpty = true;
             return;
         }
 
         if (_commandsView is { IsEmpty: true })
         {
-            EmptyTitleText.Text = "没有匹配的命令";
-            EmptyDescriptionText.Text = "换个关键字试试，或清空搜索框查看全部命令。";
+            UiLocalizer.SetTranslated(EmptyTitleText, TextBlock.TextProperty, "没有匹配的命令");
+            UiLocalizer.SetTranslated(
+                EmptyDescriptionText,
+                TextBlock.TextProperty,
+                "换个关键字试试，或清空搜索框查看全部命令。");
             _viewModel.IsListEmpty = true;
             return;
         }

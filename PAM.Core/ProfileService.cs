@@ -15,6 +15,9 @@ public sealed record ProfileSaveResult(
     bool FileCreated,
     int EntryCount);
 
+/// <summary>打开配置文件的结果。</summary>
+public sealed record ProfileOpenResult(string Path, bool FileCreated);
+
 /// <summary>
 /// 负责定位、读取、解析并安全写回 PowerShell 的 $PROFILE。
 /// </summary>
@@ -40,11 +43,26 @@ public sealed class ProfileService
     }
 
     /// <summary>
-    /// 调用 powershell -NoProfile -Command "$PROFILE" 获取当前用户的配置文件路径。
+    /// 调用 <c>powershell -NoProfile -Command "$PROFILE"</c> 获取当前用户的配置文件路径。
+    /// 保留此无参重载以兼容 Windows PowerShell 5.1 的既有调用。
     /// </summary>
-    public string GetProfilePath()
+    public string GetProfilePath() => GetProfilePathFromShell(ShellResolver.PowerShellFileName);
+
+    /// <summary>
+    /// 按设置里的默认终端定位 $PROFILE（PowerShell 7 与 5.1 是两个不同文件），
+    /// 同时返回是否因缺少 PowerShell 7 而回退，供设置页给出提示。
+    /// </summary>
+    public (string Path, bool UsedFallback) ResolveProfilePath(string? terminalType)
     {
-        var result = RunPowerShell(Utf8Prelude + "$PROFILE", TimeSpan.FromSeconds(20));
+        var shell = ShellResolver.Resolve(terminalType, out var usedFallback);
+        return (GetProfilePathFromShell(shell), usedFallback);
+    }
+
+    public string GetProfilePath(string? terminalType) => ResolveProfilePath(terminalType).Path;
+
+    private string GetProfilePathFromShell(string shellFileName)
+    {
+        var result = RunShell(shellFileName, Utf8Prelude + "$PROFILE", TimeSpan.FromSeconds(20));
 
         var path = result.StandardOutput
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
@@ -54,15 +72,59 @@ public sealed class ProfileService
         if (string.IsNullOrWhiteSpace(path))
         {
             throw new InvalidOperationException(
-                "PowerShell 没有返回 $PROFILE 路径。" + BuildProcessError(result));
+                $"{shellFileName} 没有返回 $PROFILE 路径。" + BuildProcessError(result));
         }
 
         if (!Path.IsPathRooted(path))
         {
-            throw new InvalidOperationException($"PowerShell 返回了无效的 $PROFILE 路径：{path}");
+            throw new InvalidOperationException($"{shellFileName} 返回了无效的 $PROFILE 路径：{path}");
         }
 
         return path;
+    }
+
+    /// <summary>
+    /// 定位所选终端的 $PROFILE，文件不存在时创建（UTF-8 BOM，兼容 Windows PowerShell 5.1），
+    /// 然后用系统默认编辑器打开。
+    /// </summary>
+    public ProfileOpenResult OpenProfileFile(string? terminalType)
+    {
+        var (path, _) = ResolveProfilePath(terminalType);
+        var created = EnsureProfileFile(path);
+        var directory = Path.GetDirectoryName(path);
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true,
+                WorkingDirectory = directory ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            });
+        }
+        catch
+        {
+            // 没有 .ps1 文件关联时回退到记事本，保证按钮始终能打开配置文件。
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "notepad.exe",
+                ArgumentList = { path },
+                UseShellExecute = true,
+            });
+        }
+
+        return new ProfileOpenResult(path, created);
+    }
+
+    private static bool EnsureProfileFile(string path)
+    {
+        if (File.Exists(path)) return false;
+
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+
+        File.WriteAllText(path, "# PowerShell $PROFILE" + Environment.NewLine, new UTF8Encoding(true));
+        return true;
     }
 
     public ProfileLoadResult Load(string profilePath)
@@ -222,18 +284,22 @@ public sealed class ProfileService
     }
 
     /// <summary>
-    /// 保存后启动一个新的 PowerShell 窗口，并加载 $PROFILE。
+    /// 保存后启动一个新的终端窗口，并显式加载刚写入的 $PROFILE。
+    /// 使用完整路径而不是 <c>$PROFILE</c>，保证切换默认终端后加载的仍是同一份配置。
     /// </summary>
-    public void LaunchPowerShell(string profilePath)
+    public void LaunchPowerShell(string profilePath, string? terminalType = null)
     {
         if (!File.Exists(profilePath))
         {
             throw new FileNotFoundException("配置文件不存在，无法加载。", profilePath);
         }
 
+        var shell = ShellResolver.Resolve(terminalType, out _);
+        var escapedPath = profilePath.Replace("'", "''", StringComparison.Ordinal);
+
         var startInfo = new ProcessStartInfo
         {
-            FileName = PowerShellExecutable,
+            FileName = shell,
             UseShellExecute = true,
             WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
         };
@@ -241,7 +307,7 @@ public sealed class ProfileService
         // 使用 ArgumentList 避免拼接字符串带来的参数注入问题。
         startInfo.ArgumentList.Add("-NoExit");
         startInfo.ArgumentList.Add("-Command");
-        startInfo.ArgumentList.Add(". $PROFILE");
+        startInfo.ArgumentList.Add($". '{escapedPath}'");
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("无法启动 PowerShell 进程。");
@@ -371,10 +437,13 @@ public sealed class ProfileService
     }
 
     private static PowerShellProcessResult RunPowerShell(string command, TimeSpan timeout)
+        => RunShell(PowerShellExecutable, command, timeout);
+
+    private static PowerShellProcessResult RunShell(string executable, string command, TimeSpan timeout)
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = PowerShellExecutable,
+            FileName = executable,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -393,12 +462,12 @@ public sealed class ProfileService
         try
         {
             process = Process.Start(startInfo)
-                ?? throw new InvalidOperationException("无法启动 powershell.exe。");
+                ?? throw new InvalidOperationException($"无法启动 {executable}。");
         }
         catch (Exception exception) when (exception is not InvalidOperationException)
         {
             throw new InvalidOperationException(
-                "无法启动 Windows PowerShell，请确认系统中存在 powershell.exe。",
+                $"无法启动 {executable}，请确认系统中已安装对应的 PowerShell。",
                 exception);
         }
 

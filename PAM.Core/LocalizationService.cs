@@ -1,3 +1,6 @@
+using System.Text;
+using System.Text.RegularExpressions;
+
 namespace PAM.Core;
 
 /// <summary>
@@ -135,10 +138,16 @@ public sealed class LocalizationService
         ["正在写入自定义命令…"] = "Writing custom commands…",
         ["已创建 $PROFILE 并写入"] = "Created $PROFILE and saved",
         ["已写入"] = "Saved",
-        ["{0} · 共 {1} 个自定义命令 · 执行策略受限，未启动新的 PowerShell 窗口。"] =
-            "{0} · {1} custom commands · Execution policy restricted; no new window was opened.",
-        ["{0} · 已启动新的 PowerShell 窗口 · 共 {1} 个自定义命令"] =
-            "{0} · Opened a new PowerShell window · {1} custom commands",
+        // 这四条是运行时拼好的完整状态文案（prefix 只有"已写入"和"已创建 $PROFILE 并写入"两种），
+        // 写成显式模板才能让 prefix 一起被翻译；不要再加通用的 {0} 前缀模板，否则会先命中而漏译。
+        ["已写入 · 共 {0} 个自定义命令 · 执行策略受限，未启动新的 PowerShell 窗口。"] =
+            "Saved · {0} custom commands · Execution policy restricted; no new window was opened.",
+        ["已创建 $PROFILE 并写入 · 共 {0} 个自定义命令 · 执行策略受限，未启动新的 PowerShell 窗口。"] =
+            "Created $PROFILE and saved · {0} custom commands · Execution policy restricted; no new window was opened.",
+        ["已写入 · 已启动新的 PowerShell 窗口 · 共 {0} 个自定义命令"] =
+            "Saved · Opened a new PowerShell window · {0} custom commands",
+        ["已创建 $PROFILE 并写入 · 已启动新的 PowerShell 窗口 · 共 {0} 个自定义命令"] =
+            "Created $PROFILE and saved · Opened a new PowerShell window · {0} custom commands",
         ["错误：写入自定义命令失败：{0}"] = "Error: failed to write custom commands: {0}",
 
         // ---- 设置页 ----
@@ -166,7 +175,6 @@ public sealed class LocalizationService
         ["打开配置文件"] = "Open profile file",
         ["按上方选择的默认终端打开对应的 $PROFILE；文件不存在时会自动创建。"] =
             "Opens the matching $PROFILE for the selected terminal. The file is created if missing.",
-        ["正在解析 $PROFILE…"] = "Resolving $PROFILE…",
         ["尚未解析到 $PROFILE 路径"] = "$PROFILE path not resolved yet",
         ["全局热键"] = "Global hotkey",
         ["打开终端"] = "Open terminal",
@@ -186,7 +194,6 @@ public sealed class LocalizationService
         ["已被占用：{0}"] = "Already in use: {0}",
         ["当前由 PAM 托盘占用，可继续使用。"] = "Currently held by the PAM tray; safe to keep.",
         ["常见软件快捷键提醒：{0}"] = "Common shortcut warning: {0}",
-        ["无法使用：{0}"] = "Cannot use: {0}",
         ["尚未检测，点击下方“检测冲突”。"] = "Not checked yet. Click \"Check conflicts\" below.",
         ["后台运行"] = "Background",
         ["关闭管理器时保留后台托盘"] = "Keep the tray running when the manager closes",
@@ -198,7 +205,8 @@ public sealed class LocalizationService
         ["设置文件"] = "Settings file",
         ["恢复默认设置"] = "Restore defaults",
         ["所有更改都会立即写入 settings.json。"] = "All changes are written to settings.json immediately.",
-        ["设置已保存。"] = "Settings saved.",
+        ["切换默认终端后已重新读取 $PROFILE，未保存的更改已丢弃。"] =
+            "The new default terminal's $PROFILE has been loaded; unsaved changes were discarded.",
         ["设置已保存并同步到后台托盘。"] = "Settings saved and synced to the tray.",
         ["设置已保存，但未找到后台托盘程序，热键将在下次启动托盘后生效。"] =
             "Settings saved. The tray executable was not found, so the hotkey will take effect when it is started.",
@@ -231,6 +239,8 @@ public sealed class LocalizationService
         ["无法识别按键“{0}”。"] = "Unrecognized key \"{0}\".",
         ["不能把修饰键本身当作热键按键。"] = "A modifier key cannot be the hotkey key.",
         ["无效的按键。"] = "Invalid key.",
+        ["不支持该按键，请换一个字母、数字或功能键。"] =
+            "Unsupported key. Use a letter, digit or function key instead.",
 
         // ---- 系统保留组合 ----
         ["Ctrl+Alt+Del 由 Windows 安全界面独占，任何应用都无法接管。"] =
@@ -322,6 +332,13 @@ public sealed class LocalizationService
 
     private string _language = AppSettings.LanguageZhCN;
 
+    /// <summary>
+    /// 带占位符的词条（例如「共 {0} 个别名」）会被编译成匹配模式，
+    /// 让运行时拼好的字符串（例如「共 3 个别名」）也能被翻译。
+    /// </summary>
+    private static readonly Lazy<List<(Regex Pattern, string Template)>> FormatPatterns =
+        new(BuildFormatPatterns);
+
     private LocalizationService() { }
 
     /// <summary>当前语言（zh-CN / en-US）。</summary>
@@ -337,7 +354,52 @@ public sealed class LocalizationService
     {
         if (string.IsNullOrEmpty(source)) return string.Empty;
         if (!IsEnglish) return source;
-        return English.TryGetValue(source, out var translated) ? translated : source;
+        if (English.TryGetValue(source, out var translated)) return translated;
+
+        foreach (var (pattern, template) in FormatPatterns.Value)
+        {
+            var match = pattern.Match(source);
+            if (!match.Success) continue;
+
+            var args = new object[match.Groups.Count - 1];
+            for (var i = 0; i < args.Length; i++) args[i] = match.Groups[i + 1].Value;
+
+            try
+            {
+                return string.Format(template, args);
+            }
+            catch (FormatException)
+            {
+                return template;
+            }
+        }
+
+        return source;
+    }
+
+    private static List<(Regex Pattern, string Template)> BuildFormatPatterns()
+    {
+        var patterns = new List<(Regex, string)>();
+
+        foreach (var pair in English)
+        {
+            if (!pair.Key.Contains("{0}", StringComparison.Ordinal)) continue;
+
+            var parts = Regex.Split(pair.Key, @"\{\d+\}");
+            var builder = new StringBuilder("^");
+            for (var i = 0; i < parts.Length; i++)
+            {
+                builder.Append(Regex.Escape(parts[i]));
+                if (i < parts.Length - 1) builder.Append("(.*?)");
+            }
+
+            builder.Append('$');
+            patterns.Add((
+                new Regex(builder.ToString(), RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.CultureInvariant),
+                pair.Value));
+        }
+
+        return patterns;
     }
 
     /// <summary>带占位符的翻译，例如 <c>F("共 {0} 个别名", 3)</c>。</summary>

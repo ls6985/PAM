@@ -110,7 +110,14 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
 
     public bool IsDeleteIdle => !_deletePending;
 
-    public string StateText => _isEnabled ? "已启用" : "已禁用";
+    public string StateText => LocalizationService.Instance.T(_isEnabled ? "已启用" : "已禁用");
+
+    /// <summary>语言切换后由 ViewModel 调用，通知界面重新读取本地化文本。</summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(StateText));
+        OnPropertyChanged(nameof(PreviewText));
+    }
 
     /// <summary>列表里显示的第一行有效代码，用于快速辨认这段命令。</summary>
     public string PreviewText
@@ -126,7 +133,7 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
                 }
             }
 
-            return "（空代码）";
+            return LocalizationService.Instance.T("（空代码）");
         }
     }
 

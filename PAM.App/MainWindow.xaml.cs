@@ -33,7 +33,37 @@ public partial class MainWindow : FluentWindow
         _entriesView = CollectionViewSource.GetDefaultView(ViewModel.Aliases);
         _entriesView.Filter = FilterEntry;
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        AppServices.SettingsChanged += OnSettingsChanged;
         UpdateEmptyState();
+    }
+
+    /// <summary>默认终端变更后，$PROFILE 换成了另一个文件，需要重新载入两个列表。</summary>
+    private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
+    {
+        if (e.TerminalChanged) _ = ReloadForTerminalAsync();
+    }
+
+    private async Task ReloadForTerminalAsync()
+    {
+        var hadChanges = ViewModel.HasUnsavedChanges || ViewModel.CustomCommands.HasUnsavedChanges;
+
+        await ViewModel.InitializeAsync();
+        _entriesView?.Refresh();
+        UpdateEmptyState();
+        _profileExists = ViewModel.HasProfilePath;
+
+        if (hadChanges)
+        {
+            ViewModel.SetStatus(StatusType.Warning, "切换默认终端后已重新读取 $PROFILE，未保存的更改已丢弃。");
+        }
+        else if (IsAliasTabSelected)
+        {
+            ShowRestingStatus();
+        }
+        else
+        {
+            ViewModel.CustomCommands.ShowRestingStatus();
+        }
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -51,7 +81,7 @@ public partial class MainWindow : FluentWindow
         _entriesView?.Refresh();
         UpdateEmptyState();
 
-        _profileExists = !ViewModel.ProfilePath.Contains("无法读取") && !ViewModel.ProfilePath.Contains("正在读取");
+        _profileExists = ViewModel.HasProfilePath;
 
         await RefreshPolicyAsync(silent: true);
 
@@ -67,7 +97,10 @@ public partial class MainWindow : FluentWindow
             _isPolicyRestricted = ProfileService.IsExecutionPolicyRestricted(policy);
             ViewModel.IsExecutionPolicyRestricted = _isPolicyRestricted;
 
-            PolicyWarningText.Text = $"执行策略为 {policy}，$PROFILE 可能无法加载。";
+            UiLocalizer.SetTranslated(
+                PolicyWarningText,
+                System.Windows.Controls.TextBlock.TextProperty,
+                $"执行策略为 {policy}，$PROFILE 可能无法加载。");
             PolicyWarningPanel.Visibility = _isPolicyRestricted ? Visibility.Visible : Visibility.Collapsed;
         }
         catch (Exception exception)
@@ -146,8 +179,8 @@ public partial class MainWindow : FluentWindow
     {
         var dialog = new OpenFileDialog
         {
-            Title = "选择要启动的应用程序",
-            Filter = "应用程序 (*.exe)|*.exe|所有文件 (*.*)|*.*",
+            Title = Loc.T("选择要启动的应用程序"),
+            Filter = Loc.T("应用程序 (*.exe)|*.exe|所有文件 (*.*)|*.*"),
             CheckFileExists = true,
             Multiselect = false,
             DefaultExt = ".exe",
@@ -240,7 +273,7 @@ public partial class MainWindow : FluentWindow
             {
                 try
                 {
-                    _profileService.LaunchPowerShell(ViewModel.ProfilePath);
+                    _profileService.LaunchPowerShell(ViewModel.ProfilePathRaw, AppServices.Settings.TerminalType);
                     ViewModel.SetStatus(StatusType.Written, $"已写入 · 已启动新的 PowerShell 窗口 · 共 {ViewModel.Aliases.Count} 个别名");
                 }
                 catch (Exception ex)
@@ -261,9 +294,9 @@ public partial class MainWindow : FluentWindow
     /// </summary>
     private void CopyPathButton_Click(object sender, RoutedEventArgs e)
     {
-        var profilePath = ViewModel.ProfilePath;
+        var profilePath = ViewModel.ProfilePathRaw;
 
-        if (!Path.IsPathRooted(profilePath))
+        if (!ViewModel.HasProfilePath)
         {
             ViewModel.SetStatus(StatusType.Warning, "尚未读取到 $PROFILE 路径，无法复制。");
             return;
@@ -318,6 +351,12 @@ public partial class MainWindow : FluentWindow
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // 设置页正在录制全局热键时，不能让 Ctrl+S / Ctrl+N 等窗口快捷键抢走按键。
+        if (ViewModel.Settings.IsCapturing)
+        {
+            return;
+        }
+
         if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
         {
             // 快捷键只在“别名管理”页签生效。
@@ -379,6 +418,18 @@ public partial class MainWindow : FluentWindow
         {
             ViewModel.CustomCommands.ShowRestingStatus();
         }
+        else if (ReferenceEquals(MainTabs.SelectedItem, SettingsTab))
+        {
+            ViewModel.Settings.RefreshTrayState();
+            ViewModel.SetStatus(StatusType.Info, "所有更改都会立即写入 settings.json。");
+        }
+    }
+
+    /// <summary>窗口关闭时按"无托盘行为"设置决定是否结束后台托盘。</summary>
+    private void Window_Closed(object? sender, EventArgs e)
+    {
+        AppServices.SettingsChanged -= OnSettingsChanged;
+        TrayBridge.HandleManagerClosing(AppServices.Settings);
     }
 
     private void MarkDirty()
@@ -414,16 +465,22 @@ public partial class MainWindow : FluentWindow
     {
         if (ViewModel.Aliases.Count == 0)
         {
-            EmptyTitleText.Text = "还没有别名";
-            EmptyDescriptionText.Text = "点击右上角“新建别名”，为常用应用添加一个 PowerShell 快捷命令。";
+            UiLocalizer.SetTranslated(EmptyTitleText, System.Windows.Controls.TextBlock.TextProperty, "还没有别名");
+            UiLocalizer.SetTranslated(
+                EmptyDescriptionText,
+                System.Windows.Controls.TextBlock.TextProperty,
+                "点击右上角“新建别名”，为常用应用添加一个 PowerShell 快捷命令。");
             ViewModel.IsListEmpty = true;
             return;
         }
 
         if (_entriesView is { IsEmpty: true })
         {
-            EmptyTitleText.Text = "没有匹配的别名";
-            EmptyDescriptionText.Text = "换个关键字试试，或清空搜索框查看全部别名。";
+            UiLocalizer.SetTranslated(EmptyTitleText, System.Windows.Controls.TextBlock.TextProperty, "没有匹配的别名");
+            UiLocalizer.SetTranslated(
+                EmptyDescriptionText,
+                System.Windows.Controls.TextBlock.TextProperty,
+                "换个关键字试试，或清空搜索框查看全部别名。");
             ViewModel.IsListEmpty = true;
             return;
         }

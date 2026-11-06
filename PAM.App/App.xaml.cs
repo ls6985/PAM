@@ -1,6 +1,5 @@
 using System.Windows;
-using Wpf.Ui.Appearance;
-using Wpf.Ui.Controls;
+using PAM.Core;
 
 namespace PAM.App;
 
@@ -10,20 +9,35 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        var theme = ApplicationThemeManager.IsSystemHighContrast()
-            ? ApplicationTheme.HighContrast
-            : ApplicationThemeManager.GetSystemTheme() == SystemTheme.Dark
-                ? ApplicationTheme.Dark
-                : ApplicationTheme.Light;
+        var settings = AppServices.Settings;
 
-        ApplicationThemeManager.Apply(theme);
+        // 语言要在任何窗口构造之前设好；界面遍历器负责把 XAML 里的中文替换成当前语言。
+        LocalizationService.Instance.SetLanguage(settings.Language);
+        UiLocalizer.Initialize();
 
         var mainWindow = new MainWindow();
         MainWindow = mainWindow;
 
-        // 跟随系统深浅色和强调色变化。
-        SystemThemeWatcher.Watch(mainWindow, WindowBackdropType.Mica, updateAccents: true);
+        ThemeService.Apply(settings.Theme, mainWindow);
+        AppServices.SettingsChanged += OnSettingsChanged;
 
         mainWindow.Show();
+        UiLocalizer.RefreshAll();
+
+        // 管理器启动时拉起后台托盘，保证全局热键开箱可用（托盘自身有单实例互斥）。
+        TrayBridge.EnsureTrayRunning();
+    }
+
+    private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
+    {
+        if (e.LanguageChanged)
+        {
+            LocalizationService.Instance.SetLanguage(e.Current.Language);
+        }
+
+        if (e.ThemeChanged && MainWindow is not null)
+        {
+            ThemeService.Apply(e.Current.Theme, MainWindow);
+        }
     }
 }

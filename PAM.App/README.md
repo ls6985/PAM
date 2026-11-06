@@ -1,44 +1,58 @@
 # PAM.App (WPF 主界面)
 
-使用 WPF-UI (`FluentWindow`) 构建的图形界面，主要负责管理 `$PROFILE` 中的 `Set-Alias`。通过 MVVM 解耦，`MainViewModel` 承载业务状态与校验。
+WPF-UI (`FluentWindow`) 主界面，用户唯一直接操作的程序，也是 `settings.json` 的唯一写入方。MVVM 解耦，状态与校验在 ViewModel，窗口只做 UI 交互。
 
-## 功能与快捷键
+## 三个页签
 
-- 新建、编辑、删除别名；内联编辑条，`Enter` 确认，`Esc` 取消。
-- 删除二次确认（点击变“确认删除？”，再点生效）。
-- 搜索实时过滤；执行策略受限时警告并可一键修复。
-- 路径浏览；文件不存在显示警告图标；长路径中间省略。
-- 复制路径按钮：点击页头的复制图标，把 `$PROFILE` 路径写入剪贴板并在状态栏提示“路径已复制”。
-- 保存时自动探测并写入 PowerShell 5.1 / 7 两个 `$PROFILE`。
+顶部 `TabView`（样式 `Styles.xaml` 的 `NavTabItemStyle`），状态栏三页共用：
 
-## 多页签导航
+- **别名管理**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑 / 删除（二次确认）、路径浏览、文件不存在提示、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限时警告并可一键修复。
+- **自定义命令**（`Views/CustomCommandsView`）：受控区块内的函数 / 片段，列表列含状态胶囊（点击切换启用）、代码预览；内联编辑条用多行代码框，`Ctrl+Enter` 确认。数据格式见 [PAM.Core/README.md](../PAM.Core/README.md)。
+- **设置**（`Views/SettingsView` + `ViewModels/SettingsViewModel`）：见下节。
 
-顶部使用 WPF-UI 的 `TabView`（`TabItem` 样式在 `Styles.xaml` 的 `NavTabItemStyle`）切换三个页面：
+快捷键：`Ctrl+N` 新建、`Ctrl+S` 保存、`Enter` 确认、`Esc` 取消（自定义命令页为 `Ctrl+Enter`）。设置页录制热键时窗口级快捷键会让路，避免 `Ctrl+S` 被"保存并生效"抢走。
 
-- **别名管理**：搜索框、新建/保存、内联编辑条与别名列表（`MainWindow.xaml` 内的 `AliasTab`）。
-- **自定义命令**：`Views/CustomCommandsView`，管理与别名一致的列表 + 内联编辑条交互，数据源为 `MainViewModel.CustomCommands`（`CustomCommandsViewModel`）。
-- **设置**：`Views/SettingsView` 占位页（建设中）。
+## 设置页
 
-状态栏在三个页签间共用，切换页签时会同步显示对应页签的统计；`Ctrl+N` / `Ctrl+S` 在“别名管理”与“自定义命令”页签各自生效（自定义命令页的确认键为 `Ctrl+Enter`，回车保留给代码换行）。
+配置存于 `%AppData%\PAM\settings.json`。除热键外所有改动即时落盘并 `TrayBridge.SignalSettingsChanged()` 通知托盘；热键须先通过冲突检测再点"应用热键"。
 
-## 自定义命令页签
+| 配置项 | 说明 |
+| --- | --- |
+| 主题 | 亮 / 暗 / 跟随系统。`ThemeService` 在跟随系统时挂 `SystemThemeWatcher.Watch`，固定亮/暗时 `UnWatch` 后 `ApplicationThemeManager.Apply` |
+| 语言 | 简体中文 / English，立即生效无需重启。`PAM.Core.LocalizationService` 提供词表，`Services/UiLocalizer.cs` 在元素 `Loaded` 时替换 XAML 静态中文并在切换语言时重新遍历窗口；绑定文本由 ViewModel 保存中文原文后翻译 |
+| 默认终端 | 默认 `PowerShell 7 (pwsh.exe)`，另有 `Windows PowerShell 5.1` 与 `自动探测`。决定热键唤醒的 shell、保存后启动的窗口，以及"打开配置文件"打开哪一个 `$PROFILE`；切换会触发 `AppServices.SettingsChanged`，`MainWindow` 重新载入别名与自定义命令（有未保存改动时在状态栏提示） |
+| 打开配置文件 | `ProfileService.OpenProfileFile(terminalType)`：按当前选中的终端解析 `$PROFILE`，不存在则创建（UTF-8 BOM）后用系统默认编辑器打开，无 `.ps1` 关联时回退记事本 |
+| 快捷键设置 | `SettingsView.xaml.cs` 用 `KeyInterop` 把 WPF 按键转成 Win32 VK，交给 `HotkeyChord` 规范化；`HotkeyConflictDetector` 依次检查系统保留组合 → Win32 `RegisterHotKey` 真实占用探测 → 常见软件通用快捷键。系统保留 / 已占用会阻止应用并说明原因，软冲突弹窗二次确认；托盘持有当前组合时视为自己占用。应用时若托盘未运行会自动拉起 |
+| 无托盘行为 | "关闭管理器时保留后台托盘"开启（默认）时，关闭窗口后热键与托盘菜单继续可用；关闭则发退出信号让 Tray 一并退出。设置页可查看 / 启动 / 结束后台托盘 |
+| 恢复默认 | 二次确认后整份设置恢复默认值 |
 
-- 数据来自 `$PROFILE` 的 `#region PAM-Custom` 受控区块（格式见根 README），保存时只重写该区块。
-- 列表列：名称（等宽字体）、状态胶囊（点击即启用/禁用）、代码预览（第一条有效代码行）、备注、操作（编辑 / 二次确认删除）。
-- 内联编辑条：名称（编辑时锁定）、备注、“启用该命令”复选框、多行代码编辑框（等宽、自动换行关闭、纵向滚动）。
-- 禁用的行整体半透明显示；搜索框按名称、代码、备注实时过滤。
-- “保存并生效”写入受控区块后拉起新的 PowerShell 窗口验证（执行策略受限时仅提示，不拉起）。
+`settings.json` 字段（camelCase，定义在 `PAM.Core/AppSettings.cs`）：
 
-## 加载状态
+```json
+{
+  "hotkey": "Ctrl+Alt+T",
+  "terminalType": "pwsh",
+  "autoLaunchTerminal": true,
+  "theme": "System",
+  "language": "zh-CN",
+  "keepTrayOnClose": true
+}
+```
 
-`MainViewModel.IsLoading` 初始为 `true`，`InitializeAsync()` 结束（`finally`）置回 `false`。
-`EmptyState` 的可见性由 `EmptyStateVisibilityConverter`（`IsLoading` + `IsListEmpty`）驱动，
-列表 `AliasList` 在加载中隐藏，因此启动时不会闪现“还没有别名”空状态文字。
+- `hotkey`：`Ctrl/Alt/Shift/Win` 至少一个修饰键 + 一个普通键，支持字母、数字、F1~F24、方向键、小键盘等；非法值读取时自动重置。
+- `terminalType`：`pwsh` / `powershell` / `auto`；`theme`：`System` / `Light` / `Dark`；`language`：`zh-CN` / `en-US`。
+- 托盘监听 `Local\PAM.SettingsChanged` 与 `Local\PAM.Tray.ExitRequested` 两个命名事件，并兜底轮询文件时间戳，因此手工编辑 `settings.json` 也会生效。
+- PowerShell 7 与 5.1 的 `$PROFILE` 是两个不同文件（`Documents\PowerShell\` 与 `Documents\WindowsPowerShell\`）。切换默认终端即切换管理器维护的那一份，托盘与保存后启动的窗口用同一个 shell，别名 / 自定义命令会正常加载。
 
-快捷键：`Ctrl+N` 新建，`Ctrl+S` 保存，`Enter`/`Esc` 处理编辑。
+## 应用服务（`Services/`）
 
-## 核心分层
+- `AppServices.cs`：设置读写唯一入口，广播"哪些字段变了"（主题 / 语言 / 终端 / 热键）。
+- `ThemeService.cs` · `UiLocalizer.cs` · `HotkeyConflictDetector.cs` · `Loc.cs`：主题、本地化遍历、热键检测、本地化快捷访问。
 
-- `MainWindow.xaml.cs`：纯 UI 交互（焦点、状态栏图标映射、空状态文案）。不包含业务校验和读写逻辑。
-- `MainViewModel.cs`：绑定属性、数据状态（`ObservableCollection`）、校验逻辑。调用 `PAM.Core` 获取和保存。
-- `Converters/`：值转换器（`TextNotEmptyToVisibilityConverter` 等）。
+## 加载状态与分层
+
+`MainViewModel.IsLoading` 初始为 `true`，`InitializeAsync()` 的 `finally` 置回 `false`；`EmptyStateVisibilityConverter`（`IsLoading` + `IsListEmpty`）控制空状态，列表在加载中隐藏，避免闪现"还没有别名"。
+
+- `MainWindow.xaml.cs`：焦点、状态栏、空状态文案、窗口关闭时按 `KeepTrayOnClose` 处理托盘。
+- `ViewModels/`：绑定属性、数据集合与校验，调用 `PAM.Core` 读写。
+- `Converters/` · `Controls/`：值转换器与中间省略文本控件。

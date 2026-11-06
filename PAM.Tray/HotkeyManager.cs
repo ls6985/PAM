@@ -5,6 +5,7 @@ namespace PAM.Tray;
 /// <summary>
 /// 全局热键管理器。通过 <see cref="NativeWindow"/> 创建一个隐藏的消息窗口，
 /// 使用 Win32 <c>RegisterHotKey</c> 注册全局热键并拦截 <c>WM_HOTKEY</c> 消息。
+/// 支持重复调用 <see cref="TryRegister"/>：设置变更后先注销旧组合再注册新组合。
 /// </summary>
 internal sealed class HotkeyManager : NativeWindow, IDisposable
 {
@@ -33,26 +34,29 @@ internal sealed class HotkeyManager : NativeWindow, IDisposable
         });
     }
 
+    /// <summary>当前是否成功注册了全局热键。</summary>
+    public bool IsRegistered => _registered;
+
     /// <summary>
-    /// 注册全局热键。
+    /// 注册（或改注册）全局热键。参数直接来自 <c>PAM.Core.HotkeyChord</c>。
     /// </summary>
     /// <returns>注册成功返回 <c>true</c>；热键已被其他进程占用或调用失败返回 <c>false</c>。</returns>
-    public bool TryRegister(HotkeyModifiers modifiers, Keys key)
+    public bool TryRegister(uint fsModifiers, uint virtualKey)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        if (_registered)
-        {
-            return true;
-        }
-
-        // HotkeyModifiers 的取值与 Win32 MOD_* 标志一致，可直接转换。
-        uint fsModifiers = (uint)(modifiers & (HotkeyModifiers.Alt | HotkeyModifiers.Control |
-                                              HotkeyModifiers.Shift | HotkeyModifiers.Win));
-        uint vk = (uint)(key & Keys.KeyCode);
-
-        _registered = RegisterHotKey(Handle, HotkeyId, fsModifiers, vk);
+        Unregister();
+        _registered = RegisterHotKey(Handle, HotkeyId, fsModifiers, virtualKey);
         return _registered;
+    }
+
+    /// <summary>注销当前热键，释放组合以便重新注册。</summary>
+    public void Unregister()
+    {
+        if (!_registered || Handle == IntPtr.Zero) return;
+
+        UnregisterHotKey(Handle, HotkeyId);
+        _registered = false;
     }
 
     /// <inheritdoc />
@@ -71,21 +75,12 @@ internal sealed class HotkeyManager : NativeWindow, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
+        if (_disposed) return;
         _disposed = true;
 
         if (Handle != IntPtr.Zero)
         {
-            if (_registered)
-            {
-                UnregisterHotKey(Handle, HotkeyId);
-                _registered = false;
-            }
-
+            Unregister();
             DestroyHandle();
         }
 
@@ -97,17 +92,4 @@ internal sealed class HotkeyManager : NativeWindow, IDisposable
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-}
-
-/// <summary>
-/// 全局热键修饰键，取值与 Win32 <c>MOD_*</c> 标志一致。
-/// </summary>
-[Flags]
-internal enum HotkeyModifiers : uint
-{
-    None = 0x0000,
-    Alt = 0x0001,
-    Control = 0x0002,
-    Shift = 0x0004,
-    Win = 0x0008,
 }

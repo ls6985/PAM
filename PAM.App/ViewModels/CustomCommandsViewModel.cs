@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows;
+using PAM.App;
 using PAM.Core;
 using PAM.Core.Models;
 
@@ -31,11 +33,13 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
     private bool _editorEnabled = true;
     private bool _isNameFieldEnabled = true;
     private string _editorErrorText = string.Empty;
+    private string _editorErrorTextRaw = string.Empty;
     private bool _isConfirmEnabled;
 
     public CustomCommandsViewModel(MainViewModel host)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
     }
 
     public ObservableCollection<CustomCommandEntry> Commands { get; } = [];
@@ -103,8 +107,8 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
     }
 
     public string EditorTitle => IsNewEntry || EditingEntry is null
-        ? "新建命令"
-        : $"编辑命令 · {EditingEntry.Name}";
+        ? Loc.T("新建命令")
+        : Loc.T($"编辑命令 · {EditingEntry.Name}");
 
     public string EditorName
     {
@@ -160,7 +164,14 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
     public string EditorErrorText
     {
         get => _editorErrorText;
-        set { if (_editorErrorText == value) return; _editorErrorText = value; OnPropertyChanged(); }
+        set
+        {
+            _editorErrorTextRaw = value ?? string.Empty;
+            var translated = Loc.T(_editorErrorTextRaw);
+            if (_editorErrorText == translated) return;
+            _editorErrorText = translated;
+            OnPropertyChanged();
+        }
     }
 
     public bool IsConfirmEnabled
@@ -207,13 +218,14 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
             return false;
         }
 
-        var path = _host.ProfilePath;
+        var path = _host.ProfilePathRaw;
 
         if (!Path.IsPathRooted(path))
         {
             try
             {
-                path = await Task.Run(_profileService.GetProfilePath);
+                var terminalType = AppServices.Settings.TerminalType;
+                path = await Task.Run(() => _profileService.GetProfilePath(terminalType));
                 _host.ProfilePath = path;
             }
             catch (Exception ex)
@@ -244,7 +256,7 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 
             try
             {
-                await Task.Run(() => _profileService.LaunchPowerShell(path));
+                await Task.Run(() => _profileService.LaunchPowerShell(path, AppServices.Settings.TerminalType));
                 _host.SetStatus(
                     StatusType.Written,
                     $"{prefix} · 已启动新的 PowerShell 窗口 · 共 {snapshot.Count} 个自定义命令");
@@ -411,6 +423,16 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 
     /// <summary>把模型里以 \n 存储的代码转成 TextBox 使用的 CRLF。</summary>
     private static string ToEditorText(string code) => code.Replace("\n", "\r\n", StringComparison.Ordinal);
+
+    /// <summary>语言切换后重新翻译编辑器提示、标题与列表里的状态胶囊。</summary>
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        EditorErrorText = _editorErrorTextRaw;
+        OnPropertyChanged(nameof(EditorTitle));
+        if (IsEditorOpen) UpdateValidation();
+
+        foreach (var command in Commands) command.RefreshLocalizedText();
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

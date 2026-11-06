@@ -124,19 +124,19 @@ public sealed class CustomCommandService
 
         if (value.Length == 0)
         {
-            error = "命令名称不能为空。";
+            error = LocalizationService.Instance.T("命令名称不能为空。");
             return false;
         }
 
         if (value.Any(char.IsWhiteSpace))
         {
-            error = "命令名称不能包含空格。";
+            error = LocalizationService.Instance.T("命令名称不能包含空格。");
             return false;
         }
 
         if (value.IndexOfAny(ForbiddenNameChars) >= 0)
         {
-            error = "命令名称包含 PowerShell 不支持的字符。";
+            error = LocalizationService.Instance.T("命令名称包含 PowerShell 不支持的字符。");
             return false;
         }
 

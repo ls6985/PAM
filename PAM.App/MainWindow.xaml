@@ -19,6 +19,7 @@
     WindowCornerPreference="Round"
     ExtendsContentIntoTitleBar="True"
     Loaded="Window_Loaded"
+    Closed="Window_Closed"
     PreviewKeyDown="Window_PreviewKeyDown"
     mc:Ignorable="d">
 
@@ -439,12 +440,13 @@
                     <views:CustomCommandsView DataContext="{Binding CustomCommands}" />
                 </ui:TabViewItem>
 
-                <!-- ===================== 页 3：设置（占位） ===================== -->
+                <!-- ===================== 页 3：设置 ===================== -->
                 <ui:TabViewItem
+                    x:Name="SettingsTab"
                     Header="设置"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch">
-                    <views:SettingsView />
+                    <views:SettingsView DataContext="{Binding Settings}" />
                 </ui:TabViewItem>
             </ui:TabView>
 
