@@ -42,6 +42,7 @@ public sealed class LocalizationService
         ["已启用"] = "Enabled",
         ["已禁用"] = "Disabled",
         ["（空代码）"] = "(empty code)",
+        ["显示主界面"] = "Show Main Window",
         ["运行中"] = "Running",
         ["未运行"] = "Not running",
 
@@ -318,6 +319,8 @@ public sealed class LocalizationService
         // ---- 托盘 ----
         ["热键被占用"] = "Hotkey is already in use",
         ["确定要退出 {0} 吗？"] = "Exit {0}?",
+        ["未找到主界面程序：{0}"] = "Main app not found: {0}",
+        ["启动主界面失败：{0}"] = "Failed to start the main app: {0}",
         ["启动 Windows Terminal 失败：{0}"] = "Failed to start Windows Terminal: {0}",
         ["重新加载设置"] = "Reload settings",
         ["热键：{0}"] = "Hotkey: {0}",

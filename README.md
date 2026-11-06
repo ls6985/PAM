@@ -16,7 +16,7 @@
 关系：
 
 - **用户唯一入口是 `PAM.App.exe`**。它在 `OnStartup` 里调用 `TrayBridge.EnsureTrayRunning()` 拉起同目录的 `PAM.Tray.exe`，之后两者不再直接通信。
-- **PAM.Tray 只读自己的 `settings.json`，不写、也不管主界面**：单实例 `Mutex` 抢不到时静默退出，不弹提示；不会反向激活或启动 `PAM.App`。
+- **PAM.Tray 只读 `settings.json`，从不写配置**：单实例 `Mutex` 抢不到时静默退出，不弹提示；它与主界面进程唯一的联系是右键菜单里的"显示主界面"。
 - 两个可执行程序（`PAM.App` / `PAM.Tray`）都只引用 **PAM.Core**，且**互不引用**；`PAM.Tests` 也只依赖 Core。
 - **PAM.App 写 `settings.json` → PAM.Tray 读**，通过两个命名事件（设置变更 / 请求退出）通知，托盘另用文件时间戳轮询兜底。
 - App 关闭后托盘是否继续驻留，由 `KeepTrayOnClose` 决定（默认保留，热键不受影响）。
