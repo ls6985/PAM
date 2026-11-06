@@ -235,7 +235,7 @@ public sealed class ProfileServiceTests : IDisposable
             new[] { @"set-alias -name lower -value ""C:\case.exe""", @"C:\case.exe" },
             new[] { @"Set-Alias dollar ""C:\weird`$dir\app.exe""", @"C:\weird$dir\app.exe" },
             new[] { @"Set-Alias tick ""C:``tick\app.exe""", @"C:`tick\app.exe" },
-            new[] { @"Set-Alias quote ""C:\file`"name.exe""", @"C:\file""name.exe" },
+            new[] { @"Set-Alias quote ""C:\file`""name.exe""", @"C:\file""name.exe" },
             new[] { @"Set-Alias doubled 'C:\it''s\app.exe'", @"C:\it's\app.exe" },
         };
 
@@ -275,7 +275,7 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.Contains("# @alias-meta space 带空格和中文", lines);
         Assert.Contains(@"Set-Alias -Name dollar -Value ""C:\weird`$dir\app.exe""", lines);
         Assert.Contains(@"Set-Alias -Name tick -Value ""C:``tick\app.exe""", lines);
-        Assert.Contains(@"Set-Alias -Name quote -Value ""C:\file`"name.exe""", lines);
+        Assert.Contains(@"Set-Alias -Name quote -Value ""C:\file`""name.exe""", lines);
         Assert.Contains(@"Set-Alias -Name single -Value ""C:\it's\app.exe""", lines);
 
         var loaded = _profile.Load(_profilePath).Entries;
@@ -537,7 +537,7 @@ public sealed class ProfileServiceTests : IDisposable
     {
         var longPath = "C:\\" + string.Join("\\", Enumerable.Range(0, 40).Select(static i => $"dir{i:D2} {new string('a', 20)}")) + "\\app.exe";
         var specialPath = @"D:\`$env""quote'中文名.exe";
-        var longRemark = new string('备注', 200);
+        var longRemark = string.Concat(Enumerable.Repeat("备注", 200));
 
         Assert.True(longPath.Length > 1000);
 
@@ -551,7 +551,7 @@ public sealed class ProfileServiceTests : IDisposable
 
         var text = File.ReadAllText(_profilePath);
         Assert.Contains(longPath, text);
-        Assert.Contains(specialPath.Replace("\"", "`\"", StringComparison.Ordinal), text);
+        Assert.Contains(@"Set-Alias -Name special -Value ""D:\```$env`""quote'中文名.exe""", text);
 
         var entries = _profile.Load(_profilePath).Entries;
         Assert.Equal(longPath, entries[0].Path);
@@ -638,22 +638,23 @@ public sealed class ProfileServiceTests : IDisposable
             "当前 ANSI 代码页 " + CultureInfo.CurrentCulture.TextInfo.ANSICodePage + " 找不到可验证编码回退的样本字符。");
     }
 
+    /// <summary>校验文件行尾只有原文件那一种风格，既不能混入另一种也不能被改成系统默认换行。</summary>
     private static void AssertOnlyExpectedNewLines(byte[] bytes, string expectedNewLine)
     {
         var text = Encoding.UTF8.GetString(bytes);
-        var crlf = CountOccurrences(text, "\r\n");
         var lf = text.Count(static c => c == '\n');
         var cr = text.Count(static c => c == '\r');
-
-        Assert.Equal(crlf, lf);
-        Assert.Equal(crlf, cr);
+        var crlf = CountOccurrences(text, "\r\n");
 
         if (expectedNewLine == "\n")
         {
-            Assert.Equal(0, crlf);
+            Assert.Equal(0, cr);
+            Assert.True(lf > 0);
         }
         else
         {
+            Assert.Equal(lf, crlf);
+            Assert.Equal(cr, crlf);
             Assert.True(crlf > 0);
         }
     }

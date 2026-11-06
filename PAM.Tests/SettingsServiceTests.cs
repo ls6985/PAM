@@ -145,7 +145,7 @@ public sealed class SettingsServiceTests : IDisposable
 
         Assert.Equal(
             new[] { "settings.json" },
-            Directory.GetFiles(_root).Select(static Path.GetFileName).ToArray());
+            Directory.GetFiles(_root).Select(static file => Path.GetFileName(file)).ToArray());
 
         Assert.Equal(AppSettings.ThemeDark, _service.Load().Theme);
     }
@@ -178,7 +178,7 @@ public sealed class SettingsServiceTests : IDisposable
     public void Constructor_RejectsEmptySettingsPath()
     {
         Assert.Throws<ArgumentException>(() => new SettingsService("  "));
-        Assert.Throws<ArgumentNullException>(() => new SettingsService(null!));
+        Assert.Throws<ArgumentException>(() => new SettingsService(null!));
         Assert.Throws<ArgumentNullException>(() => _service.Save(null!));
     }
 

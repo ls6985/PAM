@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PAM.App", "PAM.App\PAM.App.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PAM.Tray", "PAM.Tray\PAM.Tray.csproj", "{A7C9898C-FDB0-4AC7-967A-59FEFE383305}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PAM.Tests", "PAM.Tests\PAM.Tests.csproj", "{1794F737-835B-43F7-A94B-A1E2E4E92BA6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{A7C9898C-FDB0-4AC7-967A-59FEFE383305}.Release|x64.Build.0 = Release|Any CPU
 		{A7C9898C-FDB0-4AC7-967A-59FEFE383305}.Release|x86.ActiveCfg = Release|Any CPU
 		{A7C9898C-FDB0-4AC7-967A-59FEFE383305}.Release|x86.Build.0 = Release|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Debug|x64.Build.0 = Debug|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Debug|x86.Build.0 = Debug|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Release|x64.ActiveCfg = Release|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Release|x64.Build.0 = Release|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Release|x86.ActiveCfg = Release|Any CPU
+		{1794F737-835B-43F7-A94B-A1E2E4E92BA6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
