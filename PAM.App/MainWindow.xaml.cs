@@ -402,6 +402,12 @@ public partial class MainWindow : FluentWindow
     /// <summary>当前选中的是否为“别名管理”页签。</summary>
     private bool IsAliasTabSelected => ReferenceEquals(MainTabs.SelectedItem, AliasTab);
 
+    /// <summary>“美化”只是放在页签条上的动作按钮，拦掉点击以免切到一张空白页。</summary>
+    private void BeautifyTab_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+    }
+
     /// <summary>切换页签时把状态栏同步成对应页签的上下文，避免显示上一个页签的统计。</summary>
     private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
