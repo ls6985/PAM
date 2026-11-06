@@ -45,11 +45,15 @@ public partial class MainWindow : FluentWindow
         AddButton.IsEnabled = false;
 
         await ViewModel.InitializeAsync();
-        await RefreshPolicyAsync(silent: true);
 
-        _profileExists = !ViewModel.ProfilePath.Contains("无法读取") && !ViewModel.ProfilePath.Contains("正在读取");
+        // 加载一结束就刷新视图并更新空状态，确保 IsLoading 变 false 时列表状态已就绪，
+        // 不会在切页/渲染间隙闪现“还没有别名”。
         _entriesView?.Refresh();
         UpdateEmptyState();
+
+        _profileExists = !ViewModel.ProfilePath.Contains("无法读取") && !ViewModel.ProfilePath.Contains("正在读取");
+
+        await RefreshPolicyAsync(silent: true);
 
         SaveButton.IsEnabled = true;
         AddButton.IsEnabled = !ViewModel.IsEditorOpen;
@@ -252,6 +256,31 @@ public partial class MainWindow : FluentWindow
         AliasList.IsEnabled = true;
     }
 
+    /// <summary>
+    /// 把 $PROFILE 路径复制到剪贴板，并在状态栏提示“路径已复制”。
+    /// </summary>
+    private void CopyPathButton_Click(object sender, RoutedEventArgs e)
+    {
+        var profilePath = ViewModel.ProfilePath;
+
+        if (!Path.IsPathRooted(profilePath))
+        {
+            ViewModel.SetStatus(StatusType.Warning, "尚未读取到 $PROFILE 路径，无法复制。");
+            return;
+        }
+
+        try
+        {
+            // copy: true 让内容在窗口关闭后仍留在剪贴板。
+            Clipboard.SetDataObject(profilePath, copy: true);
+            ViewModel.SetStatus(StatusType.Saved, "路径已复制");
+        }
+        catch (Exception ex)
+        {
+            ViewModel.SetStatus(StatusType.Error, $"错误：复制路径失败：{ex.Message}");
+        }
+    }
+
     private async void FixPolicyButton_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.IsLoading) return;
@@ -290,8 +319,12 @@ public partial class MainWindow : FluentWindow
     {
         if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
         {
-            SaveButton_Click(SaveButton, new RoutedEventArgs());
-            e.Handled = true;
+            // 快捷键只在“别名管理”页签生效。
+            if (IsAliasTabSelected)
+            {
+                SaveButton_Click(SaveButton, new RoutedEventArgs());
+                e.Handled = true;
+            }
             return;
         }
 
@@ -321,10 +354,13 @@ public partial class MainWindow : FluentWindow
 
         if (e.Key == Key.N && Keyboard.Modifiers == ModifierKeys.Control)
         {
-            if (!ViewModel.IsLoading) ViewModel.BeginCreate();
+            if (IsAliasTabSelected && !ViewModel.IsLoading) ViewModel.BeginCreate();
             e.Handled = true;
         }
     }
+
+    /// <summary>当前选中的是否为“别名管理”页签。</summary>
+    private bool IsAliasTabSelected => ReferenceEquals(MainTabs.SelectedItem, AliasTab);
 
     private void MarkDirty()
     {
@@ -351,13 +387,17 @@ public partial class MainWindow : FluentWindow
         ViewModel.SetStatus(StatusType.Saved, $"已保存 · 共 {ViewModel.Aliases.Count} 个别名");
     }
 
+    /// <summary>
+    /// 更新空状态文案，并把“是否为空”交给 ViewModel.IsListEmpty，
+    /// 由 XAML 的 MultiBinding（IsLoading + IsListEmpty）决定显隐。
+    /// </summary>
     private void UpdateEmptyState()
     {
         if (ViewModel.Aliases.Count == 0)
         {
             EmptyTitleText.Text = "还没有别名";
             EmptyDescriptionText.Text = "点击右上角“新建别名”，为常用应用添加一个 PowerShell 快捷命令。";
-            EmptyState.Visibility = Visibility.Visible;
+            ViewModel.IsListEmpty = true;
             return;
         }
 
@@ -365,11 +405,11 @@ public partial class MainWindow : FluentWindow
         {
             EmptyTitleText.Text = "没有匹配的别名";
             EmptyDescriptionText.Text = "换个关键字试试，或清空搜索框查看全部别名。";
-            EmptyState.Visibility = Visibility.Visible;
+            ViewModel.IsListEmpty = true;
             return;
         }
 
-        EmptyState.Visibility = Visibility.Collapsed;
+        ViewModel.IsListEmpty = false;
     }
 
     private void ResetDeletePending()

@@ -98,6 +98,67 @@
         <Setter Property="ToolTipService.InitialShowDelay" Value="250" />
     </Style>
 
+    <!-- 顶部导航页签：扁平胶囊样式，贴合 Fluent 主题（WPF-UI TabViewItem 默认无自定义模板）。 -->
+    <Style
+        x:Key="NavTabItemStyle"
+        TargetType="{x:Type ui:TabViewItem}">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="Margin" Value="0,0,6,6" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ui:TabViewItem}">
+                    <Border
+                        x:Name="HeaderBorder"
+                        Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="8">
+                        <!-- WPF 的 TabItem 依赖模板里的 ToggleButton 双向绑定 IsSelected 来完成选中，
+                             缺少它时点击页签不会切换。 -->
+                        <ToggleButton
+                            x:Name="HeaderSite"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Content="{Binding Header, RelativeSource={RelativeSource TemplatedParent}}"
+                            Focusable="False"
+                            FocusVisualStyle="{x:Null}"
+                            IsChecked="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                    <Border Background="Transparent">
+                                        <ContentPresenter
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center" />
+                                    </Border>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="EmptyTitleStyle" TargetType="{x:Type TextBlock}">
         <Setter Property="FontSize" Value="18" />
         <Setter Property="FontWeight" Value="SemiBold" />

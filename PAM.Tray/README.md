@@ -7,4 +7,5 @@
 - 使用 `NotifyIcon` 常驻托盘，提供右键菜单（显示主界面、退出）。
 - `Mutex` 单实例限制。
 - 注册 `Ctrl+Alt+T` 全局热键（Win32 `RegisterHotKey`）。
-- 触发后启动 Windows Terminal 并加载 `$PROFILE`：`wt.exe powershell.exe -NoExit -Command ". $PROFILE"`。
+- 触发后启动 Windows Terminal 并加载 `$PROFILE`：`wt.exe {pwsh|powershell} -NoExit -Command ". $PROFILE"`。
+- shell 动态探测：装有 PowerShell 7 时用 `pwsh.exe`，否则回退 `powershell.exe`。

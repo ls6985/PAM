@@ -8,7 +8,8 @@
     xmlns:converters="clr-namespace:PAM.App.Converters"
     xmlns:models="clr-namespace:PAM.Core.Models;assembly=PAM.Core"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="PowerShell 别名管理器"
+    xmlns:views="clr-namespace:PAM.App.Views"
+    Title="PowerShell 管理器"
     Width="1160"
     Height="780"
     MinWidth="940"
@@ -29,366 +30,425 @@
 
         <ui:TitleBar
             Grid.Row="0"
-            Title="PowerShell 别名管理器"
+            Title="PowerShell 管理器"
             Icon="{ui:SymbolIcon Code24}" />
 
         <Grid Grid.Row="1" Margin="28,8,28,20">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- 页头 -->
-            <Grid Grid.Row="0" Margin="0,4,0,18">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <!-- 导航：顶部多页签（别名管理 / 自定义命令 / 设置） -->
+            <ui:TabView
+                x:Name="MainTabs"
+                Grid.Row="0"
+                Background="Transparent"
+                BorderThickness="0"
+                ItemContainerStyle="{StaticResource NavTabItemStyle}">
 
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="别名管理" Style="{StaticResource SectionTitleStyle}" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Text="在 $PROFILE 中集中管理 Set-Alias 快捷启动项，保存后立即在新窗口生效。"
-                        Style="{StaticResource SecondaryTextStyle}" />
-                </StackPanel>
+                <!-- ===================== 页 1：别名管理 ===================== -->
+                <ui:TabViewItem
+                    x:Name="AliasTab"
+                    Header="别名管理"
+                    HorizontalContentAlignment="Stretch"
+                    IsSelected="True"
+                    VerticalContentAlignment="Stretch">
+                    <Grid Margin="0,4,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
 
-                <Border
-                    Grid.Column="1"
-                    MaxWidth="420"
-                    Padding="12,8"
-                    VerticalAlignment="Center"
-                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon
-                            Margin="0,0,8,0"
-                            FontSize="16"
-                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                            Symbol="DocumentText24"
-                            VerticalAlignment="Center" />
-                        <controls:MiddleEllipsisTextBlock
-                            x:Name="ProfilePathText"
-                            Width="340"
-                            FontSize="12"
-                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                            Text="{Binding ProfilePath}"
-                            ToolTip="{Binding ProfilePath}"
-                            VerticalAlignment="Center" />
-                    </StackPanel>
-                </Border>
-            </Grid>
+                        <!-- 页头 -->
+                        <Grid Grid.Row="0" Margin="0,4,0,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-            <!-- 工具栏 -->
-            <Grid Grid.Row="1" Margin="0,0,0,14">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="别名管理" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock
+                                    Margin="0,4,0,0"
+                                    Text="在 $PROFILE 中集中管理 Set-Alias 快捷启动项，保存后立即在新窗口生效。"
+                                    Style="{StaticResource SecondaryTextStyle}" />
+                            </StackPanel>
 
-                <ui:TextBox
-                    x:Name="SearchBox"
-                    Width="380"
-                    HorizontalAlignment="Left"
-                    Icon="{ui:SymbolIcon Search24}"
-                    PlaceholderText="搜索别名、路径或备注"
-                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                            <Border
+                                Grid.Column="1"
+                                MaxWidth="440"
+                                Padding="12,8"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon
+                                        Margin="0,0,8,0"
+                                        FontSize="16"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Symbol="DocumentText24"
+                                        VerticalAlignment="Center" />
+                                    <controls:MiddleEllipsisTextBlock
+                                        x:Name="ProfilePathText"
+                                        Width="300"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding ProfilePath}"
+                                        ToolTip="{Binding ProfilePath}"
+                                        VerticalAlignment="Center" />
+                                    <ui:Button
+                                        x:Name="CopyPathButton"
+                                        Height="28"
+                                        MinWidth="0"
+                                        Margin="8,0,0,0"
+                                        Padding="8,0"
+                                        Appearance="Secondary"
+                                        Click="CopyPathButton_Click"
+                                        ToolTip="复制 $PROFILE 路径">
+                                        <ui:SymbolIcon
+                                            FontSize="15"
+                                            Symbol="Copy24" />
+                                    </ui:Button>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <ui:Button
-                        x:Name="AddButton"
-                        Click="AddButton_Click"
-                        Content="新建别名"
-                        Icon="{ui:SymbolIcon Add24}"
-                        IsEnabled="False" />
-                    <ui:Button
-                        x:Name="SaveButton"
-                        Margin="8,0,0,0"
-                        Appearance="Primary"
-                        Click="SaveButton_Click"
-                        Content="保存并生效"
-                        Icon="{ui:SymbolIcon Save24}"
-                        IsEnabled="False" />
-                </StackPanel>
-            </Grid>
+                        <!-- 工具栏 -->
+                        <Grid Grid.Row="1" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-            <!-- 内联编辑条 -->
-            <Border
-                x:Name="EditorPanel"
-                Grid.Row="2"
-                Margin="0,0,0,14"
-                Padding="18"
-                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Visibility="{Binding IsEditorOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="0">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon
-                                Margin="0,0,8,0"
-                                FontSize="16"
-                                Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                Symbol="Edit24"
-                                VerticalAlignment="Center" />
-                            <TextBlock
-                                x:Name="EditorTitleText"
-                                FontSize="15"
-                                FontWeight="SemiBold"
-                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                Text="{Binding EditorTitle}"
-                                VerticalAlignment="Center" />
-                        </StackPanel>
-                        <TextBlock
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Text="Enter 确定 · Esc 取消"
-                            Style="{StaticResource TertiaryTextStyle}" />
-                    </Grid>
-
-                    <Grid Grid.Row="1" Margin="0,14,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="190" />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition Width="220" />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="别名（必填）" Style="{StaticResource FieldLabelStyle}" />
                             <ui:TextBox
-                                x:Name="AliasField"
-                                IsEnabled="{Binding IsAliasFieldEnabled}"
-                                PlaceholderText="例如 blbl"
-                                Text="{Binding EditorAlias, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
+                                x:Name="SearchBox"
+                                Width="380"
+                                HorizontalAlignment="Left"
+                                Icon="{ui:SymbolIcon Search24}"
+                                PlaceholderText="搜索别名、路径或备注"
+                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="应用程序路径（必填）" Style="{StaticResource FieldLabelStyle}" />
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBox
-                                    x:Name="PathField"
-                                    PlaceholderText="C:\Program Files\App\app.exe"
-                                    Text="{Binding EditorPath, UpdateSourceTrigger=PropertyChanged}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <ui:Button
-                                    x:Name="BrowseButton"
-                                    Grid.Column="1"
+                                    x:Name="AddButton"
+                                    Click="AddButton_Click"
+                                    Content="新建别名"
+                                    Icon="{ui:SymbolIcon Add24}"
+                                    IsEnabled="False" />
+                                <ui:Button
+                                    x:Name="SaveButton"
                                     Margin="8,0,0,0"
-                                    Click="BrowseButton_Click"
-                                    Content="浏览…"
-                                    Icon="{ui:SymbolIcon FolderOpen24}" />
+                                    Appearance="Primary"
+                                    Click="SaveButton_Click"
+                                    Content="保存并生效"
+                                    Icon="{ui:SymbolIcon Save24}"
+                                    IsEnabled="False" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 内联编辑条 -->
+                        <Border
+                            x:Name="EditorPanel"
+                            Grid.Row="2"
+                            Margin="0,0,0,14"
+                            Padding="18"
+                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Visibility="{Binding IsEditorOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:SymbolIcon
+                                            Margin="0,0,8,0"
+                                            FontSize="16"
+                                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                            Symbol="Edit24"
+                                            VerticalAlignment="Center" />
+                                        <TextBlock
+                                            x:Name="EditorTitleText"
+                                            FontSize="15"
+                                            FontWeight="SemiBold"
+                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                            Text="{Binding EditorTitle}"
+                                            VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Text="Enter 确定 · Esc 取消"
+                                        Style="{StaticResource TertiaryTextStyle}" />
+                                </Grid>
+
+                                <Grid Grid.Row="1" Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="220" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="别名（必填）" Style="{StaticResource FieldLabelStyle}" />
+                                        <ui:TextBox
+                                            x:Name="AliasField"
+                                            IsEnabled="{Binding IsAliasFieldEnabled}"
+                                            PlaceholderText="例如 blbl"
+                                            Text="{Binding EditorAlias, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="应用程序路径（必填）" Style="{StaticResource FieldLabelStyle}" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ui:TextBox
+                                                x:Name="PathField"
+                                                PlaceholderText="C:\Program Files\App\app.exe"
+                                                Text="{Binding EditorPath, UpdateSourceTrigger=PropertyChanged}" />
+                                            <ui:Button
+                                                x:Name="BrowseButton"
+                                                Grid.Column="1"
+                                                Margin="8,0,0,0"
+                                                Click="BrowseButton_Click"
+                                                Content="浏览…"
+                                                Icon="{ui:SymbolIcon FolderOpen24}" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="4">
+                                        <TextBlock Text="备注（可选）" Style="{StaticResource FieldLabelStyle}" />
+                                        <ui:TextBox
+                                            x:Name="RemarkField"
+                                            PlaceholderText="例如：打开哔哩哔哩"
+                                            Text="{Binding EditorRemark, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+
+                                    <StackPanel
+                                        Grid.Column="6"
+                                        VerticalAlignment="Bottom"
+                                        Orientation="Horizontal">
+                                        <ui:Button
+                                            x:Name="CancelButton"
+                                            Click="CancelButton_Click"
+                                            Content="取消" />
+                                        <ui:Button
+                                            x:Name="ConfirmButton"
+                                            Margin="8,0,0,0"
+                                            Appearance="Primary"
+                                            Click="ConfirmButton_Click"
+                                            Content="确定"
+                                            Icon="{ui:SymbolIcon Checkmark24}"
+                                            IsEnabled="{Binding IsConfirmEnabled}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Grid.Row="2" Margin="0,8,0,0" Orientation="Horizontal">
+                                    <TextBlock
+                                        x:Name="EditorErrorText"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                        Text="{Binding EditorErrorText}"
+                                        TextWrapping="Wrap"
+                                        Visibility="{Binding EditorErrorText, Converter={StaticResource TextNotEmptyToVisibilityConverter}}" />
+                                    <TextBlock
+                                        x:Name="EditorPathHintText"
+                                        Margin="12,0,0,0"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                        Text="{Binding EditorPathHintText}"
+                                        TextWrapping="Wrap"
+                                        Visibility="{Binding EditorPathHintText, Converter={StaticResource TextNotEmptyToVisibilityConverter}}" />
+                                </StackPanel>
                             </Grid>
-                        </StackPanel>
+                        </Border>
 
-                        <StackPanel Grid.Column="4">
-                            <TextBlock Text="备注（可选）" Style="{StaticResource FieldLabelStyle}" />
-                            <ui:TextBox
-                                x:Name="RemarkField"
-                                PlaceholderText="例如：打开哔哩哔哩"
-                                Text="{Binding EditorRemark, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
-
-                        <StackPanel
-                            Grid.Column="6"
-                            VerticalAlignment="Bottom"
-                            Orientation="Horizontal">
-                            <ui:Button
-                                x:Name="CancelButton"
-                                Click="CancelButton_Click"
-                                Content="取消" />
-                            <ui:Button
-                                x:Name="ConfirmButton"
-                                Margin="8,0,0,0"
-                                Appearance="Primary"
-                                Click="ConfirmButton_Click"
-                                Content="确定"
-                                Icon="{ui:SymbolIcon Checkmark24}"
-                                IsEnabled="{Binding IsConfirmEnabled}" />
-                        </StackPanel>
-                    </Grid>
-
-                    <StackPanel Grid.Row="2" Margin="0,8,0,0" Orientation="Horizontal">
-                        <TextBlock
-                            x:Name="EditorErrorText"
-                            FontSize="12"
-                            Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                            Text="{Binding EditorErrorText}"
-                            TextWrapping="Wrap"
-                            Visibility="{Binding EditorErrorText, Converter={StaticResource TextNotEmptyToVisibilityConverter}}" />
-                        <TextBlock
-                            x:Name="EditorPathHintText"
-                            Margin="12,0,0,0"
-                            FontSize="12"
-                            Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                            Text="{Binding EditorPathHintText}"
-                            TextWrapping="Wrap"
-                            Visibility="{Binding EditorPathHintText, Converter={StaticResource TextNotEmptyToVisibilityConverter}}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 列标题 -->
-            <Border
-                Grid.Row="3"
-                Margin="0,0,0,4"
-                Padding="16,8"
-                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
-                CornerRadius="6">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="170" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="132" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="别名" Style="{StaticResource ColumnHeaderTextStyle}" />
-                    <TextBlock Grid.Column="1" Text="路径" Style="{StaticResource ColumnHeaderTextStyle}" />
-                    <TextBlock Grid.Column="2" Text="备注" Style="{StaticResource ColumnHeaderTextStyle}" />
-                    <TextBlock
-                        Grid.Column="3"
-                        HorizontalAlignment="Right"
-                        Text="操作"
-                        Style="{StaticResource ColumnHeaderTextStyle}" />
-                </Grid>
-            </Border>
-
-            <!-- 别名列表 -->
-            <Grid Grid.Row="4">
-                <ui:ListView
-                    x:Name="AliasList"
-                    ItemsSource="{Binding Aliases}"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    ItemContainerStyle="{StaticResource AliasListItemStyle}"
-                    MouseDoubleClick="AliasList_MouseDoubleClick"
-                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                    SelectionMode="Single">
-                    <ui:ListView.ItemTemplate>
-                        <DataTemplate DataType="{x:Type models:AliasEntry}">
-                            <Grid Height="46" Margin="16,0">
+                        <!-- 列标题 -->
+                        <Border
+                            Grid.Row="3"
+                            Margin="0,0,0,4"
+                            Padding="16,8"
+                            Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                            CornerRadius="6">
+                            <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="170" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="220" />
                                     <ColumnDefinition Width="132" />
                                 </Grid.ColumnDefinitions>
-
+                                <TextBlock Text="别名" Style="{StaticResource ColumnHeaderTextStyle}" />
+                                <TextBlock Grid.Column="1" Text="路径" Style="{StaticResource ColumnHeaderTextStyle}" />
+                                <TextBlock Grid.Column="2" Text="备注" Style="{StaticResource ColumnHeaderTextStyle}" />
                                 <TextBlock
-                                    Grid.Column="0"
-                                    Margin="0,0,16,0"
-                                    Text="{Binding Name}"
-                                    ToolTip="{Binding Name}"
-                                    Style="{StaticResource AliasNameTextStyle}" />
-
-                                <Grid Grid.Column="1" Margin="0,0,16,0" ToolTip="{Binding Path}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <ui:SymbolIcon
-                                        Margin="0,0,6,0"
-                                        FontSize="15"
-                                        Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                                        Symbol="Warning24"
-                                        ToolTip="文件不存在"
-                                        VerticalAlignment="Center"
-                                        Visibility="{Binding PathMissing, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                    <controls:MiddleEllipsisTextBlock
-                                        Grid.Column="1"
-                                        AutomationProperties.Name="{Binding Path}"
-                                        FontSize="13"
-                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                        Text="{Binding Path}"
-                                        ToolTip="{Binding Path}"
-                                        VerticalAlignment="Center" />
-                                </Grid>
-
-                                <TextBlock
-                                    Grid.Column="2"
-                                    Margin="0,0,16,0"
-                                    Text="{Binding Remark}"
-                                    ToolTip="{Binding Remark}"
-                                    Style="{StaticResource RemarkTextStyle}" />
-
-                                <Grid
                                     Grid.Column="3"
                                     HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource RowActionPanelStyle}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <ui:Button
-                                            AutomationProperties.Name="编辑"
-                                            Click="EditButton_Click"
-                                            Style="{StaticResource RowIconButtonStyle}"
-                                            ToolTip="编辑">
-                                            <ui:SymbolIcon FontSize="15" Symbol="Edit24" />
-                                        </ui:Button>
-                                        <ui:Button
-                                            AutomationProperties.Name="删除"
-                                            Margin="2,0,0,0"
-                                            Click="DeleteButton_Click"
-                                            Style="{StaticResource RowIconButtonStyle}"
-                                            ToolTip="删除（再次点击确认）">
-                                            <Grid>
-                                                <ui:SymbolIcon
-                                                    FontSize="15"
-                                                    Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                                    Symbol="Delete24"
-                                                    Visibility="{Binding IsDeleteIdle, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                <TextBlock
-                                                    FontSize="12"
-                                                    FontWeight="SemiBold"
-                                                    Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                                    Text="确认删除？"
-                                                    Visibility="{Binding DeletePending, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                            </Grid>
-                                        </ui:Button>
-                                    </StackPanel>
-                                </Grid>
+                                    Text="操作"
+                                    Style="{StaticResource ColumnHeaderTextStyle}" />
                             </Grid>
-                        </DataTemplate>
-                    </ui:ListView.ItemTemplate>
-                </ui:ListView>
+                        </Border>
 
-                <StackPanel
-                    x:Name="EmptyState"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    IsHitTestVisible="False"
-                    Visibility="Collapsed">
-                    <ui:SymbolIcon
-                        HorizontalAlignment="Center"
-                        FontSize="38"
-                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                        Symbol="Apps24" />
-                    <TextBlock x:Name="EmptyTitleText" Style="{StaticResource EmptyTitleStyle}" />
-                    <TextBlock x:Name="EmptyDescriptionText" Style="{StaticResource EmptyDescriptionStyle}" />
-                </StackPanel>
-            </Grid>
+                        <!-- 别名列表：加载中隐藏，避免与空状态叠加重影 -->
+                        <Grid Grid.Row="4">
+                            <ui:ListView
+                                x:Name="AliasList"
+                                ItemsSource="{Binding Aliases}"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                ItemContainerStyle="{StaticResource AliasListItemStyle}"
+                                MouseDoubleClick="AliasList_MouseDoubleClick"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                SelectionMode="Single"
+                                Visibility="{Binding IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                <ui:ListView.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type models:AliasEntry}">
+                                        <Grid Height="46" Margin="16,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="170" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="220" />
+                                                <ColumnDefinition Width="132" />
+                                            </Grid.ColumnDefinitions>
 
-            <!-- 状态栏 -->
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                Margin="0,0,16,0"
+                                                Text="{Binding Name}"
+                                                ToolTip="{Binding Name}"
+                                                Style="{StaticResource AliasNameTextStyle}" />
+
+                                            <Grid Grid.Column="1" Margin="0,0,16,0" ToolTip="{Binding Path}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <ui:SymbolIcon
+                                                    Margin="0,0,6,0"
+                                                    FontSize="15"
+                                                    Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                    Symbol="Warning24"
+                                                    ToolTip="文件不存在"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="{Binding PathMissing, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                <controls:MiddleEllipsisTextBlock
+                                                    Grid.Column="1"
+                                                    AutomationProperties.Name="{Binding Path}"
+                                                    FontSize="13"
+                                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                    Text="{Binding Path}"
+                                                    ToolTip="{Binding Path}"
+                                                    VerticalAlignment="Center" />
+                                            </Grid>
+
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                Margin="0,0,16,0"
+                                                Text="{Binding Remark}"
+                                                ToolTip="{Binding Remark}"
+                                                Style="{StaticResource RemarkTextStyle}" />
+
+                                            <Grid
+                                                Grid.Column="3"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Style="{StaticResource RowActionPanelStyle}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <ui:Button
+                                                        AutomationProperties.Name="编辑"
+                                                        Click="EditButton_Click"
+                                                        Style="{StaticResource RowIconButtonStyle}"
+                                                        ToolTip="编辑">
+                                                        <ui:SymbolIcon FontSize="15" Symbol="Edit24" />
+                                                    </ui:Button>
+                                                    <ui:Button
+                                                        AutomationProperties.Name="删除"
+                                                        Margin="2,0,0,0"
+                                                        Click="DeleteButton_Click"
+                                                        Style="{StaticResource RowIconButtonStyle}"
+                                                        ToolTip="删除（再次点击确认）">
+                                                        <Grid>
+                                                            <ui:SymbolIcon
+                                                                FontSize="15"
+                                                                Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                                                Symbol="Delete24"
+                                                                Visibility="{Binding IsDeleteIdle, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                            <TextBlock
+                                                                FontSize="12"
+                                                                FontWeight="SemiBold"
+                                                                Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                                                Text="确认删除？"
+                                                                Visibility="{Binding DeletePending, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                        </Grid>
+                                                    </ui:Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ui:ListView.ItemTemplate>
+                            </ui:ListView>
+
+                            <!-- 空状态：加载中隐藏，加载完成且列表为空时才显示 -->
+                            <StackPanel
+                                x:Name="EmptyState"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                IsHitTestVisible="False">
+                                <StackPanel.Visibility>
+                                    <MultiBinding Converter="{StaticResource EmptyStateVisibilityConverter}">
+                                        <Binding Path="IsLoading" />
+                                        <Binding Path="IsListEmpty" />
+                                    </MultiBinding>
+                                </StackPanel.Visibility>
+                                <ui:SymbolIcon
+                                    HorizontalAlignment="Center"
+                                    FontSize="38"
+                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                    Symbol="Apps24" />
+                                <TextBlock x:Name="EmptyTitleText" Style="{StaticResource EmptyTitleStyle}" />
+                                <TextBlock x:Name="EmptyDescriptionText" Style="{StaticResource EmptyDescriptionStyle}" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </ui:TabViewItem>
+
+                <!-- ===================== 页 2：自定义命令（占位） ===================== -->
+                <ui:TabViewItem
+                    Header="自定义命令"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch">
+                    <views:CustomCommandsView />
+                </ui:TabViewItem>
+
+                <!-- ===================== 页 3：设置（占位） ===================== -->
+                <ui:TabViewItem
+                    Header="设置"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch">
+                    <views:SettingsView />
+                </ui:TabViewItem>
+            </ui:TabView>
+
+            <!-- 状态栏（全局，三个页签共用） -->
             <Border
-                Grid.Row="5"
+                Grid.Row="1"
                 Margin="0,14,0,0"
                 Padding="12,8"
                 Background="{DynamicResource LayerFillColorDefaultBrush}"
@@ -435,7 +495,7 @@
                                 </Style>
                             </ui:SymbolIcon.Style>
                         </ui:SymbolIcon>
-                        
+
                         <TextBlock
                             x:Name="StatusText"
                             VerticalAlignment="Center"

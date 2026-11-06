@@ -1,4 +1,4 @@
-# PowerShell 终端管理器
+# PowerShell 管理器
 
 一个基于 **WPF + WinForms + .NET 10** 的 Windows 终端管理工具集。
 
@@ -16,6 +16,7 @@
 - .NET 10 SDK / Desktop Runtime
 - 系统自带 Windows PowerShell 5.1
 - Windows Terminal (`wt.exe`)
+- （可选）PowerShell 7：安装后托盘热键会优先用 `pwsh.exe` 启动终端，未安装则回退 `powershell.exe`
 
 ## 运行与发布
 

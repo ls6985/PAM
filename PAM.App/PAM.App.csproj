@@ -8,6 +8,9 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>PAM.App</RootNamespace>
     <AssemblyName>PAM.App</AssemblyName>
+    <!-- 显示名称与 exe 文件名分离：exe 仍叫 PAM.App.exe（托盘按该文件名拉起），资源管理器/文件属性里显示为“PowerShell 管理器”。 -->
+    <AssemblyTitle>PowerShell 管理器</AssemblyTitle>
+    <Product>PowerShell 管理器</Product>
     <Version>1.0.0</Version>
     <Description>在图形界面中管理 Windows PowerShell $PROFILE 里的 Set-Alias 快捷启动项。</Description>
   </PropertyGroup>

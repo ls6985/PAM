@@ -8,7 +8,24 @@
 - 删除二次确认（点击变“确认删除？”，再点生效）。
 - 搜索实时过滤；执行策略受限时警告并可一键修复。
 - 路径浏览；文件不存在显示警告图标；长路径中间省略。
+- 复制路径按钮：点击页头的复制图标，把 `$PROFILE` 路径写入剪贴板并在状态栏提示“路径已复制”。
 - 保存时自动探测并写入 PowerShell 5.1 / 7 两个 `$PROFILE`。
+
+## 多页签导航
+
+顶部使用 WPF-UI 的 `TabView`（`TabItem` 样式在 `Styles.xaml` 的 `NavTabItemStyle`）切换三个页面：
+
+- **别名管理**：搜索框、新建/保存、内联编辑条与别名列表（`MainWindow.xaml` 内的 `AliasTab`）。
+- **自定义命令**：`Views/CustomCommandsView` 占位页（建设中）。
+- **设置**：`Views/SettingsView` 占位页（建设中）。
+
+状态栏在三个页签间共用；`Ctrl+N` / `Ctrl+S` 仅在“别名管理”页签生效。
+
+## 加载状态
+
+`MainViewModel.IsLoading` 初始为 `true`，`InitializeAsync()` 结束（`finally`）置回 `false`。
+`EmptyState` 的可见性由 `EmptyStateVisibilityConverter`（`IsLoading` + `IsListEmpty`）驱动，
+列表 `AliasList` 在加载中隐藏，因此启动时不会闪现“还没有别名”空状态文字。
 
 快捷键：`Ctrl+N` 新建，`Ctrl+S` 保存，`Enter`/`Esc` 处理编辑。
 

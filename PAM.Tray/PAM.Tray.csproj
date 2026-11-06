@@ -8,12 +8,17 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>PAM.Tray</RootNamespace>
     <AssemblyName>PAM.Tray</AssemblyName>
+    <!-- 显示名称与 exe 文件名分离：exe 仍叫 PAM.Tray.exe（单实例、互斥体等按进程名工作），资源管理器/文件属性里显示为“PowerShell 管理器”。 -->
+    <AssemblyTitle>PowerShell 管理器</AssemblyTitle>
+    <Product>PowerShell 管理器</Product>
     <Version>1.0.0</Version>
     <Description>系统托盘入口（全局热键与终端唤醒）。</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PAM.Core\PAM.Core.csproj" />
+    <!-- 主界面项目：带出 PAM.App.dll 及其依赖（Wpf.Ui 等），并保证先于托盘项目构建。 -->
+    <ProjectReference Include="..\PAM.App\PAM.App.csproj" />
   </ItemGroup>
 
 </Project>

@@ -13,6 +13,8 @@
                 <ResourceDictionary Source="Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <converters:TextNotEmptyToVisibilityConverter x:Key="TextNotEmptyToVisibilityConverter"/>
+            <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
+            <converters:EmptyStateVisibilityConverter x:Key="EmptyStateVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

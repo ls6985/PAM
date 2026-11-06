@@ -13,12 +13,18 @@ public enum StatusType { Info, Saved, Dirty, Written, Warning, Error }
 public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly ProfileService _profileService = new();
-    
+    private readonly SettingsService _settingsService = new();
+
     private string _searchText = string.Empty;
     private string _profilePath = "正在读取 $PROFILE…";
     private bool _hasUnsavedChanges;
     private string _statusMessage = "正在启动…";
     private StatusType _statusType = StatusType.Info;
+
+    // 初始为 true：数据加载完成前不显示空状态，避免空文字闪现覆盖列表。
+    private bool _isLoading = true;
+    private bool _isListEmpty = true;
+    private AppSettings _appSettings;
 
     private bool _isEditorOpen;
     private bool _isNewEntry;
@@ -38,6 +44,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string StatusMessage { get => _statusMessage; set { if (_statusMessage == value) return; _statusMessage = value; OnPropertyChanged(); } }
     public StatusType StatusType { get => _statusType; set { if (_statusType == value) return; _statusType = value; OnPropertyChanged(); } }
 
+    /// <summary>是否正在加载数据：为 true 时隐藏空状态与列表，避免加载闪烁。</summary>
+    public bool IsLoading { get => _isLoading; set { if (_isLoading == value) return; _isLoading = value; OnPropertyChanged(); } }
+
+    /// <summary>列表当前是否为空（含搜索无匹配），由窗口在刷新视图后更新。</summary>
+    public bool IsListEmpty { get => _isListEmpty; set { if (_isListEmpty == value) return; _isListEmpty = value; OnPropertyChanged(); } }
+
+    /// <summary>应用设置（由 <see cref="SettingsService"/> 从 %AppData%\PAM\settings.json 载入），为设置页预留。</summary>
+    public AppSettings AppSettings { get => _appSettings; set { if (ReferenceEquals(_appSettings, value)) return; _appSettings = value ?? new AppSettings(); OnPropertyChanged(); } }
+
     public bool IsEditorOpen { get => _isEditorOpen; set { if (_isEditorOpen == value) return; _isEditorOpen = value; OnPropertyChanged(); } }
     public bool IsNewEntry { get => _isNewEntry; set { if (_isNewEntry == value) return; _isNewEntry = value; OnPropertyChanged(); OnPropertyChanged(nameof(EditorTitle)); } }
     public AliasEntry? EditingEntry { get => _editingEntry; set { if (ReferenceEquals(_editingEntry, value)) return; _editingEntry = value; OnPropertyChanged(); OnPropertyChanged(nameof(EditorTitle)); } }
@@ -51,6 +66,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool IsConfirmEnabled { get => _isConfirmEnabled; set { if (_isConfirmEnabled == value) return; _isConfirmEnabled = value; OnPropertyChanged(); } }
 
     // --- 初始化与保存（从 Window 移入） ---
+
+    public MainViewModel()
+    {
+        // 预留：设置页数据源，加载失败时 SettingsService 会回退默认值。
+        _appSettings = _settingsService.Load();
+    }
 
     public async Task InitializeAsync()
     {
@@ -124,8 +145,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         StatusMessage = message;
         StatusType = type;
     }
-
-    public bool IsLoading { get; set; } // 在 Window 中用于禁用按钮
 
     // --- 编辑器逻辑 ---
 

@@ -3,6 +3,8 @@
 无任何 UI 依赖的类库。
 
 - `Models/AliasEntry.cs`：别名数据模型，包含 `Name`、`Path`、`Remark` 及删除确认状态 `DeletePending`。
+- `AppSettings.cs`：应用设置模型（热键 `Hotkey`、终端类型 `TerminalType`（`pwsh` / `powershell`）、`AutoLaunchTerminal`），为设置页与自定义命令预留。
+- `SettingsService.cs`：把 `AppSettings` 读写到 `%AppData%\PAM\settings.json`（camelCase、缩进）；文件不存在或损坏时回退默认值。
 - `ProfileService.cs`：`$PROFILE` 定位与读写。
   - 定位：调用 `powershell -NoProfile -Command "$PROFILE"`。
   - 读写：解析特定格式，保留编码与 BOM。
