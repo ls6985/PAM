@@ -1,6 +1,8 @@
 # PAM.App (WPF 主界面)
 
-WPF-UI (`FluentWindow`) 主界面，用户唯一直接操作的程序，也是 `settings.json` 的唯一写入方。MVVM 解耦，状态与校验在 ViewModel，窗口只做 UI 交互。
+WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.json` 的唯一写入方。MVVM 解耦，状态与校验在 ViewModel，窗口只做 UI 交互。
+
+`App.xaml.cs` 的 `OnStartup` 在完成本地化与主窗口显示后调用 `TrayBridge.EnsureTrayRunning()`，静默拉起同目录的 `PAM.Tray.exe`；找不到托盘 exe 或启动失败都不影响主界面打开。csproj 只引用 `PAM.Core`，**不引用 PAM.Tray**。
 
 ## 三个页签
 

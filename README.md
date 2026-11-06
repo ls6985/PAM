@@ -8,29 +8,37 @@
 | --- | --- | --- |
 | [PAM.Core](PAM.Core/README.md) | 无 UI 的核心库：设置模型、`$PROFILE` 读写、热键描述、终端探测、本地化词表、跨进程信号 | 改数据格式、配置字段或 `$PROFILE` 读写规则时 |
 | [PAM.App](PAM.App/README.md) | WPF 主界面与设置页，用户唯一直接操作的程序，也是 `settings.json` 的唯一写入方 | **最常读**：改界面、页签、主题 / 语言 / 热键交互时 |
-| [PAM.Tray](PAM.Tray/README.md) | 纯粹的后台监听程序：常驻托盘、注册全局热键、按下后拉起 Windows Terminal；只读配置，从不写入 | 只有改热键注册或托盘行为时才需要看，日常开发基本不用碰 |
+| [PAM.Tray](PAM.Tray/README.md) | 纯粹的后台组件：常驻托盘、注册全局热键、按下后拉起 Windows Terminal；只读配置，从不写入，也不需要用户手动启动 | 只有改热键注册或托盘行为时才需要看，日常开发基本不用碰 |
 | PAM.Tests | xUnit 测试，只覆盖 PAM.Core 的纯逻辑，不涉及 WPF 界面 | 平时不用读；只有改动 `$PROFILE` 区块格式或 `settings.json` 规则时才需要同步维护 |
+
+根目录文件：`PAM.sln` · [`Directory.Build.targets`](Directory.Build.targets)（Debug 构建前结束运行中的实例） · `README.md`。
 
 关系：
 
-- 三个可执行程序都引用 **PAM.Core**，PAM.Tests 也只依赖它（测试不需要任何 UI）。
+- **用户唯一入口是 `PAM.App.exe`**。它在 `OnStartup` 里调用 `TrayBridge.EnsureTrayRunning()` 拉起同目录的 `PAM.Tray.exe`，之后两者不再直接通信。
+- **PAM.Tray 只读自己的 `settings.json`，不写、也不管主界面**：单实例 `Mutex` 抢不到时静默退出，不弹提示；不会反向激活或启动 `PAM.App`。
+- 两个可执行程序（`PAM.App` / `PAM.Tray`）都只引用 **PAM.Core**，且**互不引用**；`PAM.Tests` 也只依赖 Core。
 - **PAM.App 写 `settings.json` → PAM.Tray 读**，通过两个命名事件（设置变更 / 请求退出）通知，托盘另用文件时间戳轮询兜底。
-- PAM.App 启动时会拉起同目录的 `PAM.Tray.exe`；单独调试主界面时若找不到托盘 exe 会静默跳过，界面与设置仍可用，只是全局热键不生效。
-- 两者都不直接通信，唯一共享的数据是 `settings.json` 与 `$PROFILE`。
+- App 关闭后托盘是否继续驻留，由 `KeepTrayOnClose` 决定（默认保留，热键不受影响）。
 
 ## 环境与运行
 
 需要 Windows 10/11、.NET 10 Desktop Runtime、系统自带 Windows PowerShell 5.1、Windows Terminal (`wt.exe`)。PowerShell 7 可选，未安装时自动回退 5.1 并在设置页提示。
 
-```powershell
-dotnet run --project PAM.App        # 主界面（含设置页）
-dotnet run --project PAM.Tray       # 仅后台托盘，通常不需要单独运行
+`PAM.sln` 只是工程清单，不是可执行程序；VS 的 F5 启动资源管理器里加粗的那个工程，请确认它是 `PAM.App`（右键 → 设为启动项目）。
 
+```powershell
+dotnet run --project PAM.App        # 唯一用户入口：主界面 + 自动拉起托盘
 dotnet test                         # 一键运行 PAM.Core 的全部单元测试
 
-dotnet publish PAM.App  -c Release -r win-x64 --self-contained false
-dotnet publish PAM.Tray -c Release -r win-x64 --self-contained false
+# 发布：逐条 publish 到同一个目录，App 才能在旁边找到 Tray
+dotnet publish PAM.App  -c Release -o publish
+dotnet publish PAM.Tray -c Release -o publish
 ```
+
+> 不要写成 `dotnet publish PAM.sln -o publish`：解决方案级 `--output` 不受支持，还会把 PAM.Tests 和 xunit、`testhost.exe` 一起倒进交付目录。
+>
+> 各自 `bin` 目录里只有一个 exe，`EnsureTrayRunning()` 找不到同目录托盘会静默跳过——界面照常用，只是全局热键不生效。要在本地测热键，就启动上面 `publish` 出来的合并目录。
 
 > 本机已知问题：改动 PAM.App / PAM.Core 后直接构建 PAM.Tray 偶发 MSBuild `Copy` 栈溢出（环境问题，非代码）；先 `dotnet clean` 再构建即可，或用 `-m:1` 单线程构建。
 >

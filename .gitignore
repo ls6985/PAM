@@ -6,4 +6,7 @@ PAM.App/obj/
 PAM.Core/obj/
 PAM.Tray/obj/
 PAM.Tests/obj/
+.vs/
+publish/
+dist/
 .workbuddy/
