@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PAM.Core</RootNamespace>
+    <AssemblyName>PAM.Core</AssemblyName>
+    <Version>1.0.0</Version>
+    <Description>数据模型、$PROFILE 读写与终端启动服务。</Description>
+  </PropertyGroup>
+
+</Project>
