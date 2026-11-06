@@ -9,7 +9,7 @@
     <RootNamespace>PAM.Tray</RootNamespace>
     <AssemblyName>PAM.Tray</AssemblyName>
     <Version>1.0.0</Version>
-    <Description>系统托盘入口（当前为空壳项目）。</Description>
+    <Description>系统托盘入口（全局热键与终端唤醒）。</Description>
   </PropertyGroup>
 
   <ItemGroup>

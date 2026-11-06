@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("在图形界面中管理 Windows PowerShell $PROFILE 里的 Set-Alias 快捷启动项。")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+31ab6ca07283a9ff627753ab1ee855b5be158003")]
 [assembly: System.Reflection.AssemblyProductAttribute("PAM.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PAM.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

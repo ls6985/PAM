@@ -1,5 +1,5 @@
 ﻿PAM.App
-
+1.0.0.0
 
 winexe
 C#
@@ -12,9 +12,9 @@ TRACE;DEBUG;NET;NET10_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_O
 C:\MyFiles\Tools\TerminalTool\PAM.App\App.xaml
 2787170672
 
-5-1467841461
+8534110393
 209-52445631
 MainWindow.xaml;Styles.xaml;
 
-False
+True
 

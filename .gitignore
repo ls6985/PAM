@@ -1,0 +1,6 @@
+PAM.App/bin/
+PAM.Core/bin/
+PAM.Tray/bin/
+PAM.App/obj/
+PAM.Core/obj/
+PAM.Tray/obj/

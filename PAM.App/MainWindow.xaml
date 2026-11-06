@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="clr-namespace:PAM.App.Controls"
+    xmlns:converters="clr-namespace:PAM.App.Converters"
     xmlns:models="clr-namespace:PAM.Core.Models;assembly=PAM.Core"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="PowerShell 别名管理器"
@@ -117,7 +118,7 @@
                 </StackPanel>
             </Grid>
 
-            <!-- 内联编辑条：新建 / 编辑共用，不使用弹窗 -->
+            <!-- 内联编辑条 -->
             <Border
                 x:Name="EditorPanel"
                 Grid.Row="2"
@@ -233,7 +234,7 @@
                             Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                             Text="{Binding EditorErrorText}"
                             TextWrapping="Wrap"
-                            Visibility="{Binding EditorErrorVisibility}" />
+                            Visibility="{Binding EditorErrorText, Converter={StaticResource TextNotEmptyToVisibilityConverter}}" />
                         <TextBlock
                             x:Name="EditorPathHintText"
                             Margin="12,0,0,0"
@@ -241,7 +242,7 @@
                             Foreground="{DynamicResource SystemFillColorCautionBrush}"
                             Text="{Binding EditorPathHintText}"
                             TextWrapping="Wrap"
-                            Visibility="{Binding EditorPathHintVisibility}" />
+                            Visibility="{Binding EditorPathHintText, Converter={StaticResource TextNotEmptyToVisibilityConverter}}" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -404,17 +405,67 @@
                         <ui:SymbolIcon
                             x:Name="StatusIcon"
                             Margin="0,0,8,0"
-                            FontSize="16"
-                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                            Symbol="Info24" />
+                            FontSize="16">
+                            <ui:SymbolIcon.Style>
+                                <Style TargetType="ui:SymbolIcon">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <Setter Property="Symbol" Value="Info24" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Saved">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                            <Setter Property="Symbol" Value="CheckmarkCircle24" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Written">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                            <Setter Property="Symbol" Value="CheckmarkCircle24" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Warning">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                            <Setter Property="Symbol" Value="Warning24" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Dirty">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                            <Setter Property="Symbol" Value="Warning24" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Error">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                            <Setter Property="Symbol" Value="ErrorCircle24" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:SymbolIcon.Style>
+                        </ui:SymbolIcon>
+                        
                         <TextBlock
                             x:Name="StatusText"
                             VerticalAlignment="Center"
                             FontSize="13"
-                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Text="{Binding StatusMessage}"
                             TextTrimming="CharacterEllipsis"
-                            ToolTip="{Binding StatusMessage}" />
+                            ToolTip="{Binding StatusMessage}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Saved">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Written">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Warning">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Dirty">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusType}" Value="Error">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
 
                     <StackPanel
