@@ -6,7 +6,7 @@
 
 ## 行为
 
-- `Mutex` 单实例；`NotifyIcon` 右键菜单：显示主界面 / 重新加载设置 / 退出，托盘提示显示当前热键。
+- `Mutex` 单实例；`NotifyIcon` 右键菜单：重新加载设置 / 退出，托盘提示显示当前热键。
 - 按 `settings.json` 的 `hotkey` 注册 Win32 全局热键；系统保留组合直接拒绝，被其他软件占用时弹气泡提示去设置页更换。`HotkeyManager.TryRegister` 会先注销旧组合，支持运行中改注册。
 - 触发后 `wt.exe {pwsh|powershell} -NoExit -Command ". $PROFILE"`，shell 由 `ShellResolver.Resolve(settings.TerminalType)` 决定（未装 PowerShell 7 自动回退 5.1）。
 - UI 线程 `Timer`（700ms）消费两个命名事件并比对文件时间戳兜底：

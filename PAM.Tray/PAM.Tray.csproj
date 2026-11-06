@@ -17,8 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PAM.Core\PAM.Core.csproj" />
-    <!-- 主界面项目：带出 PAM.App.dll 及其依赖（Wpf.Ui 等），并保证先于托盘项目构建。 -->
-    <ProjectReference Include="..\PAM.App\PAM.App.csproj" />
   </ItemGroup>
 
 </Project>

@@ -4,8 +4,7 @@
     开发期专用钩子，不属于任何项目的编译项，不会进入发布产物。
 
     Debug 构建前结束正在运行的 PAM.Tray / PAM.App：两者都从各自的 bin 目录启动，
-    进程会锁住目录里的 dll / exe，导致 MSBuild 复制阶段报 MSB3021 / MSB3027，
-    严重时还会让 clean 之后无法把 PAM.App.exe 重新复制回 PAM.Tray\bin。
+    进程会锁住目录里的 dll / exe，导致 MSBuild 复制阶段报 MSB3021 / MSB3027。
 
     跳过条件：Release（dotnet publish 用的配置）、VS 设计时构建、PAM.Tests / PAM.Core，
     以及手动传入 -p:PamKeepRunning=true 的情况。

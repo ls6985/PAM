@@ -13,10 +13,6 @@ internal static class Program
     /// <summary>互斥体名称，用于限制同一会话内只运行一个实例。</summary>
     private const string MutexName = @"Local\PAM.Tray.SingleInstance";
 
-    /// <summary>主界面进程名（不含扩展名）与可执行文件名。</summary>
-    private const string AppProcessName = "PAM.App";
-    private const string AppFileName = "PAM.App.exe";
-
     private static readonly SettingsService SettingsService = new();
 
     private static AppSettings _settings = new();
@@ -24,7 +20,6 @@ internal static class Program
     private static HotkeyManager? _hotkeyManager;
     private static TrayBridge.Listener? _listener;
     private static NotifyIcon? _notifyIcon;
-    private static ToolStripMenuItem? _showMainItem;
     private static ToolStripMenuItem? _reloadItem;
     private static ToolStripMenuItem? _exitItem;
     private static bool _hotkeyRegistered;
@@ -54,15 +49,12 @@ internal static class Program
         _hotkeyManager.Pressed += (_, _) => LaunchTerminal();
         ApplyHotkey(showBalloon: true);
 
-        _showMainItem = new ToolStripMenuItem(L("显示主界面"));
-        _showMainItem.Click += (_, _) => ShowMainWindow();
         _reloadItem = new ToolStripMenuItem(L("重新加载设置"));
         _reloadItem.Click += (_, _) => ReloadSettings(showFeedback: true);
         _exitItem = new ToolStripMenuItem(L("退出"));
         _exitItem.Click += (_, _) => ConfirmExit();
 
         using var menu = new ContextMenuStrip();
-        menu.Items.Add(_showMainItem);
         menu.Items.Add(_reloadItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_exitItem);
@@ -165,7 +157,6 @@ internal static class Program
 
     private static void RefreshMenuTexts()
     {
-        if (_showMainItem is not null) _showMainItem.Text = L("显示主界面");
         if (_reloadItem is not null) _reloadItem.Text = L("重新加载设置");
         if (_exitItem is not null) _exitItem.Text = L("退出");
     }
@@ -191,93 +182,6 @@ internal static class Program
         }
 
         _notifyIcon.ShowBalloonTip(5000, AppName, message, ToolTipIcon.Warning);
-    }
-
-    /// <summary>
-    /// 托盘菜单“显示主界面”：未运行则启动 PAM.App，已运行则激活其主窗口。
-    /// </summary>
-    private static void ShowMainWindow()
-    {
-        var app = FindAppProcess();
-        if (app is null)
-        {
-            StartMainApp();
-            return;
-        }
-
-        using (app)
-        {
-            app.Refresh();
-            var handle = app.MainWindowHandle;
-            if (handle == IntPtr.Zero)
-            {
-                // 进程已存在但主窗口尚未创建（例如刚启动），不重复拉起。
-                return;
-            }
-
-            NativeMethods.ShowWindow(handle,
-                NativeMethods.IsIconic(handle) ? NativeMethods.SwRestore : NativeMethods.SwShow);
-
-            // 系统的前台窗口限制可能导致置顶失败，尽力而为即可。
-            NativeMethods.SetForegroundWindow(handle);
-        }
-    }
-
-    /// <summary>
-    /// 查找已运行的 PAM.App 进程，优先返回已创建主窗口的实例。
-    /// </summary>
-    private static Process? FindAppProcess()
-    {
-        Process? chosen = null;
-
-        foreach (var process in Process.GetProcessesByName(AppProcessName))
-        {
-            process.Refresh();
-            bool hasWindow = process.MainWindowHandle != IntPtr.Zero;
-
-            if (chosen is null || (hasWindow && chosen.MainWindowHandle == IntPtr.Zero))
-            {
-                // 后续遇到“有窗口”的实例时，替换掉先前“无窗口”的候选。
-                chosen?.Dispose();
-                chosen = process;
-            }
-            else
-            {
-                process.Dispose();
-            }
-        }
-
-        return chosen;
-    }
-
-    /// <summary>
-    /// 启动与 PAM.Tray.exe 同目录的 PAM.App.exe。
-    /// </summary>
-    private static void StartMainApp()
-    {
-        var exePath = Path.Combine(AppContext.BaseDirectory, AppFileName);
-
-        try
-        {
-            if (!File.Exists(exePath))
-            {
-                MessageBox.Show(LocalizationService.Instance.F("未找到主界面程序：{0}", exePath), AppName,
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = exePath,
-                UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(exePath),
-            });
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(LocalizationService.Instance.F("启动主界面失败：{0}", ex.Message), AppName,
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
     }
 
     /// <summary>
