@@ -33,6 +33,8 @@ dotnet publish PAM.Tray -c Release -r win-x64 --self-contained false
 ```
 
 > 本机已知问题：改动 PAM.App / PAM.Core 后直接构建 PAM.Tray 偶发 MSBuild `Copy` 栈溢出（环境问题，非代码）；先 `dotnet clean` 再构建即可，或用 `-m:1` 单线程构建。
+>
+> 托盘 / 主程序运行时锁住 `bin` 里的 dll，会让构建失败（`MSB3021` / `MSB3027`）。根目录 `Directory.Build.targets` 在 Debug 构建前自动结束这两个进程，构建完需要再用 `rr` 或托盘热键重新打开。发布（`-c Release`）与设计时构建不受影响；想保留运行时加 `-p:PamKeepRunning=true`。
 
 ## 测试
 
