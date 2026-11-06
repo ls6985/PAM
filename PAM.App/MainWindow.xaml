@@ -45,7 +45,8 @@
                 Grid.Row="0"
                 Background="Transparent"
                 BorderThickness="0"
-                ItemContainerStyle="{StaticResource NavTabItemStyle}">
+                ItemContainerStyle="{StaticResource NavTabItemStyle}"
+                SelectionChanged="MainTabs_SelectionChanged">
 
                 <!-- ===================== 页 1：别名管理 ===================== -->
                 <ui:TabViewItem
@@ -429,12 +430,13 @@
                     </Grid>
                 </ui:TabViewItem>
 
-                <!-- ===================== 页 2：自定义命令（占位） ===================== -->
+                <!-- ===================== 页 2：自定义命令 ===================== -->
                 <ui:TabViewItem
+                    x:Name="CustomTab"
                     Header="自定义命令"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch">
-                    <views:CustomCommandsView />
+                    <views:CustomCommandsView DataContext="{Binding CustomCommands}" />
                 </ui:TabViewItem>
 
                 <!-- ===================== 页 3：设置（占位） ===================== -->

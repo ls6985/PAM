@@ -57,12 +57,27 @@ public sealed class SettingsService
                 return new AppSettings();
             }
 
-            return JsonSerializer.Deserialize<AppSettings>(json, SerializerOptions) ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(json, SerializerOptions) ?? new AppSettings();
+            settings.Normalize();
+            return settings;
         }
         catch (Exception)
         {
             // 设置损坏、被占用或无权限时一律回退默认值，不让设置页拖垮启动。
             return new AppSettings();
+        }
+    }
+
+    /// <summary>返回配置文件最后写入时间；文件不存在时返回 <see cref="DateTime.MinValue"/>。</summary>
+    public DateTime GetLastWriteTimeUtc()
+    {
+        try
+        {
+            return File.Exists(SettingsFilePath) ? File.GetLastWriteTimeUtc(SettingsFilePath) : DateTime.MinValue;
+        }
+        catch
+        {
+            return DateTime.MinValue;
         }
     }
 
@@ -77,6 +92,13 @@ public sealed class SettingsService
             Directory.CreateDirectory(directory);
         }
 
-        File.WriteAllText(SettingsFilePath, JsonSerializer.Serialize(settings, SerializerOptions));
+        settings.Normalize();
+        var json = JsonSerializer.Serialize(settings, SerializerOptions);
+
+        // 先写临时文件再原子替换：托盘进程会并发读取 settings.json，
+        // 直接 WriteAllText 可能让它读到写了一半的 JSON，导致热键被错误重置。
+        var tempPath = SettingsFilePath + ".tmp";
+        File.WriteAllText(tempPath, json);
+        File.Move(tempPath, SettingsFilePath, overwrite: true);
     }
 }

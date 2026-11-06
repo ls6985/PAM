@@ -65,6 +65,7 @@ public partial class MainWindow : FluentWindow
         {
             var policy = await Task.Run(_profileService.GetExecutionPolicy);
             _isPolicyRestricted = ProfileService.IsExecutionPolicyRestricted(policy);
+            ViewModel.IsExecutionPolicyRestricted = _isPolicyRestricted;
 
             PolicyWarningText.Text = $"执行策略为 {policy}，$PROFILE 可能无法加载。";
             PolicyWarningPanel.Visibility = _isPolicyRestricted ? Visibility.Visible : Visibility.Collapsed;
@@ -82,8 +83,7 @@ public partial class MainWindow : FluentWindow
     private bool FilterEntry(object item) => item is AliasEntry entry && ViewModel.MatchesSearch(entry);
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(MainViewModel.SearchText))
+    {        if (e.PropertyName == nameof(MainViewModel.SearchText))
         {
             ResetDeletePending();
             _entriesView?.Refresh();
@@ -292,6 +292,7 @@ public partial class MainWindow : FluentWindow
             await Task.Run(_profileService.RepairExecutionPolicy);
             var policy = await Task.Run(_profileService.GetExecutionPolicy);
             _isPolicyRestricted = ProfileService.IsExecutionPolicyRestricted(policy);
+            ViewModel.IsExecutionPolicyRestricted = _isPolicyRestricted;
 
             if (_isPolicyRestricted)
             {
@@ -361,6 +362,24 @@ public partial class MainWindow : FluentWindow
 
     /// <summary>当前选中的是否为“别名管理”页签。</summary>
     private bool IsAliasTabSelected => ReferenceEquals(MainTabs.SelectedItem, AliasTab);
+
+    /// <summary>切换页签时把状态栏同步成对应页签的上下文，避免显示上一个页签的统计。</summary>
+    private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_hasLoaded || !ReferenceEquals(e.OriginalSource, MainTabs))
+        {
+            return;
+        }
+
+        if (IsAliasTabSelected)
+        {
+            ShowRestingStatus();
+        }
+        else if (ReferenceEquals(MainTabs.SelectedItem, CustomTab))
+        {
+            ViewModel.CustomCommands.ShowRestingStatus();
+        }
+    }
 
     private void MarkDirty()
     {

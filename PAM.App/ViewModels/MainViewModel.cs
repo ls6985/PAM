@@ -36,8 +36,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _editorErrorText = string.Empty;
     private string _editorPathHintText = string.Empty;
     private bool _isConfirmEnabled;
+    private bool _isExecutionPolicyRestricted;
 
     public ObservableCollection<AliasEntry> Aliases { get; } = [];
+
+    /// <summary>“自定义命令”页签的数据源，与别名页共用同一个 $PROFILE。</summary>
+    public CustomCommandsViewModel CustomCommands { get; }
     public string SearchText { get => _searchText; set { if (_searchText == value) return; _searchText = value ?? ""; OnPropertyChanged(); } }
     public string ProfilePath { get => _profilePath; set { if (_profilePath == value) return; _profilePath = value; OnPropertyChanged(); } }
     public bool HasUnsavedChanges { get => _hasUnsavedChanges; set { if (_hasUnsavedChanges == value) return; _hasUnsavedChanges = value; OnPropertyChanged(); } }
@@ -65,12 +69,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string EditorPathHintText { get => _editorPathHintText; set { if (_editorPathHintText == value) return; _editorPathHintText = value; OnPropertyChanged(); } }
     public bool IsConfirmEnabled { get => _isConfirmEnabled; set { if (_isConfirmEnabled == value) return; _isConfirmEnabled = value; OnPropertyChanged(); } }
 
+    /// <summary>执行策略是否受限（由窗口在检查后同步），保存时据此决定是否拉起终端。</summary>
+    public bool IsExecutionPolicyRestricted { get => _isExecutionPolicyRestricted; set { if (_isExecutionPolicyRestricted == value) return; _isExecutionPolicyRestricted = value; OnPropertyChanged(); } }
+
     // --- 初始化与保存（从 Window 移入） ---
 
     public MainViewModel()
     {
         // 预留：设置页数据源，加载失败时 SettingsService 会回退默认值。
         _appSettings = _settingsService.Load();
+        CustomCommands = new CustomCommandsViewModel(this);
     }
 
     public async Task InitializeAsync()
@@ -90,6 +98,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
             HasUnsavedChanges = false;
             StatusMessage = result.FileExists ? $"已保存 · 共 {Aliases.Count} 个别名" : "配置文件不存在，点击“保存并生效”时将自动创建。";
             StatusType = result.FileExists ? StatusType.Saved : StatusType.Warning;
+
+            // 同一个 $PROFILE，别名读完后接着加载受控区块里的自定义命令。
+            await CustomCommands.InitializeAsync(ProfilePath);
         }
         catch (Exception ex)
         {

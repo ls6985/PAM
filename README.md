@@ -43,3 +43,29 @@ Set-Alias -Name blbl -Value "C:\Program Files\App\app.exe"
 读取时兼容单双引号，保存时统一双引号并转义。
 
 只识别和清理上述格式，其他配置原样保留。
+
+自定义命令
+“自定义命令”页签管理 $PROFILE 中一个由 PAM 独占维护的受控区块，使用 `#region PAM-Custom` / `#endregion` 包裹：
+
+powershell
+#region PAM-Custom
+# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。
+
+# @pam-custom hello 打招呼
+function hello {
+    Write-Host "hi"
+}
+# @pam-custom-end
+
+# @pam-custom gpr 拉取并变基
+# @pam-custom-state disabled
+# function gpr {
+#     git pull --rebase
+# }
+# @pam-custom-end
+#endregion
+
+- 每条命令以 `# @pam-custom <名称> [备注]` 开头，`# @pam-custom-end` 结束；名称同时是唯一键。
+- 禁用的命令写入 `# @pam-custom-state disabled`，代码逐行注释为 `# 原行`；重新启用后原样还原，缩进与空行不丢失。
+- 保存时只重写该区块，区块外的配置、别名、编码、BOM 与换行风格原样保留；别名保存也会跳过该区块，两种写入互不破坏。
+- 区块不存在时保存会自动创建；列表清空后保存会整体移除区块。

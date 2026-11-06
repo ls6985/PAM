@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -78,12 +77,19 @@ public sealed class ProfileService
             return new ProfileLoadResult(profilePath, false, Array.Empty<AliasEntry>());
         }
 
-        var document = ReadDocument(profilePath);
+        var document = ProfileDocument.Read(profilePath);
+        var regionMask = PamCustomRegion.BuildMask(document.Lines);
         var entries = new List<AliasEntry>();
         var indexByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         for (var i = 0; i < document.Lines.Count; i++)
         {
+            // 受控区块内的内容由 CustomCommandService 负责，别名的读取与清理都要绕开它。
+            if (regionMask[i])
+            {
+                continue;
+            }
+
             if (!TryParseAliasLine(document.Lines[i], out var name, out var value))
             {
                 continue;
@@ -127,13 +133,15 @@ public sealed class ProfileService
 
         var snapshot = entries.ToList();
         var existed = File.Exists(profilePath);
-        var document = existed ? ReadDocument(profilePath) : ProfileDocument.CreateNew();
+        var document = existed ? ProfileDocument.Read(profilePath) : ProfileDocument.CreateNew();
 
+        // 受控区块内的 Set-Alias（例如自定义命令里的别名）不能被别名保存逻辑删掉。
+        var regionMask = PamCustomRegion.BuildMask(document.Lines);
         var remove = new bool[document.Lines.Count];
 
         for (var i = 0; i < document.Lines.Count; i++)
         {
-            if (!TryParseAliasLine(document.Lines[i], out var name, out _))
+            if (regionMask[i] || !TryParseAliasLine(document.Lines[i], out var name, out _))
             {
                 continue;
             }
@@ -184,11 +192,8 @@ public sealed class ProfileService
             }
         }
 
-        var text = outputLines.Count == 0
-            ? string.Empty
-            : string.Join(document.NewLine, outputLines) + document.NewLine;
-
-        WriteDocument(profilePath, text, document.Encoding);
+        var output = new ProfileDocument(outputLines, document.Encoding, document.NewLine);
+        output.WriteTo(profilePath);
 
         return new ProfileSaveResult(!existed, snapshot.Count);
     }
@@ -365,129 +370,6 @@ public sealed class ProfileService
         return name.Length > 0;
     }
 
-    private static ProfileDocument ReadDocument(string path)
-    {
-        var bytes = File.ReadAllBytes(path);
-        Encoding encoding;
-        string text;
-
-        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
-        {
-            encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
-            text = Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
-        }
-        else if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
-        {
-            encoding = new UnicodeEncoding(bigEndian: false, byteOrderMark: true);
-            text = encoding.GetString(bytes, 2, bytes.Length - 2);
-        }
-        else if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
-        {
-            encoding = new UnicodeEncoding(bigEndian: true, byteOrderMark: true);
-            text = encoding.GetString(bytes, 2, bytes.Length - 2);
-        }
-        else
-        {
-            try
-            {
-                text = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
-                    .GetString(bytes);
-
-                // Windows PowerShell 5.1 只有在有 BOM 时才按 UTF-8 读取无 ASCII 内容。
-                encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
-            }
-            catch (DecoderFallbackException)
-            {
-                try
-                {
-                    encoding = Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.ANSICodePage);
-                    text = encoding.GetString(bytes);
-                }
-                catch (ArgumentException)
-                {
-                    encoding = Encoding.Latin1;
-                    text = encoding.GetString(bytes);
-                }
-            }
-        }
-
-        var newLine = text.Contains("\r\n", StringComparison.Ordinal)
-            ? "\r\n"
-            : text.Contains('\n') ? "\n" : "\r\n";
-
-        var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-        var lines = normalized.Split('\n').ToList();
-
-        if (lines.Count > 0 && lines[^1].Length == 0)
-        {
-            lines.RemoveAt(lines.Count - 1);
-        }
-
-        if (lines.Count == 1 && lines[0].Length == 0)
-        {
-            lines.Clear();
-        }
-
-        return new ProfileDocument(lines, encoding, newLine);
-    }
-
-    private static void WriteDocument(string path, string text, Encoding encoding)
-    {
-        var fullPath = Path.GetFullPath(path);
-        var directory = Path.GetDirectoryName(fullPath);
-
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var temporaryPath = Path.Combine(
-            directory ?? Path.GetTempPath(),
-            $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
-
-        try
-        {
-            File.WriteAllText(temporaryPath, text, encoding);
-
-            if (File.Exists(fullPath))
-            {
-                try
-                {
-                    File.Replace(temporaryPath, fullPath, destinationBackupFileName: null);
-                }
-                catch (IOException)
-                {
-                    // 某些文件系统不支持 File.Replace，退回覆盖写入但仍使用临时文件。
-                    File.Copy(temporaryPath, fullPath, overwrite: true);
-                    File.Delete(temporaryPath);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    File.Copy(temporaryPath, fullPath, overwrite: true);
-                    File.Delete(temporaryPath);
-                }
-            }
-            else
-            {
-                File.Move(temporaryPath, fullPath);
-            }
-        }
-        finally
-        {
-            try
-            {
-                if (File.Exists(temporaryPath))
-                {
-                    File.Delete(temporaryPath);
-                }
-            }
-            catch
-            {
-                // 临时文件清理失败不影响已经写入的配置文件。
-            }
-        }
-    }
-
     private static PowerShellProcessResult RunPowerShell(string command, TimeSpan timeout)
     {
         var startInfo = new ProcessStartInfo
@@ -573,15 +455,4 @@ public sealed class ProfileService
         string StandardOutput,
         string StandardError,
         int ExitCode);
-
-    private sealed record ProfileDocument(
-        List<string> Lines,
-        Encoding Encoding,
-        string NewLine)
-    {
-        public static ProfileDocument CreateNew()
-        {
-            return new ProfileDocument([], new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), "\r\n");
-        }
-    }
 }
