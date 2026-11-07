@@ -37,6 +37,22 @@ public partial class MainWindow : FluentWindow
         UpdateEmptyState();
     }
 
+    /// <summary>
+    /// 界面没有定义任何 Alt 访问键；单独按 Alt 只会让 WPF 把键盘焦点框
+    /// 画到当前聚焦的大容器上（视觉上出现一个大框），这里直接拦掉。
+    /// Alt 组合键（Key.System 且 SystemKey 为普通键）不受影响，热键录制照常工作。
+    /// </summary>
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+        if (e.Handled) return;
+
+        if (e.Key == Key.System && e.SystemKey is Key.LeftAlt or Key.RightAlt)
+        {
+            e.Handled = true;
+        }
+    }
+
     /// <summary>默认终端变更后，$PROFILE 换成了另一个文件，需要重新载入两个列表。</summary>
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
