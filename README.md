@@ -6,8 +6,8 @@
 
 | 项目 | 职责 | 什么时候读 |
 | --- | --- | --- |
-| [PAM.Core](PAM.Core/README.md) | 无 UI 的核心库：设置模型、`$PROFILE` 读写、热键描述、终端探测、本地化词表、跨进程信号 | 改数据格式、配置字段或 `$PROFILE` 读写规则时 |
-| [PAM.App](PAM.App/README.md) | WPF 主界面与设置页，用户唯一直接操作的程序，也是 `settings.json` 的唯一写入方 | **最常读**：改界面、页签、主题 / 语言 / 热键交互时 |
+| [PAM.Core](PAM.Core/README.md) | 无 UI 的核心库：设置模型、`$PROFILE` 读写、热键描述、终端探测、本地化词表、跨进程信号、Starship 与字体服务 | 改数据格式、配置字段、`$PROFILE` 读写规则或美化功能时 |
+| [PAM.App](PAM.App/README.md) | WPF 主界面与设置页，用户唯一直接操作的程序，也是 `settings.json` 的唯一写入方 | **最常读**：改界面、页签、主题 / 语言 / 热键交互、Starship 美化时 |
 | [PAM.Tray](PAM.Tray/README.md) | 纯粹的后台组件：常驻托盘、注册全局热键、按下后拉起 Windows Terminal；只读配置，从不写入，也不需要用户手动启动 | 只有改热键注册或托盘行为时才需要看，日常开发基本不用碰 |
 | PAM.Tests | xUnit 测试，只覆盖 PAM.Core 的纯逻辑，不涉及 WPF 界面 | 平时不用读；只有改动 `$PROFILE` 区块格式或 `settings.json` 规则时才需要同步维护 |
 
@@ -38,7 +38,7 @@ dotnet publish PAM.Tray -c Release -o publish
 
 > 不要写成 `dotnet publish PAM.sln -o publish`：解决方案级 `--output` 不受支持，还会把 PAM.Tests 和 xunit、`testhost.exe` 一起倒进交付目录。
 >
-> 各自 `bin` 目录里只有一个 exe，`EnsureTrayRunning()` 找不到同目录托盘会静默跳过——界面照常用，只是全局热键不生效。要在本地测热键，就启动上面 `publish` 出来的合并目录。
+> Debug 构建时两个工程会把产物互相推给对方的 `bin`（见两个 csproj 里的 `Push*OutputTo*` 目标），所以任意一个 bin 目录都是完整可跑的一对：`EnsureTrayRunning()` 和托盘"显示主界面"在开发期就能正常工作。注意只构建其中一个工程不会刷新对方的产物，改了两边代码时构建整个 sln。
 
 > 本机已知问题：改动 PAM.App / PAM.Core 后直接构建 PAM.Tray 偶发 MSBuild `Copy` 栈溢出（环境问题，非代码）；先 `dotnet clean` 再构建即可，或用 `-m:1` 单线程构建。
 >
@@ -61,5 +61,7 @@ dotnet publish PAM.Tray -c Release -o publish
 | --- | --- | --- |
 | 别名 / 自定义命令 | 默认终端对应的 `$PROFILE`（PowerShell 7 与 5.1 是两个不同文件） | [PAM.Core/README.md](PAM.Core/README.md) |
 | 主题、语言、默认终端、热键、托盘行为 | `%AppData%\PAM\settings.json` | [PAM.App/README.md](PAM.App/README.md) |
+| Starship 主题（美化页写入） | `~\.config\starship.toml`（写前自动备份为 `.bak`）；init 行写入 `$PROFILE` 受控区块 | [PAM.Core/README.md](PAM.Core/README.md) |
+| 终端字体（美化页写入） | Windows Terminal `settings.json` 的 `profiles.defaults.font.face`（写前自动备份） | [PAM.Core/README.md](PAM.Core/README.md) |
 
 详细文档按项目查阅：[Core](PAM.Core/README.md)（`$PROFILE` 格式与全部服务）· [App](PAM.App/README.md)（三个页签、设置页与配置字段）· [Tray](PAM.Tray/README.md)（热键注册与热重载）。

@@ -19,8 +19,33 @@
     <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
 
+  <!-- 内置 Cascadia Code NF（变量字体，美化页可一键按当前用户安装）。 -->
+  <ItemGroup>
+    <Content Include="Assets\Fonts\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\PAM.Core\PAM.Core.csproj" />
   </ItemGroup>
+
+  <!--
+    两个程序在运行时互相按 AppContext.BaseDirectory 找对方：主界面靠 EnsureTrayRunning() 拉起
+    PAM.Tray.exe，托盘右键“显示主界面”靠 PAM.App.exe。所以各自的输出目录里必须是完整可跑的一对，
+    和本机安装/发布到同一目录的形态一致。
+    不能用 ProjectReference 互指（还原图成环，MSB4006），因此构建结束后各自把产物推给对方目录；
+    PAM.Core.* 两边都会自己生成、对方的产物也不该回推，都排除掉。
+  -->
+  <Target Name="PushAppOutputToTray" AfterTargets="Build">
+    <PropertyGroup>
+      <_TrayOutputDir>$(MSBuildThisFileDirectory)..\PAM.Tray\bin\$(Configuration)\$(TargetFramework)\</_TrayOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_AppSelfOutput Include="$(OutDir)**\*.*" Exclude="$(OutDir)PAM.Core.*;$(OutDir)PAM.Tray.*" />
+    </ItemGroup>
+    <MakeDir Directories="$(_TrayOutputDir)" />
+    <Copy SourceFiles="@(_AppSelfOutput)"
+          DestinationFiles="@(_AppSelfOutput->'$(_TrayOutputDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

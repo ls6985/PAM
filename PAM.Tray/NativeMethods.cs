@@ -24,4 +24,8 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool IsIconic(IntPtr hWnd);
+
+    /// <summary>销毁 GDI 图标句柄（TrayIconRenderer 用完 Icon.FromHandle 的句柄后调用）。</summary>
+    [DllImport("user32.dll")]
+    internal static extern bool DestroyIcon(IntPtr hIcon);
 }

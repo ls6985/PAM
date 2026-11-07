@@ -50,6 +50,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// <summary>“设置”页签的数据源。</summary>
     public SettingsViewModel Settings { get; }
 
+    /// <summary>“美化”页签的数据源（Starship / 字体 / 主题）。</summary>
+    public BeautifyViewModel Beautify { get; }
+
     public string SearchText { get => _searchText; set { if (_searchText == value) return; _searchText = value ?? ""; OnPropertyChanged(); } }
 
     /// <summary>
@@ -150,6 +153,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         CustomCommands = new CustomCommandsViewModel(this);
         Settings = new SettingsViewModel();
+        Beautify = new BeautifyViewModel();
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
     }
 

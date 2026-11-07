@@ -327,6 +327,130 @@ public sealed class LocalizationService
         ["热键 {0} 注册失败，可能已被系统或其他软件占用。请到“设置”中更换。"] =
             "Could not register hotkey {0}. It may be taken by Windows or another app. Change it in Settings.",
         ["设置已重新加载：热键 {0}"] = "Settings reloaded: hotkey {0}",
+
+        // ---- 美化（Starship / 字体 / 主题） ----
+        ["美化"] = "Beautify",
+        ["为终端配置 Starship 提示符与 Nerd Font 字体；所有写入都会先自动备份。"] =
+            "Configure the Starship prompt and Nerd Fonts for your terminal. Every write is backed up first.",
+        ["为终端配置 Starship 提示符与 Nerd Font 字体。"] =
+            "Configure the Starship prompt and Nerd Fonts for your terminal.",
+        ["检测中…"] = "Detecting…",
+        ["未安装"] = "Not installed",
+        ["已安装 {0}"] = "Installed {0}",
+        ["未检测到 Scoop"] = "Scoop not detected",
+        ["Scoop 已就绪"] = "Scoop is ready",
+        ["Starship 是跨 shell 的提示符引擎；通过 Scoop 安装后自动可用，无需手动配置 PATH。"] =
+            "Starship is a cross-shell prompt engine. Once installed via Scoop it works out of the box; no PATH setup needed.",
+        ["Starship 官方建议先装好 Nerd Font：请在上方选择字体后再安装。"] =
+            "Starship's docs recommend installing a Nerd Font first: pick a font above before installing.",
+        ["已安装，无需重复安装；换字体后重新打开终端即可生效。"] =
+            "Already installed — no need to install again. Reopen your terminal after changing fonts to take effect.",
+        ["未选字体或已安装时不可用。"] =
+            "Disabled until a font is selected; unavailable when Starship is already installed.",
+        ["Scoop 安装 Starship"] = "Install Starship via Scoop",
+        ["一键安装（含 Scoop）"] = "One-click install (incl. Scoop)",
+        ["重新检测"] = "Re-detect",
+        ["正在通过 Scoop 安装 Starship，可能需要几分钟…"] =
+            "Installing Starship via Scoop. This may take a few minutes…",
+        ["正在安装 Scoop 与 Starship，可能需要几分钟…"] =
+            "Installing Scoop and Starship. This may take a few minutes…",
+        ["正在安装 Scoop…"] = "Installing Scoop…",
+        ["Scoop 安装完成。"] = "Scoop installed.",
+        ["Starship 安装完成。"] = "Starship installed.",
+        ["未检测到 Scoop，请先安装 Scoop。"] = "Scoop was not detected. Install Scoop first.",
+        ["scoop install starship 失败（退出码 {0}）。{1}"] =
+            "scoop install starship failed (exit code {0}). {1}",
+        ["Scoop 安装失败（退出码 {0}）。{1}"] = "Scoop installation failed (exit code {0}). {1}",
+        ["操作完成。"] = "Done.",
+        ["操作失败：{0}"] = "Operation failed: {0}",
+
+        ["终端字体"] = "Terminal font",
+        ["字体选择"] = "Font",
+        ["Windows Terminal 当前字体：{0}"] = "Windows Terminal current font: {0}",
+        ["Windows Terminal 当前字体：未设置（跟随 WT 默认）"] =
+            "Windows Terminal current font: not set (using the WT default)",
+        ["写入 Windows Terminal 的 profiles.defaults.font.face；内置 Cascadia Code NF 已随本程序打包，未安装时可一键按当前用户安装。"] =
+            "Writes profiles.defaults.font.face in Windows Terminal. Cascadia Code NF ships with this app; if it is missing, install it for the current user with one click.",
+        ["安装内置字体"] = "Install bundled font",
+        ["把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。"] =
+            "Installs the bundled Cascadia Code NF for the current user (no admin rights needed).",
+        ["应用到 Windows Terminal"] = "Apply to Windows Terminal",
+        ["想要其他 Nerd Font？安装 Scoop 后执行：scoop bucket add nerd-fonts，再安装如 JetBrains-Mono-NF、FiraCode-NF 等包，重启本页即可在下拉中看到。"] =
+            "Want other Nerd Fonts? With Scoop installed, run: scoop bucket add nerd-fonts, then install e.g. JetBrains-Mono-NF or FiraCode-NF. Reopen this tab and they will appear in the list.",
+        ["正在安装内置字体…"] = "Installing the bundled font…",
+        ["正在写入 Windows Terminal 字体设置…"] = "Writing the Windows Terminal font setting…",
+        ["已把 Windows Terminal 默认字体设置为 {0}。"] = "Windows Terminal default font set to {0}.",
+        ["未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。"] =
+            "Windows Terminal settings.json was not found. Start Windows Terminal once first.",
+        ["未找到字体文件：{0}"] = "Font file not found: {0}",
+        ["只支持 .ttf 字体文件。"] = "Only .ttf font files are supported.",
+        ["安装字体失败：{0}"] = "Failed to install the font: {0}",
+        ["已为当前用户安装 {0}。"] = "Installed {0} for the current user.",
+        ["字体名称不能为空。"] = "The font name cannot be empty.",
+        ["请先选择一个字体。"] = "Select a font first.",
+        ["字体 {0} 未安装，请先安装。"] = "Font {0} is not installed. Install it first.",
+
+        ["主题"] = "Theme",
+        ["主题预设"] = "Theme preset",
+        ["应用后写入 starship.toml，并确保 $PROFILE 里有 starship init 行；原配置会自动备份为 starship.toml.bak。"] =
+            "Writes the preset into starship.toml and makes sure $PROFILE has the starship init line. The original file is backed up as starship.toml.bak.",
+        ["标注“需 Nerd Font”的预设要先装好字体，否则提示符会出现乱码方块。"] =
+            "Presets marked as needing a Nerd Font require the font to be installed first, otherwise the prompt shows placeholder boxes.",
+        ["应用主题"] = "Apply theme",
+        ["正在应用主题预设…"] = "Applying the theme preset…",
+        ["主题已应用：{0}；原 starship.toml 已自动备份。"] =
+            "Theme applied: {0}. The original starship.toml has been backed up.",
+        ["主题已应用：{0}。该预设需要 Nerd Font，当前未安装内置字体，提示符可能显示乱码方块，建议先安装。"] =
+            "Theme applied: {0}. This preset needs a Nerd Font, which is not installed yet; the prompt may show placeholder boxes. Install the bundled font first.",
+        ["该预设需要 Nerd Font，建议先安装内置字体。"] =
+            "This preset needs a Nerd Font. Install the bundled font first.",
+        ["请先选择一个主题预设。"] = "Select a theme preset first.",
+        ["未找到内置主题预设：{0}"] = "Bundled theme preset not found: {0}",
+
+        ["配置维护"] = "Config maintenance",
+        ["已创建"] = "Created",
+        ["未创建"] = "Not created",
+        ["starship init 行：已写入"] = "starship init line: present",
+        ["starship init 行：未写入"] = "starship init line: missing",
+        ["starship init 行：未知"] = "starship init line: unknown",
+        ["starship.toml.bak 存在"] = "starship.toml.bak exists",
+        ["打开 starship.toml"] = "Open starship.toml",
+        ["恢复 starship.toml 备份"] = "Restore starship.toml backup",
+        ["恢复 Windows Terminal 备份"] = "Restore Windows Terminal backup",
+        ["正在打开 starship.toml…"] = "Opening starship.toml…",
+        ["已创建并打开配置文件：{0}"] = "Created and opened the config file: {0}",
+        ["已打开配置文件：{0}"] = "Opened the config file: {0}",
+        ["正在恢复 starship.toml 备份…"] = "Restoring the starship.toml backup…",
+        ["已从备份恢复 starship.toml。"] = "starship.toml has been restored from the backup.",
+        ["正在恢复 Windows Terminal 备份…"] = "Restoring the Windows Terminal backup…",
+        ["已从备份恢复 Windows Terminal 的 settings.json。"] =
+            "The Windows Terminal settings.json has been restored from the backup.",
+        ["没有可恢复的备份。"] = "No backup to restore.",
+        ["状态刷新失败：{0}"] = "Failed to refresh the status: {0}",
+
+        // Windows Terminal settings.json 的拼接失败提示（出现即代表未写入，原配置完好）。
+        ["settings.json 的顶层不是对象，无法自动修改。"] =
+            "The root of settings.json is not an object; cannot modify automatically.",
+        ["settings.json 的 profiles 不是对象（可能是旧版数组结构），无法自动修改，请手动调整。"] =
+            "profiles in settings.json is not an object (possibly a legacy array layout); cannot modify automatically. Edit it manually.",
+        ["settings.json 的 profiles 结构异常，无法自动修改。"] =
+            "Unexpected profiles structure in settings.json; cannot modify automatically.",
+        ["settings.json 的 profiles.defaults 不是对象，无法自动修改。"] =
+            "profiles.defaults in settings.json is not an object; cannot modify automatically.",
+        ["settings.json 的 profiles.defaults 结构异常，无法自动修改。"] =
+            "Unexpected profiles.defaults structure in settings.json; cannot modify automatically.",
+        ["profiles.defaults.font 不是对象，无法自动修改。"] =
+            "profiles.defaults.font is not an object; cannot modify automatically.",
+        ["profiles.defaults.font 结构异常，无法自动修改。"] =
+            "Unexpected profiles.defaults.font structure in settings.json; cannot modify automatically.",
+        ["无法在 settings.json 中定位 {0}，请手动修改字体设置。"] =
+            "Cannot locate {0} in settings.json. Edit the font setting manually.",
+        ["无法定位 profiles.defaults.font.face，请手动修改字体设置。"] =
+            "Cannot locate profiles.defaults.font.face. Edit the font setting manually.",
+        ["settings.json 结构异常，无法自动修改。"] =
+            "Unexpected settings.json structure; cannot modify automatically.",
+        ["写入后校验未通过，已保持原配置不变。"] =
+            "Post-write validation failed; the original file was kept unchanged.",
     };
 
     private string _language = AppSettings.LanguageZhCN;

@@ -440,12 +440,11 @@
                     <views:CustomCommandsView DataContext="{Binding CustomCommands}" />
                 </ui:TabViewItem>
 
-                <!-- ===================== 动作按钮：美化（暂未接功能） ===================== -->
+                <!-- ===================== 页 2：美化 ===================== -->
                 <ui:TabViewItem
                     x:Name="BeautifyTab"
-                    Focusable="False"
-                    IsTabStop="False"
-                    PreviewMouseLeftButtonDown="BeautifyTab_PreviewMouseLeftButtonDown">
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch">
                     <ui:TabViewItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon
@@ -456,6 +455,7 @@
                             <TextBlock Text="美化" VerticalAlignment="Center" />
                         </StackPanel>
                     </ui:TabViewItem.Header>
+                    <views:BeautifyView DataContext="{Binding Beautify}" />
                 </ui:TabViewItem>
 
                 <!-- ===================== 页 3：设置 ===================== -->

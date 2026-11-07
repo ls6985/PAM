@@ -10,3 +10,5 @@ PAM.Tests/obj/
 publish/
 dist/
 .workbuddy/
+.vscode/
+.zcode/

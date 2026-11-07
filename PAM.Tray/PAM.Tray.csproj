@@ -19,4 +19,22 @@
     <ProjectReference Include="..\PAM.Core\PAM.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    与 PAM.App.csproj 的 PushAppOutputToTray 对称：把本程序产物推给主界面的输出目录，
+    保证 clean 重建后任意一个 bin 里仍是完整可跑的一对（EnsureTrayRunning / 显示主界面 都靠同目录找对方）。
+    PAM.Core.* 两边各自生成、PAM.App.* 属于对方产物，都不回推。
+  -->
+  <Target Name="PushTrayOutputToApp" AfterTargets="Build">
+    <PropertyGroup>
+      <_AppOutputDir>$(MSBuildThisFileDirectory)..\PAM.App\bin\$(Configuration)\$(TargetFramework)\</_AppOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TraySelfOutput Include="$(OutDir)**\*.*" Exclude="$(OutDir)PAM.Core.*;$(OutDir)PAM.App.*" />
+    </ItemGroup>
+    <MakeDir Directories="$(_AppOutputDir)" />
+    <Copy SourceFiles="@(_TraySelfOutput)"
+          DestinationFiles="@(_TraySelfOutput->'$(_AppOutputDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

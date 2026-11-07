@@ -23,6 +23,7 @@ internal sealed class TrayApplication : IDisposable
     private HotkeyManager? _hotkeyManager;
     private TrayBridge.Listener? _listener;
     private NotifyIcon? _notifyIcon;
+    private Icon? _trayIcon;
     private ToolStripMenuItem? _showMainItem;
     private ToolStripMenuItem? _reloadItem;
     private ToolStripMenuItem? _exitItem;
@@ -92,7 +93,7 @@ internal sealed class TrayApplication : IDisposable
 
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = CreateTrayIcon(),
             Text = AppName,
             ContextMenuStrip = _menu,
             Visible = true,
@@ -118,6 +119,29 @@ internal sealed class TrayApplication : IDisposable
     }
 
     private static string L(string source) => LocalizationService.Instance.T(source);
+
+    /// <summary>
+    /// 渲染与主界面标题栏一致的 &lt;/&gt; 代码符号图标；缺少 Segoe Fluent Icons 时回退系统默认图标。
+    /// </summary>
+    private Icon CreateTrayIcon()
+    {
+        var icon = TrayIconRenderer.Create(TrayIconRenderer.ShouldUseLightGlyph(_settings.Theme));
+        _trayIcon = icon;
+        return icon ?? SystemIcons.Application;
+    }
+
+    /// <summary>主题可能变化时重绘托盘图标（重新加载设置后调用）。</summary>
+    private void RefreshTrayIcon()
+    {
+        if (_notifyIcon is null)
+        {
+            return;
+        }
+
+        var previous = _trayIcon;
+        _notifyIcon.Icon = CreateTrayIcon();
+        previous?.Dispose();
+    }
 
     /// <summary>按当前设置重新注册全局热键；系统保留组合不允许注册。</summary>
     private void ApplyHotkey(bool showBalloon)
@@ -156,6 +180,7 @@ internal sealed class TrayApplication : IDisposable
 
         ApplyHotkey(showBalloon: true);
         RefreshMenuTexts();
+        RefreshTrayIcon();
         UpdateNotifyText();
 
         if (showFeedback && _hotkeyRegistered)
@@ -358,6 +383,8 @@ internal sealed class TrayApplication : IDisposable
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
         }
+        _trayIcon?.Dispose();
+        _trayIcon = null;
         _menu?.Dispose();
         _listener?.Dispose();
         _hotkeyManager?.Dispose();

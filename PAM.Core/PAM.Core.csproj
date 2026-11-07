@@ -10,4 +10,14 @@
     <Description>数据模型、$PROFILE 读写与终端启动服务。</Description>
   </PropertyGroup>
 
+  <!-- Starship 内置主题预设（StarshipService 按 PAM.Core.Presets.<id>.toml 解出）。 -->
+  <ItemGroup>
+    <EmbeddedResource Include="Presets\*.toml" />
+  </ItemGroup>
+
+  <!-- 单元测试需要覆盖 internal 纯逻辑（ProfileDocument / SpliceFontFace 等）。 -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="PAM.Tests" />
+  </ItemGroup>
+
 </Project>
