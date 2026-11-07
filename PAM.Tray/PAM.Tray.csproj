@@ -13,6 +13,8 @@
     <Product>PowerShell 管理器</Product>
     <Version>1.0.0</Version>
     <Description>系统托盘入口（全局热键与终端唤醒）。</Description>
+    <!-- exe 图标复用主界面那份 ico，资源管理器/任务管理器里两者显示一致；只是资源文件，不构成对 PAM.App 的项目引用。 -->
+    <ApplicationIcon>..\PAM.App\Assets\App.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

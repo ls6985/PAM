@@ -10,6 +10,7 @@
 - `TrayApplication.cs`：单实例 `Mutex`、`NotifyIcon`、托盘菜单、热键注册、设置热重载与消息循环。
 - `HotkeyManager.cs`：隐藏消息窗口 + Win32 `RegisterHotKey` / `WM_HOTKEY`。
 - 只引用 `PAM.Core`，不引用 PAM.App 项目；跨进程找主界面窗口靠进程名与 Win32 调用，编译期两者互不相干。
+- exe 图标通过 `..\PAM.App\Assets\App.ico` 复用主界面那份（只是资源文件，不是项目引用）；托盘里的 `NotifyIcon` 图标则由 `TrayIconRenderer` 在运行时自绘 `</>`，两者不是一回事。
 
 ## 行为
 

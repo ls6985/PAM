@@ -40,7 +40,7 @@ dotnet publish PAM.Tray -c Release -o publish
 >
 > Debug 构建时两个工程会把产物互相推给对方的 `bin`（见两个 csproj 里的 `Push*OutputTo*` 目标），所以任意一个 bin 目录都是完整可跑的一对：`EnsureTrayRunning()` 和托盘"显示主界面"在开发期就能正常工作。注意只构建其中一个工程不会刷新对方的产物，改了两边代码时构建整个 sln。
 
-> 本机已知问题：改动 PAM.App / PAM.Core 后直接构建 PAM.Tray 偶发 MSBuild `Copy` 栈溢出（环境问题，非代码）；先 `dotnet clean` 再构建即可，或用 `-m:1` 单线程构建。
+> 本机已知问题：改动 PAM.App / PAM.Core 后直接构建 PAM.Tray 偶发 MSBuild `Copy` 栈溢出（环境问题，非代码，发生在覆盖已存在输出文件时的删除阶段）。最有效的办法是先清空各项目的 `bin\<配置>\net10.0-windows` 输出目录再构建；`dotnet clean` 或 `-m:1` 单独使用仍可能复现。
 >
 > 托盘 / 主程序运行时锁住 `bin` 里的 dll，会让构建失败（`MSB3021` / `MSB3027`）。根目录 `Directory.Build.targets` 在 Debug 构建前自动结束这两个进程，构建完需要再用 `rr` 或托盘热键重新打开。发布（`-c Release`）与设计时构建不受影响；想保留运行时加 `-p:PamKeepRunning=true`。
 

@@ -72,3 +72,9 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 - `MainWindow.xaml.cs`：焦点、状态栏、空状态文案、窗口关闭时按 `KeepTrayOnClose` 处理托盘。
 - `ViewModels/`：绑定属性、数据集合与校验，调用 `PAM.Core` 读写。
 - `Converters/` · `Controls/`：值转换器与中间省略文本控件。
+
+## 程序图标
+
+`Assets/App.ico` 是代码绘制生成的多尺寸图标（16/24/32/48/64/128/256），由 csproj 的 `ApplicationIcon` 编进 exe：任务栏、Alt+Tab、窗口预览缩略图左上角、资源管理器都取它，**不需要任何图片素材**。改配色 / 符号编辑 `Assets/generate_icon.py` 顶部的 `BG`、`FG` 与 `round_line` 坐标后重跑 `python Assets/generate_icon.py`（需 Pillow），再重新构建即可；Windows 会缓存旧图标，必要时重启资源管理器或清图标缓存。
+
+`PAM.Tray.exe` 通过 `..\PAM.App\Assets\App.ico` 复用同一份，两个 exe 图标一致（仅资源文件复用，不是项目引用）。

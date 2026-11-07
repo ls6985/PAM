@@ -13,6 +13,8 @@
     <Product>PowerShell 管理器</Product>
     <Version>1.0.0</Version>
     <Description>在图形界面中管理 Windows PowerShell $PROFILE 里的 Set-Alias 快捷启动项。</Description>
+    <!-- exe 图标：任务栏、Alt+Tab、窗口预览缩略图左上角、资源管理器都取它。Assets/App.ico 由代码绘制生成，无需外部图片素材。 -->
+    <ApplicationIcon>Assets\App.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

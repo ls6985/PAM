@@ -1,26 +1,22 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Drawing.Text;
-using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using PAM.Core;
 
 namespace PAM.Tray;
 
 /// <summary>
-/// 渲染托盘图标：用系统自带的 Segoe Fluent Icons 字体画出与主界面标题栏一致的
-/// <c>&lt;/&gt;</c> 代码符号（WPF-UI 的 SymbolRegular.Code24 = U+F2F0），不引入图标文件。
-/// Windows 10 没有该字体时返回 null，调用方回退为系统默认图标。
+/// 渲染托盘图标：用 GDI+ 直接画出与主界面标题栏一致的 <c>&lt;/&gt;</c> 代码符号，不依赖任何图标字体。
+/// 旧实现拿系统的 Segoe Fluent Icons 去画 WPF-UI 的 U+F2F0 码位，但那是两套码位互不兼容的图标字体，
+/// Segoe Fluent Icons 里根本没有 U+F2F0；GDI+ 不抛异常而是静默画出 .notdef（空白方框），
+/// 托盘上就只剩一个小方块，代码里"字体缺失时回退"的 catch 也永远不会触发。
 /// </summary>
 internal static class TrayIconRenderer
 {
-    private const char CodeGlyph = '\uF2F0';
-    private const string GlyphFontName = "Segoe Fluent Icons";
-
-    /// <summary>渲染一个托盘图标。<paramref name="lightForeground" /> 为 true 时画浅色字形（深色主题用）。</summary>
+    /// <summary>渲染一个托盘图标。<paramref name="lightForeground" /> 为 true 时画浅色线条（深色主题用）。</summary>
     public static Icon? Create(bool lightForeground)
     {
-        // 超采样 4 倍再缩小，小尺寸下字形边缘更平滑。
+        // 超采样 4 倍再缩小，小尺寸下线条边缘更平滑。
         const int supersampling = 4;
 
         try
@@ -28,29 +24,41 @@ internal static class TrayIconRenderer
             var size = SystemInformation.SmallIconSize;
             var side = Math.Max(size.Width, size.Height);
             var canvasSide = side * supersampling;
-
-            using var font = new Font(GlyphFontName, canvasSide * 0.62f, GraphicsUnit.Pixel);
+            var u = (float)canvasSide;
 
             using var canvas = new Bitmap(canvasSide, canvasSide);
             using (var graphics = Graphics.FromImage(canvas))
             {
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 
                 var color = lightForeground
                     ? Color.FromArgb(238, 242, 246)
                     : Color.FromArgb(32, 32, 32);
 
-                using var brush = new SolidBrush(color);
-                using var format = new StringFormat
+                // 圆头圆角折线：16x16 缩略图下比字形更清晰，也不受系统字体版本影响。
+                using var pen = new Pen(color, u * 0.09f)
                 {
-                    Alignment = StringAlignment.Center,
-                    LineAlignment = StringAlignment.Center,
+                    StartCap = LineCap.Round,
+                    EndCap = LineCap.Round,
+                    LineJoin = LineJoin.Round,
                 };
 
-                // 字体字形按行高排布，垂直方向略微上移以补偿空隙，让符号视觉居中。
-                var rectangle = new RectangleF(0, -canvasSide * 0.05f, canvasSide, canvasSide);
-                graphics.DrawString(CodeGlyph.ToString(), font, brush, rectangle, format);
+                // "<"
+                graphics.DrawLines(pen, new[]
+                {
+                    new PointF(u * 0.34f, u * 0.22f),
+                    new PointF(u * 0.13f, u * 0.50f),
+                    new PointF(u * 0.34f, u * 0.78f),
+                });
+                // "/"
+                graphics.DrawLine(pen, u * 0.41f, u * 0.82f, u * 0.59f, u * 0.18f);
+                // ">"
+                graphics.DrawLines(pen, new[]
+                {
+                    new PointF(u * 0.66f, u * 0.22f),
+                    new PointF(u * 0.87f, u * 0.50f),
+                    new PointF(u * 0.66f, u * 0.78f),
+                });
             }
 
             using var scaled = new Bitmap(side, side);
@@ -73,7 +81,7 @@ internal static class TrayIconRenderer
         }
         catch
         {
-            // 缺少 Segoe Fluent Icons（如 Windows 10）或 GDI+ 异常时回退系统图标。
+            // GDI+ / HICON 异常时回退系统图标；正常路径不再依赖任何字体。
             return null;
         }
     }

@@ -121,7 +121,7 @@ internal sealed class TrayApplication : IDisposable
     private static string L(string source) => LocalizationService.Instance.T(source);
 
     /// <summary>
-    /// 渲染与主界面标题栏一致的 &lt;/&gt; 代码符号图标；缺少 Segoe Fluent Icons 时回退系统默认图标。
+    /// 渲染与主界面标题栏一致的 &lt;/&gt; 代码符号图标（GDI+ 自绘，不依赖字体）；绘制异常时回退系统默认图标。
     /// </summary>
     private Icon CreateTrayIcon()
     {
