@@ -17,13 +17,14 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 
 ## 美化页
 
-终端 Starship 与字体的配置入口，数据源 `BeautifyViewModel`，四个卡片：
+终端 Starship 与字体的配置入口，数据源 `BeautifyViewModel`，五个卡片：
 
 | 卡片 | 内容 |
 | --- | --- |
 | Starship | 探测已装版本与 Scoop；只有一个"一键安装（含 Scoop）"按钮，Scoop 缺失时自动走官方引导脚本（需联网），再用 Scoop 装 Starship。安装输出实时显示在页脚反馈区 |
 | 终端字体 | 下拉列出注册表里的等宽 / Nerd Font 候选，默认选中 Windows Terminal 当前字体；内置 `Assets/Fonts/CascadiaCodeNF.ttf` 未装时提供按当前用户安装（免管理员）；"应用到 Windows Terminal" 写入 `profiles.defaults.font.face`，写前自动备份 |
 | 主题 | 六个官方预设（EmbeddedResource 打包在 PAM.Core），应用 = 备份 → 写 `starship.toml` → 确保 `$PROFILE` init 行；标注"需 Nerd Font"的预设会在字体未装时给出警告 |
+| 自定义提示符 | **一整行 format 编辑器**（可直接改文字与 `fg:#RRGGBB`）+ 精选 20 个中文变量下拉（按身份 / Git / 运行状态 / 开发环境分组，可搜索，选中点"插入变量"）+ 12 色色板（作为"当前颜色"，也能给选中文字重新上色）+ `@ : ~ $ 空格` 固定符号按钮；上方是带真实颜色的深色预览（变量显示示意值）。默认 format 是 `[$username][$hostname][$directory][$character]` 四个动态变量，**用户名 / 主机名 / 当前路径不需要也不允许手填**，路径会随 `cd` 变化；配色复用现有 toml。"应用到 Starship" 只替换顶层 `format`，其余配置原样保留；首次应用单独备份为 `starship.toml.pam-prompt.bak`，"恢复应用前配置" 一键还原；"重置为默认" 只改编辑框、不写文件。配置本身存 toml，不进 `settings.json`。打开新终端窗口即可看到效果 |
 | 配置维护 | 展示 `starship.toml` 路径 / 是否创建 / init 行状态 / 备份存在；打开 `starship.toml`、恢复 toml 备份、恢复 Windows Terminal 备份 |
 
 进入页签（`Loaded` / 页签切换）自动刷新全部状态；所有耗时操作期间 `IsBusy` 禁用按钮。状态文案在 ViewModel 保存中文原文、读取时翻译，语言切换零成本。
@@ -41,7 +42,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 | 快捷键设置 | `SettingsView.xaml.cs` 用 `KeyInterop` 把 WPF 按键转成 Win32 VK，交给 `HotkeyChord` 规范化；`HotkeyConflictDetector` 依次检查系统保留组合 → Win32 `RegisterHotKey` 真实占用探测 → 常见软件通用快捷键。系统保留 / 已占用会阻止应用并说明原因，软冲突弹窗二次确认；托盘持有当前组合时视为自己占用。应用时若托盘未运行会自动拉起 |
 | 终端输入 | "打开终端时把中文输入法切到英文模式"（默认开启）：后台托盘的 700ms 定时器检测前台窗口，发现新打开的 PowerShell / Windows Terminal 窗口就用 UI Automation 读任务栏「托盘输入指示器」，**仅在中文模式时模拟一次单独的 Shift** 切到英文输入状态并复查；输入法本身与键盘布局都不变，本来已是英文模式时一个键都不发。每个窗口只处理一次，不写 `$PROFILE`、不注册全局钩子。最近一次切换结果记录在 `%AppData%\PAM\ime-switch.log`。开关关闭时托盘完全不碰前台窗口 |
 | 无托盘行为 | "关闭管理器时保留后台托盘"开启（默认）时，关闭窗口后热键与托盘菜单继续可用；关闭则发退出信号让 Tray 一并退出。设置页可查看 / 启动 / 结束后台托盘；结束后台托盘后全局热键立即失效，重新打开管理器或点"立即启动"才会恢复 |
-| 别名启动 | "独立进程启动（静默日志）"（默认开启）：别名改由 `$PROFILE` 里的 `Invoke-PamAlias` 公共函数用 `Start-Process` 启动，并把子进程的 stdout/stderr 重定向到 NUL 设备（否则 Electron 等程序仍把日志刷到同一个控制台），终端不再刷程序日志，关闭 PowerShell 也不会连带关掉软件；关闭则恢复原来的直接启动方式。另有"启动时显示别名备注"（默认开启），启动前 `Write-Host` 一行青色备注（备注为空则不打印）。两个开关由公共函数运行时读 `settings.json`，改设置即时生效，不用重写 `$PROFILE`；别名保存后才会生成 / 更新启动器区块，且 **`$PROFILE` 只在终端启动时加载一次，必须新开终端窗口才能生效** |
+| 别名启动 | "独立进程启动（静默日志）"（默认开启）：别名改由 `$PROFILE` 里的 `Invoke-PamAlias` 公共函数**借 `explorer.exe` 代启动**——无参数直接把路径交给 explorer，带参数先生成临时 `.lnk` 携带参数再交给 explorer。新进程父进程是 explorer，完全脱离终端进程树与控制台，所以关 PowerShell 不会连带关掉软件、Electron 等程序的日志也刷不回终端；不再需要 NUL 重定向，回到 ShellExecute 路径，UAC 提升正常（实测启动耗时反而略快）。关闭则恢复原来的直接启动方式。另有"启动时显示别名备注"（默认开启），启动前 `Write-Host` 一行青色备注（备注为空则不打印）。两个开关由公共函数运行时读 `settings.json`，改设置即时生效，不用重写 `$PROFILE`；别名保存后才会生成 / 更新启动器区块，且 **`$PROFILE` 只在终端启动时加载一次，必须新开终端窗口才能生效** |
 | 恢复默认 | 二次确认后整份设置恢复默认值 |
 
 `settings.json` 字段（camelCase，定义在 `PAM.Core/AppSettings.cs`）：
@@ -63,7 +64,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 - `hotkey`：`Ctrl/Alt/Shift/Win` 至少一个修饰键 + 一个普通键，支持字母、数字、F1~F24、方向键、小键盘等；非法值读取时自动重置。
 - `terminalType`：`pwsh` / `powershell` / `auto`；`theme`：`System` / `Light` / `Dark`；`language`：`zh-CN` / `en-US`。
 - `switchImeToEnglish`：默认 `true`。托盘检测到新打开的终端窗口时，用 UI Automation 读任务栏输入指示器，仅在中文模式时模拟一次 Shift 把该输入法切到英文模式（不更换输入法或键盘布局，已是英文则不按键）；关闭后托盘完全不做窗口检测。只影响该终端窗口，每个句柄只切一次。
-- `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch`：默认均为 `true`。由 `$PROFILE` 里的 `Invoke-PamAlias` 运行时读取，控制独立进程静默启动与备注打印；见 [PAM.Core/README.md](../PAM.Core/README.md) 的别名启动器区块。
+- `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch`：默认均为 `true`。由 `$PROFILE` 里的 `Invoke-PamAlias` 运行时读取，控制是否借 explorer 脱离终端进程树启动，以及是否打印备注；见 [PAM.Core/README.md](../PAM.Core/README.md) 的别名启动器区块。
 - 托盘监听 `Local\PAM.SettingsChanged` 与 `Local\PAM.Tray.ExitRequested` 两个命名事件，并兜底轮询文件时间戳，因此手工编辑 `settings.json` 也会生效。
 - PowerShell 7 与 5.1 的 `$PROFILE` 是两个不同文件（`Documents\PowerShell\` 与 `Documents\WindowsPowerShell\`）。切换默认终端即切换管理器维护的那一份，托盘与保存后启动的窗口用同一个 shell，别名 / 自定义命令会正常加载。
 

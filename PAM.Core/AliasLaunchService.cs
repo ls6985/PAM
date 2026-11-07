@@ -4,15 +4,22 @@ namespace PAM.Core;
 
 /// <summary>
 /// 维护 $PROFILE 里的「别名启动器」自有标记块：把 PAM 托管别名的调用改成同名函数包装，
-/// 由公共函数 <c>Invoke-PamAlias</c> 统一负责静默日志、独立进程启动与打印备注。
+/// 由公共函数 <c>Invoke-PamAlias</c> 统一负责独立进程启动与打印备注。
 ///
 /// 为什么保留 ProfileService 写出的 Set-Alias 行：那仍是唯一数据源，也保证旧配置、解析逻辑
 /// 与既有测试不变；但 PowerShell 里 Alias 优先级高于 Function，所以块内先 Remove-Item 删掉
 /// 同名别名，再定义同名 function 才会生效。
 ///
-/// 静默日志的关键：Start-Process 的子进程仍挂在父 PowerShell 的控制台上，Electron 等程序写到
-/// stdout/stderr 的日志照样会刷屏；所以增强模式把两个流重定向到 NUL 设备（PowerShell 不允许
-/// 二者同路径，故用 'NUL' 与 '\\.\NUL' 两种写法），失败时退回普通 Start-Process。
+/// 「关闭终端连带关掉软件」的根因：Start-Process 只保证 PowerShell 不阻塞等待，子进程仍在
+/// 终端的控制台 / 进程树里；Electron 等程序还会 AttachConsole(ATTACH_PARENT_PROCESS) 把日志
+/// 刷回终端。把 stdout/stderr 重定向到 NUL 只能掐掉日志，控制台归属没变。
+///
+/// 现在的做法：借 explorer.exe 代启动。explorer 不属于任何终端控制台，由它 ShellExecute 启动
+/// 的程序父进程就是 explorer，完全脱离终端进程树 → 关终端无影响、日志自然不显示、UAC 提升
+/// 照常，也不需要重定向（回到 ShellExecute 路径，实测启动耗时反而略快）。无参数时直接把
+/// exe 路径交给 explorer；带参数时先生成一个临时 .lnk 快捷方式（WScript.Shell COM）再交给
+/// explorer，参数原样传入。.lnk 用路径 hash 固定文件名、每次覆盖复用，不删除以免 explorer
+/// 还没读取就被删掉；实测删除快捷方式后进程仍稳定存活。
 ///
 /// 开关值不由本服务烘焙：公共函数运行时读 settings.json，改设置即时生效，无需重写 $PROFILE。
 /// 标记块放在 PAM-Custom 之外，避免被 CustomCommandService 整块重写。
@@ -24,40 +31,57 @@ public static class AliasLaunchService
 
     private static readonly string[] HelperFunctionLines =
     [
-        "function Invoke-PamAlias {",
-        "    param(",
-        "        [string] $Path,",
-        "        [string] $Remark,",
-        "        [string[]] $Rest",
-        "    )",
-        "    $enhanced = $true",
-        "    $showRemark = $true",
-        "    try {",
-        "        $configPath = Join-Path $env:APPDATA 'PAM\\settings.json'",
-        "        if (Test-Path -LiteralPath $configPath) {",
-        "            $cfg = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json",
-        "            if ($null -ne $cfg.aliasLaunchEnhanced) { $enhanced = [bool] $cfg.aliasLaunchEnhanced }",
-        "            if ($null -ne $cfg.showAliasRemarkOnLaunch) { $showRemark = [bool] $cfg.showAliasRemarkOnLaunch }",
-        "        }",
-        "    } catch { }",
-        "    if ($showRemark -and $Remark) { Write-Host $Remark -ForegroundColor Cyan }",
-        "    if ($enhanced) {",
-        "        # Start-Process 仍是父 PowerShell 的子进程，会继承同一个控制台；Electron 等程序",
-        "        # 把自己的日志写到 stdout/stderr，所以必须把这两个流重定向到 NUL 设备才真正静默。",
-        "        # PowerShell 不允许 stdout / stderr 指向同一路径，故用 'NUL' 与 '\\\\.\\NUL' 两个写法。",
-        "        try {",
-        "            if ($Rest) { Start-Process -FilePath $Path -ArgumentList $Rest -RedirectStandardOutput 'NUL' -RedirectStandardError '\\\\.\\NUL' -ErrorAction Stop }",
-        "            else { Start-Process -FilePath $Path -RedirectStandardOutput 'NUL' -RedirectStandardError '\\\\.\\NUL' -ErrorAction Stop }",
-        "        } catch {",
-        "            # 需要 UAC 提升 / 非 exe 目标在 UseShellExecute=false 下会失败，退回普通启动。",
-        "            if ($Rest) { Start-Process -FilePath $Path -ArgumentList $Rest }",
-        "            else { Start-Process -FilePath $Path }",
-        "        }",
-        "    } else {",
-        "        if ($Rest) { & $Path @Rest }",
-        "        else { & $Path }",
-        "    }",
-        "}",
+        @"function Invoke-PamAlias {",
+        @"    param(",
+        @"        [string] $Path,",
+        @"        [string] $Remark,",
+        @"        [string[]] $Rest",
+        @"    )",
+        @"    $enhanced = $true",
+        @"    $showRemark = $true",
+        @"    try {",
+        @"        $configPath = Join-Path $env:APPDATA 'PAM\settings.json'",
+        @"        if (Test-Path -LiteralPath $configPath) {",
+        @"            $cfg = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json",
+        @"            if ($null -ne $cfg.aliasLaunchEnhanced) { $enhanced = [bool] $cfg.aliasLaunchEnhanced }",
+        @"            if ($null -ne $cfg.showAliasRemarkOnLaunch) { $showRemark = [bool] $cfg.showAliasRemarkOnLaunch }",
+        @"        }",
+        @"    } catch { }",
+        @"    if ($showRemark -and $Remark) { Write-Host $Remark -ForegroundColor Cyan }",
+        @"    if (-not $enhanced) {",
+        @"        if ($Rest) { & $Path @Rest } else { & $Path }",
+        @"        return",
+        @"    }",
+        @"    # 无参数：直接把路径交给 explorer.exe，由它 ShellExecute 启动。",
+        @"    if (-not $Rest) {",
+        @"        if (Test-Path -LiteralPath $Path) {",
+        @"            try {",
+        @"                Start-Process -FilePath 'explorer.exe' -ArgumentList ('""' + $Path + '""') -ErrorAction Stop",
+        @"                return",
+        @"            } catch { }",
+        @"        }",
+        @"    } elseif (Test-Path -LiteralPath $Path) {",
+        @"        # 有参数：临时 .lnk 携带参数，同样由 explorer 代启动。文件名按路径固定，",
+        @"        # 每次覆盖复用、不删除，避免 explorer 异步读取时文件已被删掉。",
+        @"        try {",
+        @"            $lnk = Join-Path $env:TEMP ('pam-alias-' + [Math]::Abs($Path.GetHashCode()) + '.lnk')",
+        @"            $arguments = ($Rest | ForEach-Object {",
+        @"                if ($_.Contains(' ')) { '""' + $_ + '""' } else { $_ }",
+        @"            }) -join ' '",
+        @"            $shell = New-Object -ComObject WScript.Shell",
+        @"            $shortcut = $shell.CreateShortcut($lnk)",
+        @"            $shortcut.TargetPath = $Path",
+        @"            $shortcut.Arguments = $arguments",
+        @"            $shortcut.WorkingDirectory = Split-Path -Parent $Path",
+        @"            $shortcut.Save()",
+        @"            Start-Process -FilePath 'explorer.exe' -ArgumentList ('""' + $lnk + '""') -ErrorAction Stop",
+        @"            return",
+        @"        } catch { }",
+        @"    }",
+        @"    # 兜底：路径不存在 / COM 不可用 / explorer 失败时仍要能把程序拉起来。",
+        @"    if ($Rest) { Start-Process -FilePath $Path -ArgumentList $Rest }",
+        @"    else { Start-Process -FilePath $Path }",
+        @"}",
     ];
 
     /// <summary>按当前别名快照重写启动器块；空列表时整体移除。</summary>

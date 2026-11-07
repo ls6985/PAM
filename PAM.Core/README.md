@@ -26,9 +26,9 @@ function bili { Invoke-PamAlias -Path "C:\App\bili.exe" -Remark "哔哩哔哩" -
 # <<< PAM Alias Launcher <<<
 ```
 
-`Set-Alias` 行仍由 `ProfileService` 维护且保持不变：PowerShell 里 Alias 优先级高于 Function，所以块内先删同名别名、再定义同名函数才会生效。公共函数运行时读 `%AppData%\PAM\settings.json` 的 `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch`，决定是否用 `Start-Process` 独立启动以及是否 `Write-Host` 备注；改设置即时生效，无需重写 `$PROFILE`。
+`Set-Alias` 行仍由 `ProfileService` 维护且保持不变：PowerShell 里 Alias 优先级高于 Function，所以块内先删同名别名、再定义同名函数才会生效。公共函数运行时读 `%AppData%\PAM\settings.json` 的 `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch`，决定是否脱离终端启动以及是否 `Write-Host` 备注；改设置即时生效，无需重写 `$PROFILE`。
 
-**静默日志的关键**：`Start-Process` 的子进程仍挂在父 PowerShell 的控制台上，Electron 等程序写到 stdout/stderr 的日志照样刷屏，光换启动方式不够；增强模式因此把两个流重定向到 NUL 设备（`-RedirectStandardOutput 'NUL' -RedirectStandardError '\\.\NUL'`，PowerShell 不允许两者同路径所以用了两种写法），需要 UAC 提升而启动失败时 `catch` 里退回普通 `Start-Process`。这同时保证关闭终端不会连带关掉软件。注意 `$PROFILE` 只在终端启动时加载一次，保存别名后要**新开终端窗口**才生效。写入幂等，别名清空时整体移除区块，编码 / BOM / 换行原样保留。
+**关终端连带关闭的根因与解法**：`Start-Process` 只保证 PowerShell 不阻塞等待，子进程仍挂在终端的控制台 / 进程树里；Electron 等程序还会 `AttachConsole(ATTACH_PARENT_PROCESS)` 把日志刷回终端。把 stdout/stderr 重定向到 NUL 只能掐掉日志、改不了控制台归属。现在**借 explorer.exe 代启动**：explorer 不属于任何终端控制台，由它 ShellExecute 启动的程序父进程就是 explorer，完全脱离终端进程树 → 关终端无影响、日志自然不显示、UAC 提升照常，也不需要重定向（回到 ShellExecute 路径，实测启动耗时略快）。无参数时直接把 exe 路径交给 explorer；带参数时先用 `WScript.Shell` COM 生成一个临时 `.lnk`（文件名按路径 hash 固定、每次覆盖复用、不删除以免 explorer 异步读取时文件已消失），参数原样传入。COM / explorer / 路径不存在时 `catch` 退回普通 `Start-Process`。注意 `$PROFILE` 只在终端启动时加载一次，保存别名后要**新开终端窗口**才生效。写入幂等，别名清空时整体移除区块，编码 / BOM / 换行原样保留。
 
 ### 自定义命令（受控区块）
 
@@ -79,12 +79,14 @@ Invoke-Expression (&starship init powershell)
 | `ProfileService.cs` | 定位 `$PROFILE`（`ResolveProfilePath` 按终端解析并回报是否回退）、读写别名、`OpenProfileFile` 创建并打开配置文件、`LaunchPowerShell` 按终端启动 shell 并 dot-source 刚写入的配置 |
 | `ProfileFileStore.cs` | 底层文件读写：编码 / BOM、换行风格、原子替换，别名与自定义命令共用 |
 | `PamCustomRegion.cs` | 识别受控区块（含未闭合区块容错）与行掩码 |
-| `AliasLaunchService.cs` | 维护别名启动器自有标记块：同名函数包装 + `Invoke-PamAlias` 公共函数（独立进程 / stdout+stderr 重定向到 NUL 以静默日志 / 备注），开关由函数运行时读 settings.json |
+| `AliasLaunchService.cs` | 维护别名启动器自有标记块：同名函数包装 + `Invoke-PamAlias` 公共函数（explorer 代启动 / 带参数时临时 `.lnk` / 备注），开关由函数运行时读 settings.json |
 | `CustomCommandService.cs` | 受控区块内自定义命令的读写与名称校验 |
 | `Models/` | `AliasEntry`、`CustomCommandEntry`（状态文案经本地化服务翻译） |
 | `HotkeyChord.cs` | 与 UI 无关的全局热键模型（修饰键 + Win32 VK）、`Ctrl+Alt+T` 风格文本解析、系统保留组合表、常见软件快捷键提示 |
 | `ShellResolver.cs` | `pwsh` / `powershell` / `auto` → 实际 shell，并判断是否安装 PowerShell 7 |
 | `StarshipService.cs` | Starship 探测 / Scoop 与一键安装 / `starship.toml` 路径与备份恢复 / `$PROFILE` init 区块 / 内置主题预设（`Presets\*.toml` EmbeddedResource）。测试可注入配置路径 |
+| `StarshipPromptService.cs` | 自定义提示符：存**一整行** Starship format（不再是六段模型）+ `PromptPalette` 12 色色板 + `ParsePreview()` 预览解析；只替换顶层 `format`（自有标记块 `# >>> PAM Prompt >>>`），准确移除旧的 `"""\` 多行 format 而不动各段落内的同名局部 format，其余行 / 注释 / CRLF / 无 BOM UTF-8 原样保留。写入只做 TOML 双引号层转义，读回即编辑框原文，保证 `$`、`[`、`]`、`\`、引号可往返；`Validate()` 拒绝空 / 多行 / 非 `#RRGGBB` 颜色。独立备份 `.pam-prompt.bak` 只在首次写入时创建，`Restore()` 还原原始文件。不引入 TOML 库，配置即 toml 本身 |
+| `StarshipVariables.cs` | 精选 20 个 Starship 模块变量（取自 `starship module --list`），中文名 + 英文名称 + 四组分类 + 预览示例值；用户名 / 主机名 / 当前路径等动态值由 Starship 运行时读取，UI 只让"选"不让"填" |
 | `WindowsTerminalService.cs` | 定位 WT `settings.json`（Stable / Preview / Canary / 非打包），读写 `profiles.defaults.font.face`：JSONC 文本拼接保注释、写前备份、校验不过不落盘 |
 | `FontInstaller.cs` | 注册表枚举已装字体与等宽候选、内置字体是否已装、按当前用户安装 ttf（复制 + HKCU 注册 + 广播 `WM_FONTCHANGE`），免管理员权限 |
 | `TrayBridge.cs` | App 与 Tray 之间的命名事件（设置变更 / 请求退出）、托盘进程探测与启动 |

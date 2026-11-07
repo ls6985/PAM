@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 using PAM.Core;
 
@@ -17,7 +19,10 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
 {
     private const string BundledFontFileName = "CascadiaCodeNF.ttf";
 
+    private static readonly Regex HexInSelection = new(@"#[0-9A-Fa-f]{6}", RegexOptions.Compiled);
+
     private readonly StarshipService _starshipService = new();
+    private readonly StarshipPromptService _promptService = new();
     private readonly WindowsTerminalService _terminalService = new();
     private readonly ProfileService _profileService = new();
     private readonly Dispatcher _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
@@ -42,6 +47,19 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
     private string? _selectedFont;
     private string _selectedPresetId = string.Empty;
     private ObservableCollection<string> _fontOptions = [];
+
+    private bool _promptLoaded;
+    private bool _promptCustomized;
+    private bool _hasPromptBackup;
+    private string _promptConfigPath = string.Empty;
+    private string _promptStatusSource = "检测中…";
+    private string _promptFormat = string.Empty;
+    private string _currentColor = PromptPalette.Colors[0];
+    private string _variableSearchText = string.Empty;
+    private VariableOption? _selectedVariable;
+    private ObservableCollection<VariableOption> _filteredVariables = [];
+    private ObservableCollection<PromptPreviewItem> _promptPreviewParts = [];
+
 
     private string _feedbackSource = string.Empty;
     private object[] _feedbackArgs = [];
@@ -68,10 +86,81 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
         // 默认选中无需特殊字体的预设，保证"应用"之后立即可用。
         SelectedPresetId = _starshipService.GetPresets().FirstOrDefault(static p => !p.RequiresNerdFont)?.Id
             ?? string.Empty;
+        ApplyVariableFilter();
+        RefreshPromptState();
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
     }
 
     // --- 选项 ---
+
+    /// <summary>精选 20 个 Starship 变量（中文名 + 分组），供下拉「选一选」插入。</summary>
+    public IReadOnlyList<VariableOption> VariableOptions { get; } =
+        StarshipVariables.All.Select(static item => new VariableOption(item)).ToList();
+
+    /// <summary>按搜索词过滤后的变量下拉项。</summary>
+    public ObservableCollection<VariableOption> FilteredVariableOptions
+    {
+        get => _filteredVariables;
+        private set
+        {
+            _filteredVariables = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string VariableSearchText
+    {
+        get => _variableSearchText;
+        set
+        {
+            if (SetField(ref _variableSearchText, value ?? string.Empty)) ApplyVariableFilter();
+        }
+    }
+
+    public VariableOption? SelectedVariable
+    {
+        get => _selectedVariable;
+        set
+        {
+            _selectedVariable = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>当前颜色：插入变量 / 固定符号、给选中文字上色时都用它。</summary>
+    public string CurrentColor
+    {
+        get => _currentColor;
+        set => SetField(ref _currentColor, value ?? PromptPalette.Colors[0]);
+    }
+
+    /// <summary>颜色下拉的预设色板，选中项显示色块 + hex。</summary>
+    public IReadOnlyList<ColorOption> ColorOptions => ColorOption.Palette;
+
+    /// <summary>一行 Starship format 语法，用户可直接编辑整行。</summary>
+    public string PromptFormat
+    {
+        get => _promptFormat;
+        set
+        {
+            if (SetField(ref _promptFormat, value ?? string.Empty))
+            {
+                RebuildPreview();
+                OnPropertyChanged(nameof(CanApplyPrompt));
+            }
+        }
+    }
+
+    /// <summary>带色实时预览；变量显示示例值，实际文字由 Starship 运行时读取。</summary>
+    public ObservableCollection<PromptPreviewItem> PromptPreviewParts
+    {
+        get => _promptPreviewParts;
+        private set
+        {
+            _promptPreviewParts = value;
+            OnPropertyChanged();
+        }
+    }
 
     public IReadOnlyList<SettingOption> PresetOptions { get; private set; } = [];
 
@@ -130,6 +219,10 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(CanOpenToml));
             OnPropertyChanged(nameof(CanRestoreToml));
             OnPropertyChanged(nameof(CanRestoreWtBackup));
+            OnPropertyChanged(nameof(CanApplyPrompt));
+            OnPropertyChanged(nameof(CanRestorePrompt));
+        OnPropertyChanged(nameof(CanResetPrompt));
+            OnPropertyChanged(nameof(CanResetPrompt));
         }
     }
 
@@ -151,6 +244,11 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
         ? Loc.T("Windows Terminal 当前字体：未设置（跟随 WT 默认）")
         : Loc.F("Windows Terminal 当前字体：{0}", _currentWtFont);
 
+    public string PromptStatusText => Loc.T(_promptStatusSource);
+    public string PromptConfigPath => _promptConfigPath;
+    public bool PromptCustomized => _promptCustomized;
+    public bool HasPromptBackup => _hasPromptBackup;
+
     // Starship 官方建议先装好 Nerd Font 再启用，因此未选字体时不允许安装。
     // 只保留一键安装：Scoop 缺失时由 Core 自动先装 Scoop，不需要用户自己挑安装方式。
     public bool CanOneClickInstall => !IsBusy && !_isStarshipInstalled && HasFontSelection;
@@ -161,6 +259,9 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
     public bool CanOpenToml => !IsBusy;
     public bool CanRestoreToml => !IsBusy && _hasTomlBackup;
     public bool CanRestoreWtBackup => !IsBusy && _hasWtBackup;
+    public bool CanApplyPrompt => !IsBusy && !string.IsNullOrWhiteSpace(_promptFormat);
+    public bool CanRestorePrompt => !IsBusy && _hasPromptBackup;
+    public bool CanResetPrompt => !IsBusy;
 
     public string FeedbackKind => _feedbackType.ToString();
 
@@ -208,6 +309,7 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
 
             RebuildFontOptions(candidates, wtState.CurrentFont, bundledInstalled);
             RebuildPresetOptions();
+            RefreshPromptState();
 
             RaiseStatusChanged();
         }
@@ -294,6 +396,138 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CanOpenToml));
         OnPropertyChanged(nameof(CanRestoreToml));
         OnPropertyChanged(nameof(CanRestoreWtBackup));
+        RaisePromptChanged();
+    }
+
+    // --- 自定义提示符 ---
+
+    /// <summary>
+    /// 刷新提示符状态。默认只更新状态字段、不覆盖输入框：用户可能正在编辑但还没点应用，
+    /// 此时做一次"重新检测"不应把输入冲掉；forceReload 留给"恢复应用前配置"。
+    /// </summary>
+    private void RefreshPromptState(bool forceReload = false)
+    {
+        var state = _promptService.Read();
+        _promptConfigPath = state.ConfigPath;
+        _promptCustomized = state.Customized;
+        _hasPromptBackup = state.HasBackup;
+        _promptStatusSource = !state.ConfigExists
+            ? "starship.toml 尚未创建，应用后会自动生成"
+            : state.Customized
+                ? "当前提示符由 PowerShell 管理器接管"
+                : "当前使用原有提示符配置（尚未应用过自定义）";
+
+        if (forceReload || !_promptLoaded)
+        {
+            PromptFormat = state.Format;
+            _promptLoaded = true;
+        }
+
+        RaisePromptChanged();
+    }
+
+    private void RaisePromptChanged()
+    {
+        OnPropertyChanged(nameof(PromptStatusText));
+        OnPropertyChanged(nameof(PromptConfigPath));
+        OnPropertyChanged(nameof(PromptCustomized));
+        OnPropertyChanged(nameof(HasPromptBackup));
+        OnPropertyChanged(nameof(CanApplyPrompt));
+        OnPropertyChanged(nameof(CanRestorePrompt));
+        OnPropertyChanged(nameof(PromptFormat));
+        OnPropertyChanged(nameof(PromptPreviewParts));
+        OnPropertyChanged(nameof(CurrentColor));
+    }
+
+    /// <summary>按搜索词过滤变量下拉；整体换新集合，避免 ComboBox 显示空白。</summary>
+    private void ApplyVariableFilter()
+    {
+        var query = _variableSearchText.Trim();
+        var matched = VariableOptions.Where(item => item.Matches(query)).ToList();
+        FilteredVariableOptions = new ObservableCollection<VariableOption>(matched);
+        // 没有选中项（首次进入 / 搜索把原选中项过滤掉）时自动落到第一项，
+        // 否则下拉看着是空的、点「添加」也没有任何反应。
+        if (_selectedVariable is null || !matched.Contains(_selectedVariable))
+        {
+            SelectedVariable = matched.FirstOrDefault();
+        }
+    }
+
+    private void RebuildPreview()
+        => PromptPreviewParts = new ObservableCollection<PromptPreviewItem>(
+            StarshipPromptService.ParsePreview(_promptFormat)
+                .Select(static part => new PromptPreviewItem(part.Text, part.Color)));
+
+
+    /// <summary>把当前选中的变量包成一段带当前颜色的 Starship format。</summary>
+    public string BuildVariableSnippet()
+        => SelectedVariable is null
+            ? string.Empty
+            : $"[{SelectedVariable.Variable}](fg:{CurrentColor})";
+
+    /// <summary>把一段固定文字（@ : ~ $ 空格等）包成带当前颜色的 format 片段。</summary>
+    public string BuildLiteralSnippet(string text)
+        => $"[{EscapeStarshipLiteral(text)}](fg:{CurrentColor})";
+
+    /// <summary>给选区重新上色：已有 #RRGGBB 就替换颜色，否则把选区整段包成一个块。</summary>
+    public string ColorizeSelection(string selected)
+    {
+        if (string.IsNullOrEmpty(selected)) return selected;
+        return HexInSelection.IsMatch(selected)
+            ? HexInSelection.Replace(selected, CurrentColor)
+            : BuildLiteralSnippet(selected);
+    }
+
+    private static string EscapeStarshipLiteral(string text)
+        => text
+            .Replace("\\", @"\\", StringComparison.Ordinal)
+            .Replace("[", @"\[", StringComparison.Ordinal)
+            .Replace("]", @"\]", StringComparison.Ordinal)
+            .Replace("$", @"\$", StringComparison.Ordinal);
+
+    public async Task ApplyPromptAsync()
+    {
+        var format = _promptFormat;
+        await RunBusyAsync(
+            "正在写入自定义提示符…",
+            () => _promptService.Apply(format),
+            static _ => new[]
+            {
+                (StatusType.Saved, "自定义提示符已写入 starship.toml，原配置已单独备份；打开新终端即可看到效果。"),
+            });
+    }
+
+    public async Task RestorePromptAsync()
+    {
+        await RunBusyAsync(
+            "正在恢复应用前的提示符配置…",
+            () => _promptService.Restore(),
+            static restored => new[]
+            {
+                restored
+                    ? (StatusType.Saved, "已恢复应用前的 starship.toml，自定义提示符已移除。")
+                    : ((StatusType.Warning, "没有可恢复的应用前备份。")),
+            });
+
+        RefreshPromptState(forceReload: true);
+    }
+
+    /// <summary>只把编辑框重置为默认值，不写文件；需要再点"应用到 Starship"。</summary>
+    public void ResetPrompt()
+    {
+        string? original = null;
+        try
+        {
+            var backup = _promptService.GetBackupPath();
+            if (File.Exists(backup)) original = File.ReadAllText(backup);
+        }
+        catch (IOException)
+        {
+            // 读不到备份就退回内置配色，不影响重置。
+        }
+
+        PromptFormat = StarshipPromptService.CreateDefaultFormat(original);
+        SetFeedback(StatusType.Info, "已重置为默认内容，点击“应用到 Starship”才会写入。");
     }
 
     // --- Starship 安装 ---
@@ -497,6 +731,13 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
             option.Refresh();
         }
 
+        foreach (var option in VariableOptions)
+        {
+            option.Refresh();
+        }
+
+
+        ApplyVariableFilter();
         RaiseStatusChanged();
         FeedbackMessage = Loc.F(_feedbackSource, _feedbackArgs);
     }
@@ -513,4 +754,91 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+/// <summary>颜色下拉的一项：hex 值 + 可直接绑定到 Rectangle.Fill 的画刷。</summary>
+public sealed class ColorOption
+{
+    /// <summary>共享色板：六段编辑行与预览都用同一份，避免每行各建一份集合。</summary>
+    public static IReadOnlyList<ColorOption> Palette { get; } =
+        PromptPalette.Colors.Select(static hex => new ColorOption(hex)).ToList();
+
+    public ColorOption(string hex)
+    {
+        Hex = hex;
+        Brush = CreateBrush(hex);
+    }
+
+    public string Hex { get; }
+
+    public SolidColorBrush Brush { get; }
+
+    public static SolidColorBrush CreateBrush(string hex)
+    {
+        try
+        {
+            var color = (Color)ColorConverter.ConvertFromString(hex)!;
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+            return brush;
+        }
+        catch
+        {
+            var brush = new SolidColorBrush(Colors.White);
+            brush.Freeze();
+            return brush;
+        }
+    }
+}
+
+/// <summary>变量下拉的一项：中文名 + 分组 + 变量名，语言切换时刷新显示名。</summary>
+public sealed class VariableOption : INotifyPropertyChanged
+{
+    private readonly StarshipVariableDefinition _definition;
+
+    public VariableOption(StarshipVariableDefinition definition) => _definition = definition;
+
+    public string Variable => _definition.Variable;
+
+    public string DisplayName => IsEnglish
+        ? $"{_definition.GroupEn} · {_definition.NameEn}"
+        : $"{_definition.GroupZh} · {_definition.NameZh}";
+
+    public string ToolTipText => $"{_definition.Variable} · {_definition.Sample}";
+
+    public bool Matches(string query)
+        => string.IsNullOrEmpty(query)
+           || _definition.NameZh.Contains(query, StringComparison.OrdinalIgnoreCase)
+           || _definition.NameEn.Contains(query, StringComparison.OrdinalIgnoreCase)
+           || _definition.GroupZh.Contains(query, StringComparison.OrdinalIgnoreCase)
+           || _definition.GroupEn.Contains(query, StringComparison.OrdinalIgnoreCase)
+           || _definition.Variable.Contains(query, StringComparison.OrdinalIgnoreCase);
+
+    public void Refresh() => OnPropertyChanged(nameof(DisplayName));
+
+    private static bool IsEnglish => string.Equals(
+        Loc.Service.Language, AppSettings.LanguageEnUS, StringComparison.OrdinalIgnoreCase);
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+
+/// <summary>预览中的一段带色文字；没有指定颜色时用终端风格的浅灰。</summary>
+public sealed class PromptPreviewItem
+{
+    public PromptPreviewItem(string text, string? color)
+    {
+        Text = text;
+        Color = color;
+        Brush = ColorOption.CreateBrush(color ?? "#D4D4D4");
+    }
+
+    public string Text { get; }
+
+    public string? Color { get; }
+
+    public SolidColorBrush Brush { get; }
 }

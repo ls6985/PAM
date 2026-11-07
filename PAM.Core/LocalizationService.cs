@@ -459,6 +459,41 @@ public sealed class LocalizationService
             "Unexpected settings.json structure; cannot modify automatically.",
         ["写入后校验未通过，已保持原配置不变。"] =
             "Post-write validation failed; the original file was kept unchanged.",
+
+        // ---------------- 美化页：自定义提示符 ----------------
+        ["自定义提示符"] = "Custom prompt",
+        ["把 Black@DESKTOP-J64G5VA :~ $ 拆成六段，每段可单独改文字和颜色；文字里的空格也算内容，可以直接在输入框里加。应用时只替换 starship.toml 的顶层 format，其余配置原样保留。"] =
+            "Split Black@DESKTOP-J64G5VA :~ $ into six segments, each with its own text and color. Applying only replaces the top-level format in starship.toml and keeps everything else untouched.",
+        ["用户名、主机名、当前路径等是 Starship 读取到的值，不用手填：从下面的下拉里选一个变量插入即可；@ : ~ $ 这些固定符号也能插入，颜色单独选。整行格式可以直接编辑，应用时只替换 starship.toml 的顶层 format，其余配置原样保留。"] =
+            "Values such as the username, hostname and current directory are read by Starship at runtime: pick a variable from the dropdown instead of typing them. Fixed symbols like @ : ~ $ can be inserted too, with their own colors. Edit the whole format line directly. Applying only replaces the top-level format in starship.toml and keeps everything else untouched.",
+        ["预览为示意值，实际文字由 Starship 按系统状态生成（切换目录时路径会跟着变）。"] =
+            "The preview uses sample values; Starship generates the real text from system state (the path follows cd).",
+        ["格式（一整行 Starship format）"] = "Format (a single Starship format line)",
+        ["搜索变量"] = "Search variables",
+        ["插入变量"] = "Insert variable",
+        ["给选中文字上色"] = "Colorize selection",
+        ["当前颜色"] = "Current color",
+        ["插入固定符号"] = "Insert fixed symbol",
+        ["空格"] = "Space",
+        ["用户名"] = "Username",
+        ["主机名"] = "Hostname",
+        ["冒号"] = "Colon",
+        ["结束符"] = "Tail",
+        ["重置为默认"] = "Reset to defaults",
+        ["恢复应用前配置"] = "Restore pre-apply config",
+        ["应用到 Starship"] = "Apply to Starship",
+        ["starship.toml 尚未创建，应用后会自动生成"] = "starship.toml does not exist yet; applying will create it",
+        ["当前提示符由 PowerShell 管理器接管"] = "The prompt is currently managed by PowerShell Manager",
+        ["当前使用原有提示符配置（尚未应用过自定义）"] = "Using the original prompt (custom prompt not applied yet)",
+        ["正在写入自定义提示符…"] = "Writing the custom prompt...",
+        ["自定义提示符已写入 starship.toml，原配置已单独备份；打开新终端即可看到效果。"] =
+            "Custom prompt written to starship.toml with a separate backup of the original config. Open a new terminal to see it.",
+        ["正在恢复应用前的提示符配置…"] = "Restoring the pre-apply prompt config...",
+        ["已恢复应用前的 starship.toml，自定义提示符已移除。"] =
+            "Restored the original starship.toml; the custom prompt has been removed.",
+        ["没有可恢复的应用前备份。"] = "No pre-apply backup to restore.",
+        ["已重置为默认内容，点击“应用到 Starship”才会写入。"] =
+            "Defaults restored in the editor. Click \"Apply to Starship\" to write them.",
     };
 
     private string _language = AppSettings.LanguageZhCN;

@@ -229,6 +229,200 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 自定义提示符 -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="自定义提示符" Style="{StaticResource CardTitleStyle}" />
+                        <TextBlock
+                            Margin="0,6,0,0"
+                            Text="用户名、主机名、当前路径等是 Starship 读取到的值，不用手填：从下面的下拉里选一个变量插入即可；@ : ~ $ 这些固定符号也能插入，颜色单独选。整行格式可以直接编辑，应用时只替换 starship.toml 的顶层 format，其余配置原样保留。"
+                            Style="{StaticResource SettingHintStyle}" />
+
+                        <!-- 实时预览（深色底模拟终端） -->
+                        <Border
+                            Margin="0,12,0,0"
+                            Padding="12,10"
+                            Background="#1E1E1E"
+                            CornerRadius="6">
+                            <ItemsControl Focusable="False" ItemsSource="{Binding PromptPreviewParts}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock
+                                            FontFamily="{StaticResource MonoFontFamily}"
+                                            FontSize="14"
+                                            Foreground="{Binding Brush}"
+                                            Text="{Binding Text}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Text="预览为示意值，实际文字由 Starship 按系统状态生成（切换目录时路径会跟着变）。"
+                            Style="{StaticResource SettingHintStyle}" />
+
+                        <!-- 一整行 format 编辑器 -->
+                        <TextBlock
+                            Margin="0,12,0,0"
+                            Style="{StaticResource SettingLabelStyle}"
+                            Text="格式（一整行 Starship format）" />
+                        <TextBox
+                            x:Name="PromptFormatBox"
+                            Padding="8,6"
+                            AcceptsReturn="False"
+                            FontFamily="{StaticResource MonoFontFamily}"
+                            FontSize="12"
+                            HorizontalScrollBarVisibility="Auto"
+                            Text="{Binding PromptFormat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            TextWrapping="NoWrap"
+                            VerticalScrollBarVisibility="Disabled" />
+
+                        <!-- 变量下拉 + 插入 + 选中文字上色 -->
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="160" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox
+                                Grid.Column="0"
+                                PlaceholderText="搜索变量"
+                                Text="{Binding VariableSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <ComboBox
+                                Grid.Column="1"
+                                Margin="8,0,0,0"
+                                DisplayMemberPath="DisplayName"
+                                ItemsSource="{Binding FilteredVariableOptions}"
+                                SelectedItem="{Binding SelectedVariable, Mode=TwoWay}"
+                                ToolTip="{Binding SelectedVariable.ToolTipText}" />
+                            <ui:Button
+                                Grid.Column="2"
+                                Margin="8,0,0,0"
+                                Appearance="Secondary"
+                                Click="InsertVariableButton_Click"
+                                Content="插入变量" />
+                            <ui:Button
+                                Grid.Column="3"
+                                Margin="8,0,0,0"
+                                Appearance="Secondary"
+                                Click="ColorizeButton_Click"
+                                Content="给选中文字上色" />
+                        </Grid>
+
+                        <!-- 当前颜色 + 固定符号 -->
+                        <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                            <TextBlock
+                                Margin="0,0,8,0"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource SettingLabelStyle}"
+                                Text="当前颜色" />
+                            <ComboBox
+                                Width="160"
+                                ItemsSource="{Binding ColorOptions}"
+                                SelectedValue="{Binding CurrentColor, Mode=TwoWay}"
+                                SelectedValuePath="Hex">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Rectangle
+                                                Width="14"
+                                                Height="14"
+                                                Margin="0,0,8,0"
+                                                RadiusX="3"
+                                                RadiusY="3"
+                                                Fill="{Binding Brush}" />
+                                            <TextBlock
+                                                FontFamily="{StaticResource MonoFontFamily}"
+                                                FontSize="12"
+                                                Text="{Binding Hex}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock
+                                Margin="14,0,8,0"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource SettingLabelStyle}"
+                                Text="插入固定符号" />
+                            <Button
+                                MinWidth="34"
+                                Margin="0,0,6,0"
+                                Padding="8,4"
+                                Click="SymbolButton_Click"
+                                Content="@"
+                                FontFamily="{StaticResource MonoFontFamily}"
+                                Tag="@" />
+                            <Button
+                                MinWidth="34"
+                                Margin="0,0,6,0"
+                                Padding="8,4"
+                                Click="SymbolButton_Click"
+                                Content=":"
+                                FontFamily="{StaticResource MonoFontFamily}"
+                                Tag=":" />
+                            <Button
+                                MinWidth="34"
+                                Margin="0,0,6,0"
+                                Padding="8,4"
+                                Click="SymbolButton_Click"
+                                Content="~"
+                                FontFamily="{StaticResource MonoFontFamily}"
+                                Tag="~" />
+                            <Button
+                                MinWidth="34"
+                                Margin="0,0,6,0"
+                                Padding="8,4"
+                                Click="SymbolButton_Click"
+                                Content="$"
+                                FontFamily="{StaticResource MonoFontFamily}"
+                                Tag="$" />
+                            <Button
+                                Margin="0,0,6,0"
+                                Padding="8,4"
+                                Click="SymbolButton_Click"
+                                Content="空格"
+                                Tag="__space__" />
+                        </StackPanel>
+
+                        <StackPanel Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <ui:Button
+                                Appearance="Secondary"
+                                Click="ResetPromptButton_Click"
+                                Content="重置为默认"
+                                Icon="{ui:SymbolIcon ArrowReset24}"
+                                IsEnabled="{Binding CanResetPrompt}" />
+                            <ui:Button
+                                Margin="8,0,0,0"
+                                Appearance="Secondary"
+                                Click="RestorePromptButton_Click"
+                                Content="恢复应用前配置"
+                                Icon="{ui:SymbolIcon ArrowReset24}"
+                                IsEnabled="{Binding CanRestorePrompt}" />
+                            <ui:Button
+                                Margin="8,0,0,0"
+                                Appearance="Primary"
+                                Click="ApplyPromptButton_Click"
+                                Content="应用到 Starship"
+                                Icon="{ui:SymbolIcon CheckmarkCircle24}"
+                                IsEnabled="{Binding CanApplyPrompt}" />
+                        </StackPanel>
+
+                        <TextBlock Margin="0,8,0,0" Style="{StaticResource SettingHintStyle}" Text="{Binding PromptStatusText}" />
+                        <TextBlock
+                            FontFamily="{StaticResource MonoFontFamily}"
+                            Style="{StaticResource SettingHintStyle}"
+                            Text="{Binding PromptConfigPath}"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTip="{Binding PromptConfigPath}" />
+                    </StackPanel>
+                </Border>
+
                 <!-- 配置维护 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>

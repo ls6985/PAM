@@ -59,11 +59,16 @@ public sealed class AliasLaunchServiceTests : IDisposable
         Assert.Contains("Set-Alias -Name bili -Value \"C:\\App\\bili.exe\"", text);
         Assert.Contains("aliasLaunchEnhanced", text);
         Assert.Contains("showAliasRemarkOnLaunch", text);
-        // 增强模式必须把子进程 stdout/stderr 指向 NUL，否则 Electron 日志仍会刷到终端；
-        // 两个路径不能相同（Start-Process 会直接报「RedirectStandardOutput 和 RedirectStandardError 相同」）。
-        Assert.Contains("-RedirectStandardOutput 'NUL'", text);
-        Assert.Contains("-RedirectStandardError '\\\\.\\NUL'", text);
-        Assert.Contains("catch {", text); // 需要 UAC 提升时退回普通启动
+        // 增强模式必须把子进程挪出终端进程树：无参数交给 explorer.exe，带参数用临时 .lnk 再交给 explorer。
+        // 重定向 NUL 只能掐掉日志、改不了控制台归属，所以新版不再使用它。
+        Assert.Contains("Start-Process -FilePath 'explorer.exe'", text);
+        Assert.Contains("New-Object -ComObject WScript.Shell", text);
+        Assert.Contains("'.lnk'", text);
+        Assert.Contains("catch {", text); // COM / explorer 失败时退回普通启动
+        Assert.DoesNotContain("-RedirectStandardOutput", text);
+        Assert.DoesNotContain("NUL", text);
+        // 开关关闭时恢复原来的直接启动。
+        Assert.Contains("& $Path @Rest", text);
     }
 
     [Fact]
