@@ -7,6 +7,8 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     d:DesignHeight="700"
     d:DesignWidth="900"
+    Focusable="False"
+    FocusVisualStyle="{x:Null}"
     Loaded="View_Loaded"
     Unloaded="View_Unloaded"
     mc:Ignorable="d">
@@ -44,6 +46,8 @@
 
     <Grid Margin="0,4,0,0">
         <ScrollViewer
+            Focusable="False"
+            FocusVisualStyle="{x:Null}"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,10,0">
@@ -225,29 +229,50 @@
                                     </Grid>
                                 </Border>
 
-                                <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                                <!-- 四个按钮横排会超出 320 列宽、最后一个被裁掉；改成 2×2 等宽。 -->
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="8" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
                                     <ui:Button
+                                        Grid.Row="0"
+                                        Grid.Column="0"
+                                        HorizontalAlignment="Stretch"
                                         Click="ChangeHotkeyButton_Click"
                                         Content="更改…"
                                         Icon="{ui:SymbolIcon Keyboard24}" />
                                     <ui:Button
-                                        Margin="8,0,0,0"
+                                        Grid.Row="0"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Stretch"
                                         Appearance="Secondary"
                                         Click="RestoreHotkeyButton_Click"
                                         Content="恢复默认" />
                                     <ui:Button
-                                        Margin="8,0,0,0"
+                                        Grid.Row="2"
+                                        Grid.Column="0"
+                                        HorizontalAlignment="Stretch"
                                         Appearance="Secondary"
                                         Click="CheckHotkeyButton_Click"
                                         Content="检测冲突"
                                         IsEnabled="{Binding CanCheckHotkey}" />
                                     <ui:Button
-                                        Margin="8,0,0,0"
+                                        Grid.Row="2"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Stretch"
                                         Appearance="Primary"
                                         Click="ApplyHotkeyButton_Click"
                                         Content="应用热键"
                                         IsEnabled="{Binding CanApplyHotkey}" />
-                                </StackPanel>
+                                </Grid>
                             </StackPanel>
                         </Grid>
 

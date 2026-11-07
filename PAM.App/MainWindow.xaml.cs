@@ -472,6 +472,15 @@ public partial class MainWindow : FluentWindow
 
         _lastSelectedTab = MainTabs.SelectedItem as TabViewItem;
 
+        // 切页后把键盘焦点收回到页签标题：内容区（尤其带 ScrollViewer 的美化 / 设置页）
+        // 不该因为整块获得焦点而出现一个包住全部内容的焦点框。用户随后点击输入框或按钮
+        // 仍会正常重新获得焦点，窗口级快捷键也不受影响。
+        if (_lastSelectedTab is not null)
+        {
+            var selectedTab = _lastSelectedTab;
+            Dispatcher.BeginInvoke(new Action(() => { selectedTab.Focus(); }), DispatcherPriority.Input);
+        }
+
         if (IsAliasTabSelected)
         {
             ShowRestingStatus();

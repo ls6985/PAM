@@ -99,9 +99,8 @@
     </Style>
 
     <!--
-        顶部导航页签：圆角矩形，配色沿用本工具既有约定——
-        常态用卡片底色 + 卡片描边（同路径卡片），选中用中性底 + 强调色描边（同设置页热键录入框），
-        不用强调色整块填充，避免和界面其余部分脱节。
+        顶部导航页签：圆角矩形。常态无描边、次要文字；选中时换成低饱和强调色底 +
+        强调色描边 + 主文字色，和主按钮同一套强调色体系，深浅色主题下都能一眼看出选中项。
     -->
     <Style
         x:Key="NavTabItemStyle"
@@ -110,7 +109,7 @@
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Padding" Value="14,0" />
         <!-- 尺寸与间距只能放在模板内部的 Border 上：WPF-UI 的 TabView 模板硬编码 TabPanel 作 items host
@@ -164,8 +163,8 @@
                             <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
-                            <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource AccentFillColorSecondaryBrush}" />
                             <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">

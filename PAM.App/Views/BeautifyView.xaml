@@ -7,6 +7,8 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     d:DesignHeight="700"
     d:DesignWidth="900"
+    Focusable="False"
+    FocusVisualStyle="{x:Null}"
     Loaded="View_Loaded"
     mc:Ignorable="d">
 
@@ -44,6 +46,8 @@
 
     <Grid Margin="0,4,0,0">
         <ScrollViewer
+            Focusable="False"
+            FocusVisualStyle="{x:Null}"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,10,0">
@@ -88,22 +92,24 @@
                                     ItemsSource="{Binding FontOptions}"
                                     SelectedItem="{Binding SelectedFont, Mode=TwoWay}"
                                     ToolTip="{Binding WtSettingsPath}" />
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                                    <ui:Button
-                                        Appearance="Secondary"
-                                        Click="InstallBundledFontButton_Click"
-                                        Content="安装内置字体"
-                                        Icon="{ui:SymbolIcon FontIncrease24}"
-                                        IsEnabled="{Binding CanInstallBundledFont}"
-                                        ToolTip="把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。" />
-                                    <ui:Button
-                                        Margin="8,0,0,0"
-                                        Appearance="Primary"
-                                        Click="ApplyFontButton_Click"
-                                        Content="应用到 Windows Terminal"
-                                        Icon="{ui:SymbolIcon PaintBrush24}"
-                                        IsEnabled="{Binding CanApplyFont}" />
-                                </StackPanel>
+                                <!-- 两个按钮横排会超出 320 列宽，右对齐时左端会被裁掉；改成各占一行。 -->
+                                <ui:Button
+                                    Margin="0,8,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    Appearance="Secondary"
+                                    Click="InstallBundledFontButton_Click"
+                                    Content="安装内置字体"
+                                    Icon="{ui:SymbolIcon FontIncrease24}"
+                                    IsEnabled="{Binding CanInstallBundledFont}"
+                                    ToolTip="把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。" />
+                                <ui:Button
+                                    Margin="0,8,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    Appearance="Primary"
+                                    Click="ApplyFontButton_Click"
+                                    Content="应用到 Windows Terminal"
+                                    Icon="{ui:SymbolIcon PaintBrush24}"
+                                    IsEnabled="{Binding CanApplyFont}" />
                             </StackPanel>
 
                             <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
