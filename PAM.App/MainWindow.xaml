@@ -47,6 +47,7 @@
                 Background="Transparent"
                 BorderThickness="0"
                 ItemContainerStyle="{StaticResource NavTabItemStyle}"
+                PreviewMouseLeftButtonDown="MainTabs_PreviewMouseLeftButtonDown"
                 SelectionChanged="MainTabs_SelectionChanged">
 
                 <!-- ===================== 页 1：别名管理 ===================== -->
@@ -210,7 +211,6 @@
                                         <TextBlock Text="别名（必填）" Style="{StaticResource FieldLabelStyle}" />
                                         <ui:TextBox
                                             x:Name="AliasField"
-                                            IsEnabled="{Binding IsAliasFieldEnabled}"
                                             PlaceholderText="例如 blbl"
                                             Text="{Binding EditorAlias, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
@@ -450,9 +450,27 @@
                             <ui:SymbolIcon
                                 Margin="0,0,6,0"
                                 FontSize="14"
+                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type ui:TabViewItem}}}"
                                 Symbol="Wand24"
                                 VerticalAlignment="Center" />
-                            <TextBlock Text="美化" VerticalAlignment="Center" />
+                            <TextBlock Text="美化" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <!-- 自定义 Header 不参与页签模板的 Foreground 触发，
+                                         这里显式跟随选中态，避免常态一直显示成禁用灰。 -->
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontSize" Value="13" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ui:TabViewItem}}}"
+                                                Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </ui:TabViewItem.Header>
                     <views:BeautifyView DataContext="{Binding Beautify}" />

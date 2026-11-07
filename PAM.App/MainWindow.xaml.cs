@@ -179,9 +179,10 @@ public partial class MainWindow : FluentWindow
 
     private void FocusInvalidEditorField()
     {
-        if (ViewModel.IsAliasFieldEnabled) { AliasField.Focus(); AliasField.SelectAll(); return; }
-        PathField.Focus();
-        PathField.SelectAll();
+        // 别名和路径都可编辑，按 ViewModel 标记的出错字段把光标放到对应输入框。
+        if (ViewModel.EditorErrorField == "Path") { PathField.Focus(); PathField.SelectAll(); return; }
+        AliasField.Focus();
+        AliasField.SelectAll();
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e)
@@ -418,6 +419,39 @@ public partial class MainWindow : FluentWindow
     /// <summary>当前选中的是否为“别名管理”页签。</summary>
     private bool IsAliasTabSelected => ReferenceEquals(MainTabs.SelectedItem, AliasTab);
 
+    /// <summary>上一次选中的页签，用于“无选中”时兜底恢复。</summary>
+    private TabViewItem? _lastSelectedTab;
+
+    /// <summary>
+    /// 页签选中态由模板里的 ToggleButton 双向绑定：再次点击已选中的页签会把勾选取消，
+    /// 整个 TabView 变成无选中项、内容区空白。这里直接吃掉这类点击，保证“点击 = 选中”。
+    /// </summary>
+    private void MainTabs_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source) return;
+
+        // 只认模板里名为 HeaderBorder 的页签标题区域：内容区的点击必须照常传递，
+        // 否则页面里的按钮会被一起吃掉。
+        DependencyObject? current = source;
+        var clickedHeader = false;
+        TabViewItem? clickedTab = null;
+
+        while (current is not null && !ReferenceEquals(current, MainTabs))
+        {
+            if (current is FrameworkElement { Name: "HeaderBorder" }) clickedHeader = true;
+            if (current is TabViewItem tab) { clickedTab = tab; break; }
+
+            current = current is Visual visual
+                ? VisualTreeHelper.GetParent(visual)
+                : LogicalTreeHelper.GetParent(current);
+        }
+
+        if (clickedHeader && clickedTab is { IsSelected: true } && MainTabs.Items.Contains(clickedTab))
+        {
+            e.Handled = true;
+        }
+    }
+
     /// <summary>切换页签时把状态栏同步成对应页签的上下文，避免显示上一个页签的统计。</summary>
     private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -425,6 +459,18 @@ public partial class MainWindow : FluentWindow
         {
             return;
         }
+
+        // 兜底：不论因为鼠标、键盘还是代码造成“没有选中任何页签”，都立刻恢复上一次的页签，
+        // 内容区永远不会空白（正常情况下点击拦截已在 PreviewMouseLeftButtonDown 生效）。
+        if (MainTabs.SelectedItem is null)
+        {
+            var restore = _lastSelectedTab ?? AliasTab;
+            restore.IsSelected = true;
+            MainTabs.SelectedItem = restore;
+            return;
+        }
+
+        _lastSelectedTab = MainTabs.SelectedItem as TabViewItem;
 
         if (IsAliasTabSelected)
         {

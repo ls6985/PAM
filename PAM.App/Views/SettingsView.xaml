@@ -330,7 +330,7 @@
                             <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="关闭管理器时保留后台托盘" Style="{StaticResource SettingLabelStyle}" />
                                 <TextBlock
-                                    Text="开启后关闭窗口仍可使用全局热键与托盘菜单；关闭则一并退出后台进程。"
+                                    Text="关闭后台托盘后，全局热键立即失效（无法用快捷键唤起终端），托盘菜单也会消失；下次打开管理器或点“立即启动”才会恢复。"
                                     Style="{StaticResource SettingHintStyle}" />
                             </StackPanel>
                             <ui:ToggleSwitch

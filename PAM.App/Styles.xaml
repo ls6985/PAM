@@ -140,15 +140,19 @@
                             Background="Transparent"
                             BorderThickness="0"
                             Content="{Binding Header, RelativeSource={RelativeSource TemplatedParent}}"
+                            Foreground="{TemplateBinding Foreground}"
                             Focusable="False"
                             FocusVisualStyle="{x:Null}"
                             IsChecked="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="{x:Type ToggleButton}">
                                     <Border Background="Transparent">
+                                        <!-- 自定义 Header（例如“美化”页签的图标 + 文字）也走继承，
+                                             否则它拿不到页签的常态 / 选中态前景色，看起来像被禁用。 -->
                                         <ContentPresenter
                                             HorizontalAlignment="Center"
-                                            VerticalAlignment="Center" />
+                                            VerticalAlignment="Center"
+                                            TextElement.Foreground="{TemplateBinding Foreground}" />
                                     </Border>
                                 </ControlTemplate>
                             </ToggleButton.Template>

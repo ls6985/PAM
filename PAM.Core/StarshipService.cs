@@ -189,7 +189,7 @@ public sealed class StarshipService
     // --- 安装 ---
 
     /// <summary>
-    /// 用 Scoop 安装 Starship。要求 Scoop 已安装（界面据此决定展示哪个按钮）。
+    /// 用 Scoop 安装 Starship。要求 Scoop 已安装；被一键安装流程在最末尾调用。
     /// </summary>
     public StarshipInstallResult InstallStarship(Action<string>? progress = null)
     {

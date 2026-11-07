@@ -34,7 +34,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _editorAlias = string.Empty;
     private string _editorPath = string.Empty;
     private string _editorRemark = string.Empty;
-    private bool _isAliasFieldEnabled = true;
+    // 校验失败时对应的输入字段（"Alias" / "Path"），窗口据此决定焦点落点。
+    private string _editorErrorField = string.Empty;
     private string _editorErrorTextRaw = string.Empty;
     private string _editorErrorText = string.Empty;
     private string _editorPathHintTextRaw = string.Empty;
@@ -114,7 +115,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string EditorAlias { get => _editorAlias; set { if (_editorAlias == value) return; _editorAlias = value ?? ""; OnPropertyChanged(); UpdateValidation(); } }
     public string EditorPath { get => _editorPath; set { if (_editorPath == value) return; _editorPath = value ?? ""; OnPropertyChanged(); UpdateValidation(); } }
     public string EditorRemark { get => _editorRemark; set { if (_editorRemark == value) return; _editorRemark = value ?? ""; OnPropertyChanged(); } }
-    public bool IsAliasFieldEnabled { get => _isAliasFieldEnabled; set { if (_isAliasFieldEnabled == value) return; _isAliasFieldEnabled = value; OnPropertyChanged(); } }
+
+    /// <summary>校验失败对应的输入字段："Alias" / "Path"，无错误时为空。</summary>
+    public string EditorErrorField => _editorErrorField;
 
     public string EditorErrorText
     {
@@ -249,7 +252,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         IsNewEntry = true;
         EditingEntry = null;
-        IsAliasFieldEnabled = true;
         EditorAlias = string.Empty;
         EditorPath = string.Empty;
         EditorRemark = string.Empty;
@@ -262,7 +264,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         IsNewEntry = false;
         EditingEntry = entry;
-        IsAliasFieldEnabled = false;
+        // 别名也允许修改：写回时由 TryCommitEditor 更新 EditingEntry.Name。
         EditorAlias = entry.Name;
         EditorPath = entry.Path;
         EditorRemark = entry.Remark;
@@ -276,7 +278,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         IsEditorOpen = false;
         EditingEntry = null;
         IsNewEntry = false;
-        IsAliasFieldEnabled = true;
+        _editorErrorField = string.Empty;
         IsConfirmEnabled = false;
         EditorErrorText = string.Empty;
         EditorPathHintText = string.Empty;
@@ -290,12 +292,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
         var alias = rawAlias.Trim();
         var path = ProfileService.NormalizePath(EditorPath);
         string? error = null;
+        var errorField = "Alias";
 
         if (alias.Length == 0) error = "别名不能为空。";
         else if (rawAlias.Any(char.IsWhiteSpace)) error = "别名不能包含空格。";
         else if (IsAliasDuplicate(alias)) error = "该别名已存在，请换一个。";
-        if (error is null && path.Length == 0) error = "请选择或填写应用程序路径。";
+        if (error is null && path.Length == 0) { error = "请选择或填写应用程序路径。"; errorField = "Path"; }
 
+        _editorErrorField = error is null ? string.Empty : errorField;
         EditorErrorText = error ?? string.Empty;
         EditorPathHintText = (path.Length > 0 && !File.Exists(path)) ? "⚠ 文件不存在，仍可保存。" : string.Empty;
 
@@ -319,7 +323,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         var remark = EditorRemark.Trim();
 
         if (IsNewEntry) Aliases.Add(new AliasEntry(name, path, remark));
-        else if (EditingEntry is not null) { EditingEntry.Path = path; EditingEntry.Remark = remark; }
+        else if (EditingEntry is not null)
+        {
+            // 编辑时别名也可改名；IsAliasDuplicate 已排除当前项，所以同名不会被误判为冲突。
+            EditingEntry.Name = name;
+            EditingEntry.Path = path;
+            EditingEntry.Remark = remark;
+        }
 
         CloseEditor();
         return true;

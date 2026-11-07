@@ -9,7 +9,7 @@ using PAM.Core;
 namespace PAM.App.ViewModels;
 
 /// <summary>
-/// "美化"页签的数据源：Starship 探测与安装（Scoop / 一键）、内置 Cascadia Code NF 字体安装、
+/// "美化"页签的数据源：Starship 探测与一键安装（含 Scoop）、内置 Cascadia Code NF 字体安装、
 /// 主题预设写入 starship.toml、Windows Terminal 默认字体，以及配置备份与恢复。
 /// 状态在进入页签时刷新；所有耗时操作走 IsBusy，期间禁用操作按钮。
 /// </summary>
@@ -99,7 +99,6 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(CanApplyFont));
                 OnPropertyChanged(nameof(HasFontSelection));
-                OnPropertyChanged(nameof(CanInstallStarship));
                 OnPropertyChanged(nameof(CanOneClickInstall));
             }
         }
@@ -123,7 +122,6 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
                 return;
             }
 
-            OnPropertyChanged(nameof(CanInstallStarship));
             OnPropertyChanged(nameof(CanOneClickInstall));
             OnPropertyChanged(nameof(CanRefresh));
             OnPropertyChanged(nameof(CanInstallBundledFont));
@@ -154,7 +152,7 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
         : Loc.F("Windows Terminal 当前字体：{0}", _currentWtFont);
 
     // Starship 官方建议先装好 Nerd Font 再启用，因此未选字体时不允许安装。
-    public bool CanInstallStarship => !IsBusy && _isScoopInstalled && !_isStarshipInstalled && HasFontSelection;
+    // 只保留一键安装：Scoop 缺失时由 Core 自动先装 Scoop，不需要用户自己挑安装方式。
     public bool CanOneClickInstall => !IsBusy && !_isStarshipInstalled && HasFontSelection;
     public bool CanRefresh => !IsBusy;
     public bool CanInstallBundledFont => !IsBusy && !_isBundledFontInstalled;
@@ -289,7 +287,6 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(InitLineText));
         OnPropertyChanged(nameof(HasTomlBackup));
         OnPropertyChanged(nameof(HasWtBackup));
-        OnPropertyChanged(nameof(CanInstallStarship));
         OnPropertyChanged(nameof(CanOneClickInstall));
         OnPropertyChanged(nameof(CanInstallBundledFont));
         OnPropertyChanged(nameof(CanApplyFont));
@@ -300,17 +297,6 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
     }
 
     // --- Starship 安装 ---
-
-    public async Task InstallStarshipAsync()
-    {
-        await RunBusyAsync(
-            "正在通过 Scoop 安装 Starship，可能需要几分钟…",
-            () => _starshipService.InstallStarship(ReportProgress),
-            static result => new[]
-            {
-                (result.Success ? StatusType.Saved : StatusType.Error, result.Message),
-            });
-    }
 
     /// <summary>一键安装：Scoop 不存在时先装 Scoop（官方引导脚本），再装 Starship。</summary>
     public async Task InstallStarshipWithScoopAsync()

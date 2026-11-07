@@ -164,19 +164,11 @@
                                 <ui:Button
                                     HorizontalAlignment="Stretch"
                                     Appearance="Primary"
-                                    Click="InstallStarshipButton_Click"
-                                    Content="Scoop 安装 Starship"
-                                    Icon="{ui:SymbolIcon Rocket24}"
-                                    IsEnabled="{Binding CanInstallStarship}"
-                                    ToolTip="未选字体或已安装时不可用。" />
-                                <ui:Button
-                                    Margin="0,8,0,0"
-                                    HorizontalAlignment="Stretch"
-                                    Appearance="Secondary"
                                     Click="OneClickInstallButton_Click"
                                     Content="一键安装（含 Scoop）"
                                     Icon="{ui:SymbolIcon Wand24}"
-                                    IsEnabled="{Binding CanOneClickInstall}" />
+                                    IsEnabled="{Binding CanOneClickInstall}"
+                                    ToolTip="未选字体或已安装时不可用。" />
                                 <ui:Button
                                     Margin="0,8,0,0"
                                     HorizontalAlignment="Stretch"

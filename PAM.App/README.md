@@ -8,7 +8,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 
 顶部 `TabView`（样式 `Styles.xaml` 的 `NavTabItemStyle`），状态栏各页共用：
 
-- **别名管理**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑 / 删除（二次确认）、路径浏览、文件不存在提示、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限时警告并可一键修复。
+- **别名管理**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑（别名也可改名）/ 删除（二次确认）、路径浏览、文件不存在提示、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限时警告并可一键修复。
 - **自定义命令**（`Views/CustomCommandsView`）：受控区块内的函数 / 片段，列表列含状态胶囊（点击切换启用）、代码预览；内联编辑条用多行代码框，`Ctrl+Enter` 确认。数据格式见 [PAM.Core/README.md](../PAM.Core/README.md)。
 - **美化**（`Views/BeautifyView` + `ViewModels/BeautifyViewModel`）：见下节。
 - **设置**（`Views/SettingsView` + `ViewModels/SettingsViewModel`）：见下节。
@@ -21,7 +21,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 
 | 卡片 | 内容 |
 | --- | --- |
-| Starship | 探测已装版本与 Scoop；`scoop install starship` 按钮；Scoop 缺失时"一键安装（含 Scoop）"走官方引导脚本（需联网）。安装输出实时显示在页脚反馈区 |
+| Starship | 探测已装版本与 Scoop；只有一个"一键安装（含 Scoop）"按钮，Scoop 缺失时自动走官方引导脚本（需联网），再用 Scoop 装 Starship。安装输出实时显示在页脚反馈区 |
 | 终端字体 | 下拉列出注册表里的等宽 / Nerd Font 候选，默认选中 Windows Terminal 当前字体；内置 `Assets/Fonts/CascadiaCodeNF.ttf` 未装时提供按当前用户安装（免管理员）；"应用到 Windows Terminal" 写入 `profiles.defaults.font.face`，写前自动备份 |
 | 主题 | 六个官方预设（EmbeddedResource 打包在 PAM.Core），应用 = 备份 → 写 `starship.toml` → 确保 `$PROFILE` init 行；标注"需 Nerd Font"的预设会在字体未装时给出警告 |
 | 配置维护 | 展示 `starship.toml` 路径 / 是否创建 / init 行状态 / 备份存在；打开 `starship.toml`、恢复 toml 备份、恢复 Windows Terminal 备份 |
@@ -39,7 +39,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 | 默认终端 | 默认 `PowerShell 7 (pwsh.exe)`，另有 `Windows PowerShell 5.1` 与 `自动探测`。决定热键唤醒的 shell、保存后启动的窗口，以及"打开配置文件"打开哪一个 `$PROFILE`；切换会触发 `AppServices.SettingsChanged`，`MainWindow` 重新载入别名与自定义命令（有未保存改动时在状态栏提示） |
 | 打开配置文件 | `ProfileService.OpenProfileFile(terminalType)`：按当前选中的终端解析 `$PROFILE`，不存在则创建（UTF-8 BOM）后用系统默认编辑器打开，无 `.ps1` 关联时回退记事本 |
 | 快捷键设置 | `SettingsView.xaml.cs` 用 `KeyInterop` 把 WPF 按键转成 Win32 VK，交给 `HotkeyChord` 规范化；`HotkeyConflictDetector` 依次检查系统保留组合 → Win32 `RegisterHotKey` 真实占用探测 → 常见软件通用快捷键。系统保留 / 已占用会阻止应用并说明原因，软冲突弹窗二次确认；托盘持有当前组合时视为自己占用。应用时若托盘未运行会自动拉起 |
-| 无托盘行为 | "关闭管理器时保留后台托盘"开启（默认）时，关闭窗口后热键与托盘菜单继续可用；关闭则发退出信号让 Tray 一并退出。设置页可查看 / 启动 / 结束后台托盘 |
+| 无托盘行为 | "关闭管理器时保留后台托盘"开启（默认）时，关闭窗口后热键与托盘菜单继续可用；关闭则发退出信号让 Tray 一并退出。设置页可查看 / 启动 / 结束后台托盘；结束后台托盘后全局热键立即失效，重新打开管理器或点"立即启动"才会恢复 |
 | 恢复默认 | 二次确认后整份设置恢复默认值 |
 
 `settings.json` 字段（camelCase，定义在 `PAM.Core/AppSettings.cs`）：

@@ -197,8 +197,8 @@ public sealed class LocalizationService
         ["尚未检测，点击下方“检测冲突”。"] = "Not checked yet. Click \"Check conflicts\" below.",
         ["后台运行"] = "Background",
         ["关闭管理器时保留后台托盘"] = "Keep the tray running when the manager closes",
-        ["开启后关闭窗口仍可使用全局热键与托盘菜单；关闭则一并退出后台进程。"] =
-            "When on, the hotkey and tray menu still work after closing the window. When off, the background process exits too.",
+        ["关闭后台托盘后，全局热键立即失效（无法用快捷键唤起终端），托盘菜单也会消失；下次打开管理器或点“立即启动”才会恢复。"] =
+            "Turning off the background tray immediately disables the global hotkey (you can no longer open a terminal with it) and removes the tray menu. It comes back only when you reopen the manager or click \"Start now\".",
         ["后台托盘状态"] = "Tray status",
         ["立即启动"] = "Start now",
         ["结束后台运行"] = "Stop background",
@@ -347,11 +347,8 @@ public sealed class LocalizationService
             "Already installed — no need to install again. Reopen your terminal after changing fonts to take effect.",
         ["未选字体或已安装时不可用。"] =
             "Disabled until a font is selected; unavailable when Starship is already installed.",
-        ["Scoop 安装 Starship"] = "Install Starship via Scoop",
         ["一键安装（含 Scoop）"] = "One-click install (incl. Scoop)",
         ["重新检测"] = "Re-detect",
-        ["正在通过 Scoop 安装 Starship，可能需要几分钟…"] =
-            "Installing Starship via Scoop. This may take a few minutes…",
         ["正在安装 Scoop 与 Starship，可能需要几分钟…"] =
             "Installing Scoop and Starship. This may take a few minutes…",
         ["正在安装 Scoop…"] = "Installing Scoop…",

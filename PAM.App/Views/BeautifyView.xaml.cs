@@ -28,9 +28,6 @@ public partial class BeautifyView : UserControl
     private void RefreshButton_Click(object sender, RoutedEventArgs e)
         => _ = _viewModel?.RefreshStateAsync();
 
-    private void InstallStarshipButton_Click(object sender, RoutedEventArgs e)
-        => _ = _viewModel?.InstallStarshipAsync();
-
     private void OneClickInstallButton_Click(object sender, RoutedEventArgs e)
         => _ = _viewModel?.InstallStarshipWithScoopAsync();
 
