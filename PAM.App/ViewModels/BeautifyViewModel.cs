@@ -41,6 +41,7 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
     private string _initLineSource = "未知";
     private string? _selectedFont;
     private string _selectedPresetId = string.Empty;
+    private ObservableCollection<string> _fontOptions = [];
 
     private string _feedbackSource = string.Empty;
     private object[] _feedbackArgs = [];
@@ -74,7 +75,20 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<SettingOption> PresetOptions { get; private set; } = [];
 
-    public ObservableCollection<string> FontOptions { get; } = [];
+    /// <summary>
+    /// 字体候选。整体替换而不是 Clear+Add：ComboBox 对"原地改动"的集合不会重算
+    /// 显示用 <c>SelectionBoxItem</c>（SelectedItem 正确、显示却空白），换新集合强制它重建。
+    /// </summary>
+    public ObservableCollection<string> FontOptions
+    {
+        get => _fontOptions;
+        private set
+        {
+            if (ReferenceEquals(_fontOptions, value)) return;
+            _fontOptions = value;
+            OnPropertyChanged(nameof(FontOptions));
+        }
+    }
 
     public string? SelectedFont
     {
@@ -228,11 +242,9 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
             options.Insert(0, currentFont);
         }
 
-        FontOptions.Clear();
-        foreach (var option in options)
-        {
-            FontOptions.Add(option);
-        }
+        // 整体换新集合（见 FontOptions 注释）：ComboBox 重建条目后，
+        // 内部选择先被清空，下面的 SelectedFont 通知才是"真变化"，显示层才会跟着更新。
+        FontOptions = options;
 
         // 用户已选且仍有效的选择保持不变；否则默认显示终端当前字体，
         // 没有配置过字体时选内置字体（已装）或第一个候选，绝不让下拉空着。
@@ -242,8 +254,8 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
             : currentFont ?? (_isBundledFontInstalled ? FontInstaller.BundledFontFamily : options.FirstOrDefault());
         SelectedFont = selection;
 
-        // Clear() 会把 ComboBox 的视觉选中重置为 null；若值恰好未变，上面的赋值不会触发通知，
-        // ComboBox 就一直显示空白。这里强制补一次通知让它重新匹配 SelectedItem。
+        // ItemsSource 换新会把 ComboBox 的内部选中清空；若值恰好未变，上面的赋值不触发通知，
+        // 这里强制补一次，让 ComboBox 从空选中重新匹配 SelectedItem 并重算 SelectionBoxItem。
         OnPropertyChanged(nameof(SelectedFont));
     }
 
