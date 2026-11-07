@@ -225,7 +225,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         try
         {
             var snapshot = Aliases.ToList();
-            var result = await Task.Run(() => _profileService.Save(_profilePathRaw, snapshot));
+            await Task.Run(() =>
+            {
+                _profileService.Save(_profilePathRaw, snapshot);
+                AliasLaunchService.Sync(_profilePathRaw, snapshot);
+            });
 
             HasUnsavedChanges = false;
 

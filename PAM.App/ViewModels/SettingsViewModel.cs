@@ -50,6 +50,9 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private string _language = AppSettings.LanguageZhCN;
     private string _terminalType = AppSettings.TerminalTypePwsh;
     private bool _keepTrayOnClose = true;
+    private bool _switchImeToEnglish = true;
+    private bool _aliasLaunchEnhanced = true;
+    private bool _showAliasRemarkOnLaunch = true;
     private string _hotkeyDisplay = AppSettings.DefaultHotkey;
     private string _pendingHotkeyDisplay = string.Empty;
     private bool _hasPendingHotkey;
@@ -124,6 +127,24 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         set { if (SetField(ref _keepTrayOnClose, value) && !_isSyncing) Commit(s => s.KeepTrayOnClose = value); }
     }
 
+    public bool SwitchImeToEnglish
+    {
+        get => _switchImeToEnglish;
+        set { if (SetField(ref _switchImeToEnglish, value) && !_isSyncing) Commit(s => s.SwitchImeToEnglish = value); }
+    }
+
+    public bool AliasLaunchEnhanced
+    {
+        get => _aliasLaunchEnhanced;
+        set { if (SetField(ref _aliasLaunchEnhanced, value) && !_isSyncing) Commit(s => s.AliasLaunchEnhanced = value); }
+    }
+
+    public bool ShowAliasRemarkOnLaunch
+    {
+        get => _showAliasRemarkOnLaunch;
+        set { if (SetField(ref _showAliasRemarkOnLaunch, value) && !_isSyncing) Commit(s => s.ShowAliasRemarkOnLaunch = value); }
+    }
+
     /// <summary>已经生效并写入设置文件的热键。</summary>
     public string HotkeyDisplay { get => _hotkeyDisplay; private set => SetField(ref _hotkeyDisplay, value); }
     public string PendingHotkeyDisplay { get => _pendingHotkeyDisplay; private set => SetField(ref _pendingHotkeyDisplay, value); }
@@ -174,6 +195,9 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         _language = settings.Language;
         _terminalType = settings.TerminalType;
         _keepTrayOnClose = settings.KeepTrayOnClose;
+        _switchImeToEnglish = settings.SwitchImeToEnglish;
+        _aliasLaunchEnhanced = settings.AliasLaunchEnhanced;
+        _showAliasRemarkOnLaunch = settings.ShowAliasRemarkOnLaunch;
         _hotkeyDisplay = settings.Hotkey;
         _pendingChord = null;
         _check = HotkeyConflictDetector.Idle();
@@ -186,6 +210,9 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Language));
         OnPropertyChanged(nameof(TerminalType));
         OnPropertyChanged(nameof(KeepTrayOnClose));
+        OnPropertyChanged(nameof(SwitchImeToEnglish));
+        OnPropertyChanged(nameof(AliasLaunchEnhanced));
+        OnPropertyChanged(nameof(ShowAliasRemarkOnLaunch));
         OnPropertyChanged(nameof(HotkeyDisplay));
         RaiseCheckChanged();
 

@@ -195,6 +195,17 @@ public sealed class LocalizationService
         ["当前由 PAM 托盘占用，可继续使用。"] = "Currently held by the PAM tray; safe to keep.",
         ["常见软件快捷键提醒：{0}"] = "Common shortcut warning: {0}",
         ["尚未检测，点击下方“检测冲突”。"] = "Not checked yet. Click \"Check conflicts\" below.",
+        ["终端输入"] = "Terminal input",
+        ["打开终端时把中文输入法切到英文模式"] = "Switch the Chinese IME to English mode when a terminal opens",
+        ["后台托盘检测到新打开的 PowerShell / Windows Terminal 窗口时，先读任务栏输入指示器；只有处于中文模式才模拟一次 Shift 切到英文输入状态。输入法本身不变，也不会换成英文键盘；已是英文模式时一个键都不按。每个窗口只处理一次。"] =
+            "When a new PowerShell / Windows Terminal window opens, the tray reads the taskbar input indicator and taps Shift once only if the IME is in Chinese mode. The input method itself and the keyboard layout stay unchanged; nothing is pressed when it is already in English mode. Each window is handled once.",
+        ["别名启动"] = "Alias launching",
+        ["独立进程启动（静默日志）"] = "Launch as a separate process (silence output)",
+        ["用别名启动软件时改为独立进程，并把子进程的 stdout/stderr 重定向到 NUL 设备：终端不再刷程序日志，关闭 PowerShell 也不会把软件一起关掉。关闭则恢复原来的直接启动方式。$PROFILE 只在终端启动时加载一次，保存别名后要新开终端窗口才生效。"] =
+            "Launch aliases in a separate process and redirect its stdout/stderr to the NUL device: no program output in the terminal, and closing PowerShell will not close the app. Turn off to restore the original direct launch. $PROFILE is loaded only when a terminal starts, so open a new terminal window after saving aliases.",
+        ["启动时显示别名备注"] = "Show alias remark on launch",
+        ["启动前在终端打印一行该别名的备注；没有备注时不打印。"] =
+            "Print the alias remark in the terminal before launching; nothing is printed when the remark is empty.",
         ["后台运行"] = "Background",
         ["关闭管理器时保留后台托盘"] = "Keep the tray running when the manager closes",
         ["关闭后台托盘后，全局热键立即失效（无法用快捷键唤起终端），托盘菜单也会消失；下次打开管理器或点“立即启动”才会恢复。"] =

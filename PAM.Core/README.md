@@ -13,6 +13,23 @@ Set-Alias -Name blbl -Value "C:\Program Files\App\app.exe"
 
 备注写在上一行的 `# @alias-meta` 注释里。读取兼容单双引号，保存统一双引号并转义；只识别和清理上述格式，其余配置原样保留。
 
+### 别名启动器（自有标记块）
+
+由 `AliasLaunchService` 在保存别名后写入，同样**不在** PAM-Custom 区块内：
+
+```powershell
+# >>> PAM Alias Launcher >>>
+# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。
+function Invoke-PamAlias { ... }
+Remove-Item -Path "Alias:bili" -ErrorAction SilentlyContinue
+function bili { Invoke-PamAlias -Path "C:\App\bili.exe" -Remark "哔哩哔哩" -Rest $args }
+# <<< PAM Alias Launcher <<<
+```
+
+`Set-Alias` 行仍由 `ProfileService` 维护且保持不变：PowerShell 里 Alias 优先级高于 Function，所以块内先删同名别名、再定义同名函数才会生效。公共函数运行时读 `%AppData%\PAM\settings.json` 的 `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch`，决定是否用 `Start-Process` 独立启动以及是否 `Write-Host` 备注；改设置即时生效，无需重写 `$PROFILE`。
+
+**静默日志的关键**：`Start-Process` 的子进程仍挂在父 PowerShell 的控制台上，Electron 等程序写到 stdout/stderr 的日志照样刷屏，光换启动方式不够；增强模式因此把两个流重定向到 NUL 设备（`-RedirectStandardOutput 'NUL' -RedirectStandardError '\\.\NUL'`，PowerShell 不允许两者同路径所以用了两种写法），需要 UAC 提升而启动失败时 `catch` 里退回普通 `Start-Process`。这同时保证关闭终端不会连带关掉软件。注意 `$PROFILE` 只在终端启动时加载一次，保存别名后要**新开终端窗口**才生效。写入幂等，别名清空时整体移除区块，编码 / BOM / 换行原样保留。
+
 ### 自定义命令（受控区块）
 
 由 PAM 独占维护，用 `#region PAM-Custom` / `#endregion` 包裹：
@@ -57,11 +74,12 @@ Invoke-Expression (&starship init powershell)
 
 | 文件 | 职责 |
 | --- | --- |
-| `AppSettings.cs` | 设置模型（`Hotkey`、`TerminalType`、`Theme`、`Language`、`KeepTrayOnClose`、`AutoLaunchTerminal`）；`Normalize()` 修正手工改坏的值 |
+| `AppSettings.cs` | 设置模型（`Hotkey`、`TerminalType`、`Theme`、`Language`、`KeepTrayOnClose`、`AutoLaunchTerminal`、`SwitchImeToEnglish`、`AliasLaunchEnhanced`、`ShowAliasRemarkOnLaunch`）；`Normalize()` 修正手工改坏的值 |
 | `SettingsService.cs` | 读写 `%AppData%\PAM\settings.json`（camelCase、临时文件原子替换，避免托盘读到半截 JSON）；损坏时回退默认值 |
 | `ProfileService.cs` | 定位 `$PROFILE`（`ResolveProfilePath` 按终端解析并回报是否回退）、读写别名、`OpenProfileFile` 创建并打开配置文件、`LaunchPowerShell` 按终端启动 shell 并 dot-source 刚写入的配置 |
 | `ProfileFileStore.cs` | 底层文件读写：编码 / BOM、换行风格、原子替换，别名与自定义命令共用 |
 | `PamCustomRegion.cs` | 识别受控区块（含未闭合区块容错）与行掩码 |
+| `AliasLaunchService.cs` | 维护别名启动器自有标记块：同名函数包装 + `Invoke-PamAlias` 公共函数（独立进程 / stdout+stderr 重定向到 NUL 以静默日志 / 备注），开关由函数运行时读 settings.json |
 | `CustomCommandService.cs` | 受控区块内自定义命令的读写与名称校验 |
 | `Models/` | `AliasEntry`、`CustomCommandEntry`（状态文案经本地化服务翻译） |
 | `HotkeyChord.cs` | 与 UI 无关的全局热键模型（修饰键 + Win32 VK）、`Ctrl+Alt+T` 风格文本解析、系统保留组合表、常见软件快捷键提示 |

@@ -337,6 +337,71 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 终端输入 -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="终端输入" Style="{StaticResource CardTitleStyle}" />
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="320" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="打开终端时把中文输入法切到英文模式" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock
+                                    Text="后台托盘检测到新打开的 PowerShell / Windows Terminal 窗口时，先读任务栏输入指示器；只有处于中文模式才模拟一次 Shift 切到英文输入状态。输入法本身不变，也不会换成英文键盘；已是英文模式时一个键都不按。每个窗口只处理一次。"
+                                    Style="{StaticResource SettingHintStyle}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsChecked="{Binding SwitchImeToEnglish, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 别名启动 -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="别名启动" Style="{StaticResource CardTitleStyle}" />
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="320" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="14" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="独立进程启动（静默日志）" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock
+                                    Text="用别名启动软件时改为独立进程，并把子进程的 stdout/stderr 重定向到 NUL 设备：终端不再刷程序日志，关闭 PowerShell 也不会把软件一起关掉。关闭则恢复原来的直接启动方式。$PROFILE 只在终端启动时加载一次，保存别名后要新开终端窗口才生效。"
+                                    Style="{StaticResource SettingHintStyle}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsChecked="{Binding AliasLaunchEnhanced, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="启动时显示别名备注" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock
+                                    Text="启动前在终端打印一行该别名的备注；没有备注时不打印。"
+                                    Style="{StaticResource SettingHintStyle}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsChecked="{Binding ShowAliasRemarkOnLaunch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- 后台运行 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>

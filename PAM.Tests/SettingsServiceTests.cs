@@ -62,6 +62,9 @@ public sealed class SettingsServiceTests : IDisposable
             Theme = AppSettings.ThemeDark,
             Language = AppSettings.LanguageEnUS,
             KeepTrayOnClose = false,
+            SwitchImeToEnglish = false,
+            AliasLaunchEnhanced = false,
+            ShowAliasRemarkOnLaunch = false,
         });
 
         Assert.True(File.Exists(_settingsPath));
@@ -71,7 +74,7 @@ public sealed class SettingsServiceTests : IDisposable
 
         var names = document.RootElement.EnumerateObject().Select(static property => property.Name).ToArray();
         Assert.Equal(
-            new[] { "hotkey", "terminalType", "autoLaunchTerminal", "theme", "language", "keepTrayOnClose" }
+            new[] { "hotkey", "terminalType", "autoLaunchTerminal", "theme", "language", "keepTrayOnClose", "switchImeToEnglish", "aliasLaunchEnhanced", "showAliasRemarkOnLaunch" }
                 .OrderBy(static name => name, StringComparer.Ordinal).ToArray(),
             names.OrderBy(static name => name, StringComparer.Ordinal).ToArray());
 
@@ -84,6 +87,9 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal("Dark", document.RootElement.GetProperty("theme").GetString());
         Assert.Equal("en-US", document.RootElement.GetProperty("language").GetString());
         Assert.False(document.RootElement.GetProperty("keepTrayOnClose").GetBoolean());
+        Assert.False(document.RootElement.GetProperty("switchImeToEnglish").GetBoolean());
+        Assert.False(document.RootElement.GetProperty("aliasLaunchEnhanced").GetBoolean());
+        Assert.False(document.RootElement.GetProperty("showAliasRemarkOnLaunch").GetBoolean());
     }
 
     [Fact]
@@ -107,6 +113,9 @@ public sealed class SettingsServiceTests : IDisposable
             Theme = AppSettings.ThemeLight,
             Language = AppSettings.LanguageEnUS,
             KeepTrayOnClose = false,
+            SwitchImeToEnglish = false,
+            AliasLaunchEnhanced = false,
+            ShowAliasRemarkOnLaunch = false,
         };
 
         _service.Save(saved);
@@ -118,6 +127,9 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(saved.Theme, loaded.Theme);
         Assert.Equal(saved.Language, loaded.Language);
         Assert.Equal(saved.KeepTrayOnClose, loaded.KeepTrayOnClose);
+        Assert.Equal(saved.SwitchImeToEnglish, loaded.SwitchImeToEnglish);
+        Assert.Equal(saved.AliasLaunchEnhanced, loaded.AliasLaunchEnhanced);
+        Assert.Equal(saved.ShowAliasRemarkOnLaunch, loaded.ShowAliasRemarkOnLaunch);
 
         _service.Save(new AppSettings { TerminalType = AppSettings.TerminalTypePwsh });
         Assert.True(_service.Load().UsesPowerShell7);
@@ -135,6 +147,9 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(AppSettings.LanguageZhCN, loaded.Language);
         Assert.True(loaded.AutoLaunchTerminal);
         Assert.True(loaded.KeepTrayOnClose);
+        Assert.True(loaded.SwitchImeToEnglish);
+        Assert.True(loaded.AliasLaunchEnhanced);
+        Assert.True(loaded.ShowAliasRemarkOnLaunch);
     }
 
     [Fact]
@@ -268,5 +283,8 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(AppSettings.LanguageZhCN, settings.Language);
         Assert.True(settings.AutoLaunchTerminal);
         Assert.True(settings.KeepTrayOnClose);
+        Assert.True(settings.SwitchImeToEnglish);
+        Assert.True(settings.AliasLaunchEnhanced);
+        Assert.True(settings.ShowAliasRemarkOnLaunch);
     }
 }

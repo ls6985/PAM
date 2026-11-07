@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWindowsForms>true</UseWindowsForms>
+    <!-- 只为拿到 WindowsDesktop 引用集里的 UIAutomationClient / UIAutomationTypes：
+         读任务栏输入指示器要用 UIA，运行时与 WinForms 共用 Microsoft.WindowsDesktop.App。
+         WinForms 项目默认不含这两个引用，而 UIA 归在 WPF 引用集里。 -->
+    <UseWPF>true</UseWPF>
     <RootNamespace>PAM.Tray</RootNamespace>
     <AssemblyName>PAM.Tray</AssemblyName>
     <!-- 显示名称与 exe 文件名分离：exe 仍叫 PAM.Tray.exe（单实例、互斥体等按进程名工作），资源管理器/文件属性里显示为“PowerShell 管理器”。 -->
@@ -19,6 +23,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PAM.Core\PAM.Core.csproj" />
+    <!-- UseWPF 会换一套隐式 global using，这里显式补回 System.IO。 -->
+    <Using Include="System.IO" />
   </ItemGroup>
 
   <!--
@@ -26,7 +32,7 @@
     保证 clean 重建后任意一个 bin 里仍是完整可跑的一对（EnsureTrayRunning / 显示主界面 都靠同目录找对方）。
     PAM.Core.* 两边各自生成、PAM.App.* 属于对方产物，都不回推。
   -->
-  <Target Name="PushTrayOutputToApp" AfterTargets="Build">
+  <Target Name="PushTrayOutputToApp" AfterTargets="Build" Condition="'$(PamSkipOutputPush)' != 'true'">
     <PropertyGroup>
       <_AppOutputDir>$(MSBuildThisFileDirectory)..\PAM.App\bin\$(Configuration)\$(TargetFramework)\</_AppOutputDir>
     </PropertyGroup>

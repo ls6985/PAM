@@ -12,6 +12,7 @@ public sealed class SettingsChangedEventArgs(AppSettings previous, AppSettings c
     public bool TerminalChanged => !string.Equals(Previous.TerminalType, Current.TerminalType, StringComparison.OrdinalIgnoreCase);
     public bool HotkeyChanged => !string.Equals(Previous.Hotkey, Current.Hotkey, StringComparison.OrdinalIgnoreCase);
     public bool KeepTrayOnCloseChanged => Previous.KeepTrayOnClose != Current.KeepTrayOnClose;
+    public bool SwitchImeToEnglishChanged => Previous.SwitchImeToEnglish != Current.SwitchImeToEnglish;
 }
 
 /// <summary>

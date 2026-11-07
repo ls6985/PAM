@@ -205,6 +205,12 @@ internal sealed class TrayApplication : IDisposable
         {
             ReloadSettings(showFeedback: false);
         }
+
+        // 打开终端后自动切英文，由托盘在已有的定时器里完成；开关关闭时完全不碰前台窗口。
+        if (_settings.SwitchImeToEnglish)
+        {
+            ImeSwitcher.CheckForegroundWindow();
+        }
     }
 
     private void RefreshMenuTexts()

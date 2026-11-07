@@ -45,6 +45,15 @@ public sealed class AppSettings
     /// <summary>关闭管理器窗口时是否保留后台 PAM.Tray 继续运行。</summary>
     public bool KeepTrayOnClose { get; set; } = true;
 
+    /// <summary>后台托盘检测到新打开的终端窗口时，是否把该窗口的输入法切成英文。</summary>
+    public bool SwitchImeToEnglish { get; set; } = true;
+
+    /// <summary>别名启动软件时是否用独立进程：静默程序日志，且关闭终端不会连带关闭程序。</summary>
+    public bool AliasLaunchEnhanced { get; set; } = true;
+
+    /// <summary>别名启动软件时，是否先在终端打印一行别名备注。</summary>
+    public bool ShowAliasRemarkOnLaunch { get; set; } = true;
+
     /// <summary>是否优先使用 PowerShell 7。</summary>
     [JsonIgnore]
     public bool UsesPowerShell7 =>

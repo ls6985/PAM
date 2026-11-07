@@ -37,7 +37,7 @@
     不能用 ProjectReference 互指（还原图成环，MSB4006），因此构建结束后各自把产物推给对方目录；
     PAM.Core.* 两边都会自己生成、对方的产物也不该回推，都排除掉。
   -->
-  <Target Name="PushAppOutputToTray" AfterTargets="Build">
+  <Target Name="PushAppOutputToTray" AfterTargets="Build" Condition="'$(PamSkipOutputPush)' != 'true'">
     <PropertyGroup>
       <_TrayOutputDir>$(MSBuildThisFileDirectory)..\PAM.Tray\bin\$(Configuration)\$(TargetFramework)\</_TrayOutputDir>
     </PropertyGroup>
