@@ -349,8 +349,7 @@
                                                 Text="{Binding CustomText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                 ToolTip="输入任意文字或 $变量"
                                                 Visibility="{Binding SelectedOption, Converter={StaticResource CustomSelectedToVisibility}}" />
-                                            <!-- 颜色选择：与「内容」下拉用同一个 WPF-UI ComboBox，
-                                                 预设 12 色带色号，首项「自定义…」选中后右侧出现可编辑色号框。 -->
+                                            <!-- 颜色：与变量下拉同款 ComboBox；选「自定义…」后右侧出现可编辑色号框。 -->
                                             <ComboBox
                                                 Width="118"
                                                 Margin="5,0,0,0"

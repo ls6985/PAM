@@ -10,13 +10,10 @@ using PAM.Core;
 namespace PAM.App.Views;
 
 /// <summary>
-/// 让 ComboBox 在「收起」时显示短模板、「展开」时显示完整模板。
-/// 注意：WPF 把模板应用在项内容宿主 <see cref="ContentPresenter" /> 上，而非 <see cref="ComboBoxItem" />，
-/// 所以不能用「container is ComboBoxItem」判断；正确做法是向上遍历视觉树——
-/// 下拉项一定位于 <see cref="ComboBoxItem" /> 内（在 Popup 中），而选中框不在，据此区分两种状态。
-/// 防护：仅当容器本身是 <see cref="Visual" /> 时才向上遍历，否则直接返回短模板。
-/// 否则（如颜色下拉的选中框容器不是 Visual）<see cref="VisualTreeHelper.GetParent" /> 会抛
-/// ArgumentException 导致整个程序闪退。
+/// ComboBox 收起时显示短模板、展开时显示完整模板。
+/// WPF 把模板应用在项内容宿主 <see cref="ContentPresenter" /> 上而非 <see cref="ComboBoxItem" />，
+/// 故向上遍历视觉树：下拉项位于 <see cref="ComboBoxItem" /> 内（Popup 中），选中框不在，据此区分。
+/// 仅当容器本身是 <see cref="Visual" /> 才遍历，避免 <see cref="VisualTreeHelper.GetParent" /> 对非 Visual 容器抛异常。
 /// </summary>
 public sealed class SegmentChoiceTemplateSelector : DataTemplateSelector
 {

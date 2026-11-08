@@ -1009,7 +1009,6 @@ public sealed class PromptSegment : INotifyPropertyChanged
                 _hexInput = GetHexDigitsOrEmpty(value);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HexInput));
-                OnPropertyChanged(nameof(SelectedColorOption));
             }
         }
     }
