@@ -375,7 +375,7 @@ public sealed class ProfileServiceTests : IDisposable
     [Fact]
     public void Save_UpgradesBomlessUtf8ToUtf8WithBom()
     {
-        // Windows PowerShell 5.1 只有在带 BOM 时才按 UTF-8 读取非 ASCII 内容，README 记录了这一升级行为。
+        // Windows PowerShell 5.1 只有在带 BOM 时才按 UTF-8 读取非 ASCII 内容，AGENT-测试.md 记录了这一升级行为。
         WriteProfile("# 中文注释\r\n", Utf8NoBom);
         Assert.False(HasUtf8Bom(ProfileBytes()));
 
