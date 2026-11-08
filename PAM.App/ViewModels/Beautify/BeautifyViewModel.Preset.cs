@@ -5,8 +5,8 @@ using PAM.Core;
 namespace PAM.App.ViewModels;
 
 /// <summary>
-/// 主题预设功能：把内置 Starship 主题写入 starship.toml（整文件覆盖并自动备份），
-/// 下拉选项维护。修改主题逻辑只看本文件。
+/// 主题预设功能：把内置 Starship 主题写入 starship.toml（写前单槽备份；会保留已有的
+/// PAM 自定义提示符块并剥掉预设自带的顶层 format），下拉选项维护。修改主题逻辑只看本文件。
 /// </summary>
 public sealed partial class BeautifyViewModel
 {

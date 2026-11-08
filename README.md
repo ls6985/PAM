@@ -6,8 +6,8 @@
 
 | 项目 | 职责 | 什么时候读 |
 | --- | --- | --- |
-| [PAM.Core](PAM.Core/README.md) | 无 UI 的核心库：设置模型、`$PROFILE` 读写、热键描述、终端探测、本地化词表、跨进程信号、Starship 与字体服务 | 改数据格式、配置字段、`$PROFILE` 读写规则或美化功能时 |
-| [PAM.App](PAM.App/README.md) | WPF 主界面与设置页，用户唯一直接操作的程序，也是 `settings.json` 的唯一写入方 | **最常读**：改界面、页签、主题 / 语言 / 热键交互、Starship 美化时 |
+| [PAM.Core](PAM.Core/README.md) | 无 UI 的核心库：设置模型、`$PROFILE` 读写、热键描述、终端探测、本地化词表、跨进程信号、Starship / 字体 / Windows Terminal 外观服务 | 改数据格式、配置字段、`$PROFILE` 读写规则、终端外观或美化功能时 |
+| [PAM.App](PAM.App/README.md) | WPF 主界面与设置页，用户唯一直接操作的程序，也是 `settings.json` 的唯一写入方 | **最常读**：改界面、页签、主题 / 语言 / 热键交互、终端外观、Starship 美化时 |
 | [PAM.Tray](PAM.Tray/README.md) | 纯粹的后台组件：常驻托盘、注册全局热键、按下后拉起 Windows Terminal；只读配置，从不写入，也不需要用户手动启动 | 只有改热键注册或托盘行为时才需要看，日常开发基本不用碰 |
 | PAM.Tests | xUnit 测试，只覆盖 PAM.Core 的纯逻辑，不涉及 WPF 界面 | 平时不用读；只有改动 `$PROFILE` 区块格式或 `settings.json` 规则时才需要同步维护 |
 
@@ -22,6 +22,8 @@
 - 托盘的 700ms 定时器除消费信号外，在 `switchImeToEnglish` 开启时还会检测新打开的终端窗口，用 UI Automation 判断任务栏输入指示器的中/英状态，仅在中文模式时模拟一次 Shift 把当前中文输入法切到英文模式（不更换输入法 / 键盘布局，见 [PAM.Tray/README.md](PAM.Tray/README.md)）。
 - App 关闭后托盘是否继续驻留，由 `KeepTrayOnClose` 决定（默认保留，热键不受影响）。
 - 别名启动行为由 `$PROFILE` 里 `AliasLaunchService` 维护的自有标记块承担：公共函数 `Invoke-PamAlias` 借 `explorer.exe` 代启动（带参数时经临时 `.lnk`），新进程父进程是 explorer、**完全脱离终端进程树与控制台**，因此关终端不会带走软件、程序日志也刷不回终端，不需要重定向 NUL，UAC 提升正常。开关写在 `settings.json`，公共函数运行时读取，改设置无需重写 `$PROFILE`；`$PROFILE` 只在终端启动时加载一次，改完要新开终端窗口。
+- 美化页的「外观」卡片接管 Windows Terminal `settings.json` 里 `profiles.defaults` 的 7 组外观设置：字体（`font.face`）、复古风格（`experimental.retroTerminalEffect`）、光标形状 / 颜色（`cursorShape` / `cursorColor`）、背景图与背景图透明度（`backgroundImage` / `backgroundImageOpacity`）、窗口透明度与亚克力材质（`opacity` / `useAcrylic`）。界面按「默认值 → 外观」分组，一次「保存外观设置」只提交与读盘快照不同的项；留空 / 选「终端默认」等于删除属性回到 WT 默认。写入走通用 JSONC 拼接（`WindowsTerminalService.Appearance.cs`）：逐层补齐对象、保留注释与 BOM、整体解析 + 逐项回读校验通过才落盘，绝不整份反序列化重写。
+- **终端配置的原始备份**：本程序第一次改动 Windows Terminal `settings.json`（字体或外观）时，把当时的文件完整复制为同目录 `settings.json.bak`，之后无论改多少次都**不覆盖**；「恢复 Windows Terminal 备份」也**不删除**备份。所以恢复永远回到安装本软件前的配置，且可以反复恢复。这与 Starship 主题的单槽 `.bak`（最近一次应用主题前）是两套不同语义，别混用。
 - 自定义提示符由 `StarshipPromptService` 接管 `~/.config/starship.toml` 的**顶层 `format`、`add_newline` 与 format 里引用到的模块段落**（都写在自有标记块内）。美化页用「点选片段组合」：每个片段在下拉里选变量或固定符号、单独选颜色，整体由选择拼成 Starship format，变量不再手填、不可直接编辑；精选 20 个中文变量 + 固定符号（@ : ~ $ 空格）+ 12 色色板（颜色下拉与变量下拉同款 WPF-UI ComboBox，每项显示 `#RRGGBB` 色号，选「自定义…」后可在右侧直接填 `#` 后面的 6 位色号）。用户名 / 主机名 / 当前路径等是 Starship 运行时读取的值，不做可编辑文字；配置本身就是 toml，无需额外持久化。接管模块段落是因为顶层 format 的外层 `(fg:…)` 只能染色裸文字，模块段落里的 format / 样式会盖过它（典型如主题预设的 powerline 段落），而 TOML 又不允许重复定义表——所以被引用的 `[module]` 段落整段移走、由托管块把段选色内嵌进模块自身 format 重写，未被引用的段落 / 注释原样保留。提示符前空一行与路径分隔符由美化页两个开关控制，随托管块写入并从块读回：`add_newline`（提示符前空一行，默认关）、`use_os_path_sep = false`（路径分隔符 `/`，默认开，接管 `[directory]` 段时显式落盘）；块外的旧顶层 `add_newline` 会被移走防 TOML 重复键。首次应用用独立的 `starship.toml.pam-prompt.bak` 保存原始文件（见 [PAM.Core/README.md](PAM.Core/README.md)）。
 
 ## 环境与运行
@@ -55,8 +57,12 @@ dotnet publish PAM.Tray -c Release -o publish
 | --- | --- |
 | `ProfileServiceTests.cs` | 受控区块只追加 / 整体替换 / 清空移除；区块与别名互不破坏；多行代码含缩进空行的启用禁用还原；单引号、双引号、无引号路径解析与写回转义（`` ` ``、`$`、`"`）；UTF-8 BOM、无 BOM 升级、ANSI 保留；CRLF 与 LF 各自的换行风格保留；配置文件缺失时自动建父目录；空文件、超长路径、特殊字符、非法路径参数 |
 | `SettingsServiceTests.cs` | `settings.json` 的 camelCase 键名与缩进格式、全部属性读写映射、文件缺失或损坏（乱码、截断、非法 JSON）时回退默认值且不抛异常、手工改坏的枚举值被 `Normalize()` 修正 |
+| `AliasLaunchServiceTests.cs` | 别名启动器区块幂等写入、清空时整体移除、不破坏 PAM-Custom / `Set-Alias` / 编码 / 换行 / 转义 |
+| `StarshipServiceTests.cs` | Starship init 区块幂等写入、`starship.toml` 备份与恢复、内置预设资源；应用主题时保留已有自定义提示符块 |
+| `StarshipPromptServiceTests.cs` | 托管块写顶层 format 并接管引用到的模块段落、未引用段落 / 注释 / 编码保留、format 往返与首次备份恢复、变量表与预览解析 |
+| `WindowsTerminalServiceTests.cs` | `settings.json` 的 JSONC 文本拼接：注释逐字保留、结构逐层补齐、属性设置 / 删除、嵌套同名项不误改、非法值不落盘；**多次写入不覆盖原始备份、恢复后备份保留可反复恢复**；外观 8 项批量写入与回读 |
 
-维护规则：**功能代码没改，就不用动测试代码，也不用读它**——改完 `PAM.Core` 的业务逻辑跑一遍 `dotnet test` 确认没被改坏即可。只有当 `$PROFILE` 区块格式、编码保留规则或 `settings.json` 字段本身发生变化时，才需要同步调整对应断言。测试不追求覆盖率，只覆盖上表列出的核心行为与边界场景。
+维护规则：**功能代码没改，就不用动测试代码，也不用读它**——改完 `PAM.Core` 的业务逻辑跑一遍 `dotnet test` 确认没被改坏即可。只有当 `$PROFILE` 区块格式、编码保留规则、`settings.json` 字段或终端外观属性本身发生变化时，才需要同步调整对应断言。测试不追求覆盖率，只覆盖上表列出的核心行为与边界场景。
 
 ## 数据在哪
 
@@ -64,7 +70,7 @@ dotnet publish PAM.Tray -c Release -o publish
 | --- | --- | --- |
 | 别名 / 自定义命令 | 默认终端对应的 `$PROFILE`（PowerShell 7 与 5.1 是两个不同文件） | [PAM.Core/README.md](PAM.Core/README.md) |
 | 主题、语言、默认终端、热键、托盘行为 | `%AppData%\PAM\settings.json` | [PAM.App/README.md](PAM.App/README.md) |
-| Starship 主题（美化页写入） | `~\.config\starship.toml`（写前自动备份为 `.bak`）；init 行写入 `$PROFILE` 受控区块 | [PAM.Core/README.md](PAM.Core/README.md) |
-| 终端字体（美化页写入） | Windows Terminal `settings.json` 的 `profiles.defaults.font.face`（写前自动备份） | [PAM.Core/README.md](PAM.Core/README.md) |
+| Starship 主题（美化页写入） | `~\.config\starship.toml`（应用主题前单槽备份为 `.bak`）；init 行写入 `$PROFILE` 受控区块 | [PAM.Core/README.md](PAM.Core/README.md) |
+| 终端外观（美化页写入） | Windows Terminal `settings.json` 的 `profiles.defaults`：字体、复古效果、光标、背景图、透明度、亚克力；首次修改前的原始配置另存为 `settings.json.bak`，永不覆盖、恢复后保留 | [PAM.Core/README.md](PAM.Core/README.md) |
 
-详细文档按项目查阅：[Core](PAM.Core/README.md)（`$PROFILE` 格式与全部服务）· [App](PAM.App/README.md)（三个页签、设置页与配置字段）· [Tray](PAM.Tray/README.md)（热键注册与热重载）。
+详细文档按项目查阅：[Core](PAM.Core/README.md)（`$PROFILE` 格式与全部服务）· [App](PAM.App/README.md)（四个页签、外观卡片、设置页与配置字段）· [Tray](PAM.Tray/README.md)（热键注册与热重载）。

@@ -10,22 +10,24 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 
 - **别名管理**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑（别名也可改名）/ 删除（二次确认）、路径浏览、文件不存在提示、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限时警告并可一键修复。
 - **自定义命令**（`Views/CustomCommandsView`）：受控区块内的函数 / 片段，列表列含状态胶囊（点击切换启用）、代码预览；内联编辑条用多行代码框，`Ctrl+Enter` 确认。数据格式见 [PAM.Core/README.md](../PAM.Core/README.md)。
-- **美化**（`Views/BeautifyView` + `ViewModels/BeautifyViewModel`）：见下节。
+- **美化**（`Views/BeautifyView` + `ViewModels/Beautify/` 下按功能拆分的 partial ViewModel）：见下节。
 - **设置**（`Views/SettingsView` + `ViewModels/SettingsViewModel`）：见下节。
 
 快捷键：`Ctrl+N` 新建、`Ctrl+S` 保存、`Enter` 确认、`Esc` 取消（自定义命令页为 `Ctrl+Enter`）。设置页录制热键时窗口级快捷键会让路，避免 `Ctrl+S` 被"保存并生效"抢走。
 
 ## 美化页
 
-终端 Starship 与字体的配置入口，数据源 `BeautifyViewModel`，五个卡片：
+终端外观、Starship 与字体的配置入口，数据源 `BeautifyViewModel`（壳 + 按功能拆分的 `ViewModels/Beautify/*.cs`），五个卡片：
 
 | 卡片 | 内容 |
 | --- | --- |
 | Starship | 探测已装版本与 Scoop；只有一个"一键安装（含 Scoop）"按钮，Scoop 缺失时自动走官方引导脚本（需联网），再用 Scoop 装 Starship。安装输出实时显示在页脚反馈区 |
-| 终端字体 | 下拉列出注册表里的等宽 / Nerd Font 候选，默认选中 Windows Terminal 当前字体；内置 `Assets/Fonts/CascadiaCodeNF.ttf` 未装时提供按当前用户安装（免管理员）；"应用到 Windows Terminal" 写入 `profiles.defaults.font.face`，写前自动备份 |
+| 外观 | 对齐 Windows Terminal「默认值 → 外观」的分组布局，7 组设置：**文本**（字体，含内置 Cascadia Code NF 一键安装）、**显示效果**（复古风格终端显示）、**光标**（形状 / 颜色）、**背景图**（路径 + 浏览 / 清空、背景图透明度）、**窗口**（窗口透明度、窗口透明亚克力材质）。分别写入 `profiles.defaults` 的 `font.face` / `experimental.retroTerminalEffect` / `cursorShape` / `cursorColor` / `backgroundImage` / `backgroundImageOpacity` / `opacity` / `useAcrylic`。字体下拉列出注册表里的等宽 / Nerd Font 候选并默认选中当前字体；控件值从磁盘读回并留一份快照，"保存外观设置"只提交有变化的项，留空 / 选「终端默认」等于删除属性交还 WT 默认；"放弃更改"重新读盘。未保存的编辑不会被其它操作的自动刷新覆盖。首次修改前自动保存 `settings.json.bak`（永不覆盖） |
 | 主题 | 六个官方预设（EmbeddedResource 打包在 PAM.Core），应用 = 备份 → 写 `starship.toml` → 确保 `$PROFILE` init 行；标注"需 Nerd Font"的预设会在字体未装时给出警告。下拉下方状态行通过比对当前 toml 原文识别已应用的主题并显示名称（重启后也保持选中），应用自定义提示符后改为提示"自定义提示符已接管顶层 format" |
 | 自定义提示符 | **点选片段组合**编辑器：点「添加片段」加入提示符元素，每个片段下拉选变量（精选 20 个中文变量，按身份 / Git / 运行状态 / 开发环境分组）或固定符号（`@ : ~ $ 空格`），单独选 12 色色板颜色（选「自定义…」后右侧直接填 `#` 后面的 6 位色号），变量不再手填、不可直接编辑；上方是带真实颜色的深色预览（变量显示示意值）。默认 format 是 `[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[:](fg:#BBC4B9)[$directory](fg:#BBC4B9)[$character](fg:#BFA8BF)`（即作者当前提示符的组合：用户名 / 主机名 / 冒号 / 路径同色，结束符另一色），**用户名 / 主机名 / 当前路径不需要也不允许手填**，路径会随 `cd` 变化。"应用到 Starship" 写入顶层 `format` 并接管 format 里引用到的模块段落（段选色内嵌进模块自身 format，未被引用的段落原样保留）；首次应用单独备份为 `starship.toml.pam-prompt.bak`，"恢复应用前配置" 一键还原（恢复即删除备份，按钮回到禁用，再次应用会重新备份）；"重置为默认" 只改编辑框、不写文件。配置本身存 toml，不进 `settings.json`。打开新终端窗口即可看到效果 |
-| 配置维护 | 展示 `starship.toml` 路径 / 是否创建 / init 行状态 / 备份存在；打开 `starship.toml`、恢复 toml 备份、恢复 Windows Terminal 备份 |
+| 配置维护 | 展示 `starship.toml` 路径 / 是否创建 / init 行状态 / 备份存在，以及 Windows Terminal 原始备份的创建时间与路径；打开 `starship.toml`、恢复 toml 备份、恢复 Windows Terminal 备份 |
+
+「恢复 Windows Terminal 备份」的语义与 toml 备份不同：toml 是**单槽**（最近一次应用主题前，恢复后仍保留）；WT 的 `settings.json.bak` 是**本软件第一次修改终端配置前**的原始快照，只在首次写入时创建、之后无论字体 / 外观改多少次都不覆盖，恢复也不删除备份——所以点恢复永远回到安装本软件前的配置，且可反复恢复。恢复后外观卡片强制重新读盘，未保存的编辑作废。
 
 进入页签（`Loaded` / 页签切换）自动刷新全部状态；所有耗时操作期间 `IsBusy` 禁用按钮。状态文案在 ViewModel 保存中文原文、读取时翻译，语言切换零成本。
 

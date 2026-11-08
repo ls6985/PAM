@@ -9,21 +9,28 @@ public sealed record WindowsTerminalState(
     string SettingsPath,
     bool SettingsExists,
     string? CurrentFont,
-    bool BackupExists);
+    bool BackupExists,
+    string BackupPath = "",
+    DateTime? BackupCreatedAt = null);
 
 /// <summary>写字体操作的结果。</summary>
 public sealed record WindowsTerminalFontResult(bool Success, string Message);
 
 /// <summary>
 /// Windows Terminal 的 settings.json 读写服务：定位配置文件、读取/写入
-/// <c>profiles.defaults.font.face</c>，写入前自动备份。
+/// <c>profiles.defaults</c> 下的外观属性（字体、光标、背景图、透明度等）。
 /// <para>
 /// settings.json 是允许注释与尾逗号的 JSONC，不能走"反序列化 → 再序列化"（会丢注释），
-/// 因此采用文本拼接：用 JsonDocument 定位结构、拿到节点的原文片段，再对原文做最小改动，
+/// 因此采用文本拼接：用 JsonDocument 判断结构、在原文上做最小改动，
 /// 改完重新解析校验通过才落盘。结构不符合预期时报错且不写，绝不破坏用户配置。
 /// </para>
+/// <para>
+/// 备份语义：<c>settings.json.bak</c> 是「本软件第一次修改终端配置之前」的原始快照，
+/// <b>只在首次写入时创建，之后无论改多少次都不覆盖</b>；恢复也保留备份，可反复恢复。
+/// 所以「恢复 Windows Terminal 备份」永远回到安装本软件前的配置，而不是上一次修改前的配置。
+/// </para>
 /// </summary>
-public sealed class WindowsTerminalService
+public sealed partial class WindowsTerminalService
 {
     private const string BackupSuffix = ".bak";
     private const string SettingsFileName = "settings.json";
@@ -52,7 +59,7 @@ public sealed class WindowsTerminalService
     public string? DiscoverSettingsPath()
         => GetCandidateSettingsPaths().FirstOrDefault(File.Exists);
 
-    /// <summary>当前状态：路径、是否存在、defaults 里配置的字体、有无备份。
+    /// <summary>当前状态：路径、是否存在、defaults 里配置的字体、原始备份的路径与时间。
     /// <paramref name="settingsPath" /> 缺省时自动发现，测试可直接注入路径。</summary>
     public WindowsTerminalState GetState(string? settingsPath = null)
     {
@@ -63,11 +70,34 @@ public sealed class WindowsTerminalService
             path = GetCandidateSettingsPaths()[0];
         }
 
+        var backupPath = GetBackupPath(path);
         return new WindowsTerminalState(
             path,
             File.Exists(path),
             ReadFontFace(path),
-            File.Exists(path + BackupSuffix));
+            File.Exists(backupPath),
+            backupPath,
+            File.Exists(backupPath) ? File.GetLastWriteTime(backupPath) : null);
+    }
+
+    /// <summary>原始快照的存放位置：与 settings.json 同目录的 settings.json.bak。</summary>
+    public string GetBackupPath(string settingsPath) => settingsPath + BackupSuffix;
+
+    /// <summary>
+    /// 只在备份不存在时保存当前配置。任何写入（字体 / 外观）都必须先调用它，
+    /// 之后重复写入一律不覆盖，保证 .bak 始终是「本软件第一次修改前」的原始配置。
+    /// 返回是否新建了备份。
+    /// </summary>
+    private bool EnsureOriginalBackup(string settingsPath)
+    {
+        var backupPath = GetBackupPath(settingsPath);
+        if (File.Exists(backupPath) || !File.Exists(settingsPath))
+        {
+            return false;
+        }
+
+        File.Copy(settingsPath, backupPath, overwrite: false);
+        return true;
     }
 
     /// <summary>读取 profiles.defaults.font.face；结构缺失或文件不可解析时返回 null。</summary>
@@ -108,8 +138,8 @@ public sealed class WindowsTerminalService
             return new WindowsTerminalFontResult(false, "未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。");
         }
 
-        // 备份先行：拼接哪怕只把内存字符串改坏，用户也能一键还原。
-        File.Copy(settingsPath, settingsPath + BackupSuffix, overwrite: true);
+        // 只在首次写入时留原始快照；后续修改不再覆盖，恢复永远是「安装本软件前」的配置。
+        EnsureOriginalBackup(settingsPath);
 
         var originalBytes = File.ReadAllBytes(settingsPath);
         var text = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetString(
@@ -144,8 +174,12 @@ public sealed class WindowsTerminalService
         return new WindowsTerminalFontResult(true, $"已把 Windows Terminal 默认字体设置为 {face}。");
     }
 
-    /// <summary>用备份恢复 settings.json。没有备份时返回 false。
-    /// <paramref name="settingsPath" /> 缺省时自动发现，测试可直接注入路径。</summary>
+    /// <summary>
+    /// 用原始快照恢复 settings.json，回到本软件第一次修改终端配置之前的状态。
+    /// 没有备份时返回 false。<b>备份文件本身保留</b>：恢复之后继续改、再点恢复，
+    /// 依然是同一份「安装本软件前」的配置。
+    /// <paramref name="settingsPath" /> 缺省时自动发现，测试可直接注入路径。
+    /// </summary>
     public bool RestoreBackup(string? settingsPath = null)
     {
         settingsPath ??= DiscoverSettingsPath();
@@ -154,7 +188,7 @@ public sealed class WindowsTerminalService
             return false;
         }
 
-        var backupPath = settingsPath + BackupSuffix;
+        var backupPath = GetBackupPath(settingsPath);
         if (!File.Exists(backupPath))
         {
             return false;
@@ -268,17 +302,24 @@ public sealed class WindowsTerminalService
         return keyIndex;
     }
 
-    /// <summary>往对象的开括号后插入一个属性；对象为空（紧跟 }）时不留尾逗号。</summary>
+    /// <summary>
+    /// 往对象的开括号后插入一个属性；对象为空（紧跟 }）时不留尾逗号。
+    /// 原对象首成员前的缩进 / 换行原样保留，插入项沿用同样的分隔符，避免把配置压成一整行。
+    /// </summary>
     private static string InsertValueAfter(string text, int insertIndex, string valueWithComma)
     {
         var rest = text[insertIndex..];
         var trimmed = rest.AsSpan().TrimStart();
         var skipWhitespace = rest.Length - trimmed.Length;
+        var whitespace = rest[..skipWhitespace];
 
         // 已有成员时插入的属性以逗号结尾；空对象里插入时不带尾逗号。
         var insertion = trimmed.StartsWith('}') ? valueWithComma.TrimEnd(',') : valueWithComma;
+        var separator = insertion.EndsWith(',')
+            ? (whitespace.Contains('\n') ? whitespace : " ")
+            : string.Empty;
 
-        return text[..insertIndex] + insertion + rest[skipWhitespace..];
+        return text[..insertIndex] + whitespace + insertion + separator + rest[skipWhitespace..];
     }
 
     private static string InsertIntoObject(string text, string value)

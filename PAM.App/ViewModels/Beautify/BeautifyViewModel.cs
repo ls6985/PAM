@@ -11,12 +11,13 @@ using PAM.Core;
 namespace PAM.App.ViewModels;
 
 /// <summary>
-/// "美化"页签的数据源：Starship 探测与一键安装（含 Scoop）、内置 Cascadia Code NF 字体安装、
-/// 主题预设写入 starship.toml、Windows Terminal 默认字体，以及配置备份与恢复。
+/// "美化"页签的数据源：Windows Terminal 外观（字体 / 复古 / 光标 / 背景图 / 透明度）、
+/// Starship 探测与一键安装（含 Scoop）、内置 Cascadia Code NF 字体安装、
+/// 主题预设写入 starship.toml，以及配置备份与恢复。
 /// 状态在进入页签时刷新；所有耗时操作走 IsBusy，期间禁用操作按钮。
 ///
 /// 本文件只承载「外壳」：共享字段、INotifyPropertyChanged 基础设施、通用执行（RunBusyAsync）、
-/// 反馈与本地化桥接。各功能（状态刷新 / 字体 / 主题 / 自定义提示符 / Starship 安装 / 配置维护）
+/// 反馈与本地化桥接。各功能（外观与字体 / 状态刷新 / 主题 / 自定义提示符 / Starship 安装 / 配置维护）
 /// 分别落在同名 partial 文件里，互不干扰，修改某一功能不必通读其它功能。
 /// </summary>
 public sealed partial class BeautifyViewModel : INotifyPropertyChanged
@@ -87,6 +88,7 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
         _tomlStatusSource = File.Exists(_tomlPath) ? "已创建" : "未创建";
         RebuildFontOptions(candidates, wtState.CurrentFont, _isBundledFontInstalled);
         RebuildPresetOptions();
+        RefreshAppearanceFromDisk();
         RaiseStatusChanged();
 
         // 初始选中优先识别已应用的预设（重启后也能看到当前主题），识别不出选无需特殊字体的预设。
@@ -119,7 +121,8 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(CanOneClickInstall));
             OnPropertyChanged(nameof(CanRefresh));
             OnPropertyChanged(nameof(CanInstallBundledFont));
-            OnPropertyChanged(nameof(CanApplyFont));
+            OnPropertyChanged(nameof(CanApplyAppearance));
+            OnPropertyChanged(nameof(CanDiscardAppearance));
             OnPropertyChanged(nameof(CanApplyPreset));
             OnPropertyChanged(nameof(CanOpenToml));
             OnPropertyChanged(nameof(CanRestoreToml));
@@ -211,6 +214,13 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
             option.Refresh();
         }
 
+        foreach (var option in CursorShapeOptions)
+        {
+            option.Refresh();
+        }
+
+        OnPropertyChanged(nameof(AppearanceStatusText));
+        OnPropertyChanged(nameof(WtBackupText));
         RaiseStatusChanged();
         FeedbackMessage = Loc.F(_feedbackSource, _feedbackArgs);
     }

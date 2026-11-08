@@ -341,8 +341,6 @@ public sealed class LocalizationService
 
         // ---- 美化（Starship / 字体 / 主题） ----
         ["美化"] = "Beautify",
-        ["为终端配置 Starship 提示符与 Nerd Font 字体；所有写入都会先自动备份。"] =
-            "Configure the Starship prompt and Nerd Fonts for your terminal. Every write is backed up first.",
         ["为终端配置 Starship 提示符与 Nerd Font 字体。"] =
             "Configure the Starship prompt and Nerd Fonts for your terminal.",
         ["检测中…"] = "Detecting…",
@@ -372,22 +370,104 @@ public sealed class LocalizationService
         ["操作完成。"] = "Done.",
         ["操作失败：{0}"] = "Operation failed: {0}",
 
-        ["终端字体"] = "Terminal font",
-        ["字体选择"] = "Font",
+        // ---------------- 美化页：外观（Windows Terminal「默认值 → 外观」） ----------------
+        ["配置终端外观、Starship 提示符与 Nerd Font；首次修改终端配置前会自动保存一份原始配置，随时可恢复。"] =
+            "Configure terminal appearance, the Starship prompt and Nerd Fonts. A snapshot of the original terminal config is saved before the first change and can be restored at any time.",
+        ["对应 Windows Terminal「默认值 → 外观」的设置，写入 settings.json 的 profiles.defaults；只保存改动过的项，留空或选「终端默认」即交还终端默认。"] =
+            "Maps to Windows Terminal's Defaults > Appearance and writes profiles.defaults in settings.json. Only changed items are saved; leave a field empty or pick \"Terminal default\" to hand it back to the terminal.",
+        ["文本"] = "Text",
+        ["字体"] = "Font",
+        ["写入 profiles.defaults.font.face；内置 Cascadia Code NF 已随本程序打包，未安装时可一键按当前用户安装。"] =
+            "Writes profiles.defaults.font.face. Cascadia Code NF ships with this app; install it for the current user with one click if missing.",
+        ["显示效果"] = "Effects",
+        ["复古风格终端显示"] = "Retro terminal effect",
+        ["CRT 扫描线与辉光效果（experimental.retroTerminalEffect）。"] =
+            "CRT scanlines and glow (experimental.retroTerminalEffect).",
+        ["启用复古效果"] = "Enable retro effect",
+        ["光标"] = "Cursor",
+        ["光标形状"] = "Cursor shape",
+        ["对应 cursorShape；选「终端默认」即删除该设置。"] =
+            "Maps to cursorShape. Pick \"Terminal default\" to remove the setting.",
+        ["光标颜色"] = "Cursor color",
+        ["对应 cursorColor，填 #RGB 或 #RRGGBB；留空使用配色方案里的光标色。"] =
+            "Maps to cursorColor. Enter #RGB or #RRGGBB; leave empty to use the color scheme's cursor color.",
+        ["例如 #FFFFFF；留空表示不设置"] = "For example #FFFFFF; leave empty to leave it unset",
+        ["背景图"] = "Background image",
+        ["背景图路径"] = "Background image path",
+        ["对应 backgroundImage；也支持 desktopWallpaper 与 ms-appdata URI。清空即移除背景图。"] =
+            "Maps to backgroundImage. desktopWallpaper and ms-appdata URIs also work. Clear the field to remove the image.",
+        ["清空"] = "Clear",
+        ["移除背景图设置"] = "Remove the background image setting",
+        ["背景图透明度"] = "Background image opacity",
+        ["对应 backgroundImageOpacity（0~1），这里按百分比显示。"] =
+            "Maps to backgroundImageOpacity (0-1), shown here as a percentage.",
+        ["窗口"] = "Window",
+        ["窗口透明度"] = "Window opacity",
+        ["对应 opacity（0~100，100 为完全不透明）；需低于 100 才能看出效果。"] =
+            "Maps to opacity (0-100, where 100 is fully opaque). Set it below 100 to see the effect.",
+        ["窗口透明亚克力材质"] = "Acrylic transparency",
+        ["对应 useAcrylic；开启后透明背景带模糊（Windows 11 效果最佳）。"] =
+            "Maps to useAcrylic. Enabling it blurs the transparent background (best on Windows 11).",
+        ["使用亚克力材质"] = "Use acrylic",
+        ["放弃更改"] = "Discard changes",
+        ["保存外观设置"] = "Save appearance",
+        ["「恢复 Windows Terminal 备份」：本程序第一次修改终端配置（字体 / 外观）时会把当时的 settings.json 完整备份为 settings.json.bak，之后无论改多少次都不覆盖；点此永远恢复到安装本软件前的配置。备份保留，可反复恢复。"] =
+            "\"Restore Windows Terminal backup\": the first time this app changes terminal settings (font / appearance), it saves the whole settings.json as settings.json.bak. Later changes never overwrite it, so restoring always returns to the config from before this app was installed. The backup is kept and can be restored repeatedly.",
+        ["回到本软件第一次修改前的 settings.json；原始备份不会被覆盖或删除，可反复恢复。"] =
+            "Return to the settings.json from before this app's first change. The original backup is never overwritten or deleted, so it can be restored repeatedly.",
+        ["原始配置备份创建于 {0}；恢复时永远回到这份配置。"] =
+            "Original backup created at {0}. Restoring always returns to this config.",
+        ["还没有原始配置备份；第一次通过本程序修改终端配置时会自动生成。"] =
+            "No original backup yet. It is created automatically the first time this app changes terminal settings.",
+        ["备份文件：{0}"] = "Backup file: {0}",
+        ["已恢复到本软件首次修改前的 Windows Terminal 配置；原始备份保留，可再次恢复。"] =
+            "Restored the Windows Terminal config from before this app's first change. The original backup is kept and can be restored again.",
+        ["有尚未保存的修改；保存后打开新终端窗口即可看到效果。"] =
+            "Unsaved changes. Save them, then open a new terminal window to see the effect.",
+        ["当前显示的是 settings.json 里已保存的值；改动后点「保存外观设置」。"] =
+            "Showing the values saved in settings.json. Click \"Save appearance\" after making changes.",
+        ["正在保存终端外观设置…"] = "Saving terminal appearance settings…",
+        ["没有需要保存的更改。"] = "Nothing to save.",
+        ["光标颜色要写成 #RGB 或 #RRGGBB；留空表示使用终端默认颜色。"] =
+            "Cursor color must be #RGB or #RRGGBB; leave empty to use the terminal default.",
+        ["已保存 {0} 项终端外观设置，打开新终端窗口即可看到效果。"] =
+            "Saved {0} terminal appearance setting(s). Open a new terminal window to see the effect.",
+        ["选择终端背景图"] = "Choose a terminal background image",
+        ["图片文件 (*.png;*.jpg;*.jpeg;*.gif;*.bmp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp|所有文件 (*.*)|*.*"] =
+            "Image files (*.png;*.jpg;*.jpeg;*.gif;*.bmp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp|All files (*.*)|*.*",
+        ["终端默认"] = "Terminal default",
+        ["竖线 (bar)"] = "Bar",
+        ["复古粗块 (vintage)"] = "Vintage block",
+        ["下划线 (underscore)"] = "Underscore",
+        ["实心框 (filledBox)"] = "Filled box",
+        ["空心框 (emptyBox)"] = "Empty box",
+        ["双下划线 (doubleUnderscore)"] = "Double underscore",
+
+        // 外观写入失败的提示（出现即代表 settings.json 未被改动）。
+        ["未知的外观设置项。"] = "Unknown appearance setting.",
+        ["外观设置的值不是合法的 JSON 字面量。"] = "The appearance value is not a valid JSON literal.",
+        ["开关值只能是 true / false。"] = "A toggle can only be true or false.",
+        ["光标形状不合法。"] = "Invalid cursor shape.",
+        ["不支持的光标形状。"] = "Unsupported cursor shape.",
+        ["光标颜色要写成 #RGB 或 #RRGGBB。"] = "Cursor color must be #RGB or #RRGGBB.",
+        ["背景图路径不能为空。"] = "The background image path cannot be empty.",
+        ["背景图透明度必须在 0 ~ 1 之间。"] = "Background image opacity must be between 0 and 1.",
+        ["窗口透明度必须是 0 ~ 100 的整数。"] = "Window opacity must be an integer between 0 and 100.",
+        ["settings.json 的目标层级不是对象，无法自动修改，请手动调整。"] =
+            "A target level in settings.json is not an object; cannot modify automatically. Edit it manually.",
+        ["settings.json 的目标属性不是简单值或结构异常，无法自动修改，请手动调整。"] =
+            "A target property in settings.json is not a simple value or has an unexpected structure; edit it manually.",
+        ["外观设置的属性路径为空。"] = "The appearance setting path is empty.",
+
         ["Windows Terminal 当前字体：{0}"] = "Windows Terminal current font: {0}",
         ["Windows Terminal 当前字体：未设置（跟随 WT 默认）"] =
             "Windows Terminal current font: not set (using the WT default)",
-        ["写入 Windows Terminal 的 profiles.defaults.font.face；内置 Cascadia Code NF 已随本程序打包，未安装时可一键按当前用户安装。"] =
-            "Writes profiles.defaults.font.face in Windows Terminal. Cascadia Code NF ships with this app; if it is missing, install it for the current user with one click.",
         ["安装内置字体"] = "Install bundled font",
         ["把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。"] =
             "Installs the bundled Cascadia Code NF for the current user (no admin rights needed).",
-        ["应用到 Windows Terminal"] = "Apply to Windows Terminal",
         ["想要其他 Nerd Font？安装 Scoop 后执行：scoop bucket add nerd-fonts，再安装如 JetBrains-Mono-NF、FiraCode-NF 等包，重启本页即可在下拉中看到。"] =
             "Want other Nerd Fonts? With Scoop installed, run: scoop bucket add nerd-fonts, then install e.g. JetBrains-Mono-NF or FiraCode-NF. Reopen this tab and they will appear in the list.",
         ["正在安装内置字体…"] = "Installing the bundled font…",
-        ["正在写入 Windows Terminal 字体设置…"] = "Writing the Windows Terminal font setting…",
-        ["已把 Windows Terminal 默认字体设置为 {0}。"] = "Windows Terminal default font set to {0}.",
         ["未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。"] =
             "Windows Terminal settings.json was not found. Start Windows Terminal once first.",
         ["未找到字体文件：{0}"] = "Font file not found: {0}",
@@ -395,13 +475,9 @@ public sealed class LocalizationService
         ["安装字体失败：{0}"] = "Failed to install the font: {0}",
         ["已为当前用户安装 {0}。"] = "Installed {0} for the current user.",
         ["字体名称不能为空。"] = "The font name cannot be empty.",
-        ["请先选择一个字体。"] = "Select a font first.",
-        ["字体 {0} 未安装，请先安装。"] = "Font {0} is not installed. Install it first.",
 
         ["主题"] = "Theme",
         ["主题预设"] = "Theme preset",
-        ["应用后写入 starship.toml，并确保 $PROFILE 里有 starship init 行；原配置会自动备份为 starship.toml.bak。"] =
-            "Writes the preset into starship.toml and makes sure $PROFILE has the starship init line. The original file is backed up as starship.toml.bak.",
         ["标注“需 Nerd Font”的预设要先装好字体，否则提示符会出现乱码方块。"] =
             "Presets marked as needing a Nerd Font require the font to be installed first, otherwise the prompt shows placeholder boxes.",
         ["应用主题"] = "Apply theme",
@@ -410,17 +486,12 @@ public sealed class LocalizationService
             "Theme applied: {0}. The original starship.toml has been backed up.",
         ["主题已应用：{0}。该预设需要 Nerd Font，当前未安装内置字体，提示符可能显示乱码方块，建议先安装。"] =
             "Theme applied: {0}. This preset needs a Nerd Font, which is not installed yet; the prompt may show placeholder boxes. Install the bundled font first.",
-        ["该预设需要 Nerd Font，建议先安装内置字体。"] =
-            "This preset needs a Nerd Font. Install the bundled font first.",
         ["请先选择一个主题预设。"] = "Select a theme preset first.",
         ["未找到内置主题预设：{0}"] = "Bundled theme preset not found: {0}",
 
         ["配置维护"] = "Config maintenance",
         ["已创建"] = "Created",
         ["未创建"] = "Not created",
-        ["starship init 行：已写入"] = "starship init line: present",
-        ["starship init 行：未写入"] = "starship init line: missing",
-        ["starship init 行：未知"] = "starship init line: unknown",
         ["starship.toml.bak 存在"] = "starship.toml.bak exists",
         ["打开 starship.toml"] = "Open starship.toml",
         ["恢复 starship.toml 备份"] = "Restore starship.toml backup",
@@ -431,8 +502,6 @@ public sealed class LocalizationService
         ["正在恢复 starship.toml 备份…"] = "Restoring the starship.toml backup…",
         ["已从备份恢复 starship.toml。"] = "starship.toml has been restored from the backup.",
         ["正在恢复 Windows Terminal 备份…"] = "Restoring the Windows Terminal backup…",
-        ["已从备份恢复 Windows Terminal 的 settings.json。"] =
-            "The Windows Terminal settings.json has been restored from the backup.",
         ["没有可恢复的备份。"] = "No backup to restore.",
         ["状态刷新失败：{0}"] = "Failed to refresh the status: {0}",
 
@@ -451,8 +520,6 @@ public sealed class LocalizationService
             "profiles.defaults.font is not an object; cannot modify automatically.",
         ["profiles.defaults.font 结构异常，无法自动修改。"] =
             "Unexpected profiles.defaults.font structure in settings.json; cannot modify automatically.",
-        ["无法在 settings.json 中定位 {0}，请手动修改字体设置。"] =
-            "Cannot locate {0} in settings.json. Edit the font setting manually.",
         ["无法定位 profiles.defaults.font.face，请手动修改字体设置。"] =
             "Cannot locate profiles.defaults.font.face. Edit the font setting manually.",
         ["settings.json 结构异常，无法自动修改。"] =
@@ -462,18 +529,10 @@ public sealed class LocalizationService
 
         // ---------------- 美化页：自定义提示符 ----------------
         ["自定义提示符"] = "Custom prompt",
-        ["把 Black@DESKTOP-J64G5VA :~ $ 拆成六段，每段可单独改文字和颜色；文字里的空格也算内容，可以直接在输入框里加。应用时只替换 starship.toml 的顶层 format，其余配置原样保留。"] =
-            "Split Black@DESKTOP-J64G5VA :~ $ into six segments, each with its own text and color. Applying only replaces the top-level format in starship.toml and keeps everything else untouched.",
-        ["用户名、主机名、当前路径等是 Starship 读取到的值，不用手填：从下面的下拉里选一个变量插入即可；@ : ~ $ 这些固定符号也能插入，颜色单独选。整行格式可以直接编辑，应用时只替换 starship.toml 的顶层 format，其余配置原样保留。"] =
-            "Values such as the username, hostname and current directory are read by Starship at runtime: pick a variable from the dropdown instead of typing them. Fixed symbols like @ : ~ $ can be inserted too, with their own colors. Edit the whole format line directly. Applying only replaces the top-level format in starship.toml and keeps everything else untouched.",
         ["预览为示意值，实际文字由 Starship 按系统状态生成（切换目录时路径会跟着变）。"] =
             "The preview uses sample values; Starship generates the real text from system state (the path follows cd).",
-        ["格式（一整行 Starship format）"] = "Format (a single Starship format line)",
-        ["搜索变量"] = "Search variables",
         ["插入变量"] = "Insert variable",
-        ["给选中文字上色"] = "Colorize selection",
         ["当前颜色"] = "Current color",
-        ["插入固定符号"] = "Insert fixed symbol",
         ["空格"] = "Space",
         ["用户名"] = "Username",
         ["主机名"] = "Hostname",

@@ -119,7 +119,9 @@ public sealed class StarshipServiceTests : IDisposable
         var text = File.ReadAllText(_profilePath);
 
         Assert.Equal(2, Occurrences(text, "starship init").Count);
-        Assert.Contains("#endregion\n\n# >>> PAM Starship >>>", text);
+        // 源码文件在 Windows 上可能是 CRLF，raw string 字面量会带上 \r\n；
+        // 断言只关心「区块后空一行接新块」，先归一化行尾再比较。
+        Assert.Contains("#endregion\n\n# >>> PAM Starship >>>", text.Replace("\r\n", "\n"));
     }
 
     [Fact]

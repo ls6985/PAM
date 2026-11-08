@@ -37,8 +37,17 @@ public partial class BeautifyView : UserControl
     private void InstallBundledFontButton_Click(object sender, RoutedEventArgs e)
         => _ = _viewModel?.InstallBundledFontAsync();
 
-    private void ApplyFontButton_Click(object sender, RoutedEventArgs e)
-        => _ = _viewModel?.ApplyFontAsync();
+    private void ApplyAppearanceButton_Click(object sender, RoutedEventArgs e)
+        => _ = _viewModel?.ApplyAppearanceAsync();
+
+    private void DiscardAppearanceButton_Click(object sender, RoutedEventArgs e)
+        => _viewModel?.DiscardAppearance();
+
+    private void BrowseBackgroundImageButton_Click(object sender, RoutedEventArgs e)
+        => _viewModel?.BrowseBackgroundImage();
+
+    private void ClearBackgroundImageButton_Click(object sender, RoutedEventArgs e)
+        => _viewModel?.ClearBackgroundImage();
 
     private void ApplyPresetButton_Click(object sender, RoutedEventArgs e)
         => _ = _viewModel?.ApplyPresetAsync();

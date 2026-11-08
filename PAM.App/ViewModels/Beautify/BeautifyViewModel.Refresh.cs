@@ -39,6 +39,7 @@ public sealed partial class BeautifyViewModel
             var detect = await Task.Run(() => _starshipService.Detect());
             var scoopInstalled = await Task.Run(() => _starshipService.IsScoopInstalled());
             var wtState = await Task.Run(() => _terminalService.GetState());
+            var wtAppearance = await Task.Run(() => _terminalService.ReadAppearance(wtState.SettingsPath));
             var candidates = await Task.Run(() => FontInstaller.GetMonospaceCandidates());
             var bundledInstalled = await Task.Run(() => FontInstaller.IsBundledFontInstalled());
             var state = await Task.Run(() => _starshipService.GetState(profilePath));
@@ -62,6 +63,7 @@ public sealed partial class BeautifyViewModel
             RebuildFontOptions(candidates, wtState.CurrentFont, bundledInstalled);
             RebuildPresetOptions();
             RefreshPromptState();
+            ApplyAppearanceFromState(wtState, wtAppearance);
 
             RaiseStatusChanged();
         }
@@ -106,9 +108,20 @@ public sealed partial class BeautifyViewModel
             : currentFont ?? (_isBundledFontInstalled ? FontInstaller.BundledFontFamily : options.FirstOrDefault());
         SelectedFont = selection;
 
-        // ItemsSource 换新会把 ComboBox 的内部选中清空；若值恰好未变，上面的赋值不触发通知，
-        // 这里强制补一次，让 ComboBox 从空选中重新匹配 SelectedItem 并重算 SelectionBoxItem。
-        OnPropertyChanged(nameof(SelectedFont));
+        // 下拉重建属于「读盘回填」，不能算用户改动；否则保存按钮会无故亮起。
+        _suppressAppearanceDirty = true;
+        try
+        {
+            SelectedFont = selection;
+
+            // ItemsSource 换新会把 ComboBox 的内部选中清空；若值恰好未变，上面的赋值不触发通知，
+            // 这里强制补一次，让 ComboBox 从空选中重新匹配 SelectedItem 并重算 SelectionBoxItem。
+            OnPropertyChanged(nameof(SelectedFont));
+        }
+        finally
+        {
+            _suppressAppearanceDirty = false;
+        }
     }
 
     private void RebuildPresetOptions()
@@ -151,7 +164,11 @@ public sealed partial class BeautifyViewModel
         OnPropertyChanged(nameof(PresetStatusText));
         OnPropertyChanged(nameof(CanOneClickInstall));
         OnPropertyChanged(nameof(CanInstallBundledFont));
-        OnPropertyChanged(nameof(CanApplyFont));
+        OnPropertyChanged(nameof(CanApplyAppearance));
+        OnPropertyChanged(nameof(CanDiscardAppearance));
+        OnPropertyChanged(nameof(AppearanceStatusText));
+        OnPropertyChanged(nameof(WtBackupText));
+        OnPropertyChanged(nameof(WtBackupPathText));
         OnPropertyChanged(nameof(CanApplyPreset));
         OnPropertyChanged(nameof(CanOpenToml));
         OnPropertyChanged(nameof(CanRestoreToml));

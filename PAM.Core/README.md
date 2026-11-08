@@ -72,7 +72,7 @@ Invoke-Expression (&starship init powershell)
 
 ## 文件
 
-按功能分文件夹：`Profile/`（$PROFILE 定位、读写与区块维护）、`Terminal/`（终端配置与字体）、`Settings/`（设置模型与持久化）、`Starship/` 与 `StarshipPrompt/`（Starship 主题与自定义提示符）、`Models/`（数据模型）。命名空间统一为 `PAM.Core`，不随文件夹变化；根目录只留三个跨功能基础设施：`ProfileFileStore.cs`、`TrayBridge.cs`、`LocalizationService.cs`。
+按功能分文件夹：`Profile/`（$PROFILE 定位、读写与区块维护）、`Terminal/`（Windows Terminal 配置、外观与字体）、`Settings/`（设置模型与持久化）、`Starship/` 与 `StarshipPrompt/`（Starship 主题与自定义提示符）、`Models/`（数据模型）。命名空间统一为 `PAM.Core`，不随文件夹变化；根目录只留三个跨功能基础设施：`ProfileFileStore.cs`、`TrayBridge.cs`、`LocalizationService.cs`。
 
 | 文件 | 职责 |
 | --- | --- |
@@ -89,7 +89,9 @@ Invoke-Expression (&starship init powershell)
 | `Starship/StarshipService.cs` | Starship 探测 / Scoop 与一键安装 / `starship.toml` 路径与备份恢复 / `$PROFILE` init 区块 / 内置主题预设（`Presets\*.toml` EmbeddedResource）。测试可注入配置路径 |
 | `StarshipPrompt/StarshipPromptService.cs` | 自定义提示符：存**一整行** Starship format（不再是六段模型）+ `PromptPalette` 12 色色板 + `ParsePreview()` 预览解析；托管块 `# >>> PAM Prompt >>>` 内写顶层 `format` 与 `add_newline`（提示符前空一行开关，默认 false），并接管 format 里引用到的模块段落——顶层 format 的外层 `(fg:…)` 只能染色裸文字，段落里的 format / 样式会盖过它，且 TOML 不允许重复定义表，所以被引用的 `[module]`（含 `[module.x]` 子表）整段移走、由托管块把段选色内嵌进模块自身 format 重写（模板在 `StarshipPromptService.Modules.cs`），未被引用的段落 / 注释 / CRLF / 无 BOM UTF-8 原样保留；块插在第一个段落表头之前，避免块内表头捕获根级键。写入只做 TOML 双引号层转义，读回即编辑框原文（只认块内第一个表头之前的 format 行），保证 `$`、`[`、`]`、`\`、引号可往返；`add_newline` 从块内同区域读回、`use_os_path_sep` 从块内 `[directory]` 段读回，缺失时按 `CreateDefaultOptions()` 回显；接管 `[directory]` 段时 `use_os_path_sep` 两种取值都显式落盘（false = `/` 分隔，默认），块外的旧顶层 `add_newline` / `format` 移走防 TOML 重复键；`Validate()` 拒绝空 / 多行 / 非 `#RRGGBB` 颜色。独立备份 `.pam-prompt.bak` 只在首次写入时创建，`Restore()` 还原原始文件并删除备份（"恢复应用前配置"按钮的可用性 = 有未撤销的备份）。不引入 TOML 库，配置即 toml 本身 |
 | `StarshipPrompt/StarshipVariables.cs` | 精选 20 个 Starship 模块变量（取自 `starship module --list`），中文名 + 英文名称 + 四组分类 + 预览示例值；用户名 / 主机名 / 当前路径等动态值由 Starship 运行时读取，UI 只让"选"不让"填" |
-| `Terminal/WindowsTerminalService.cs` | 定位 WT `settings.json`（Stable / Preview / Canary / 非打包），读写 `profiles.defaults.font.face`：JSONC 文本拼接保注释、写前备份、校验不过不落盘 |
+| `Terminal/WindowsTerminalService.cs` | 定位 WT `settings.json`（Stable / Preview / Canary / 非打包）；`GetState()` 报告字体 / 原始备份路径与时间；`ApplyFont()` 写 `profiles.defaults.font.face`；`RestoreBackup()` 恢复原始配置。**备份只在首次写入时创建、之后永不覆盖，恢复后也不删除**——所以恢复永远回到安装本软件前的配置 |
+| `Terminal/WindowsTerminalService.Appearance.cs` | 外观读写：`ReadAppearance()` 读回 `profiles.defaults` 的 8 个属性（null = 未设置 / 跟随 WT 默认），`ApplyAppearance(changes)` 只提交有差异的项；`SpliceProperty()` 是通用 JSONC 拼接器——逐层补齐对象、替换 / 删除标量、按 JsonDocument 的值原文定位本层属性（不会误改嵌套对象里的同名项）、保留注释 / 尾逗号 / BOM / 缩进，整体解析 + 逐项回读校验通过才原子落盘 |
+| `Terminal/TerminalAppearance.cs` | 外观数据模型：`TerminalAppearance`（读回值）、`TerminalAppearanceChange`（Set / Remove 一项）、`TerminalAppearanceKey` 枚举、`TerminalAppearanceSchema`（键 → `profiles.defaults` 路径、光标形状清单、合法值校验） |
 | `Terminal/FontInstaller.cs` | 注册表枚举已装字体与等宽候选、内置字体是否已装、按当前用户安装 ttf（复制 + HKCU 注册 + 广播 `WM_FONTCHANGE`），免管理员权限 |
 | `TrayBridge.cs` | App 与 Tray 之间的命名事件（设置变更 / 请求退出）、托盘进程探测与启动 |
 | `LocalizationService.cs` | 中文原文 → 英文词表，支持精确匹配与带 `{0}` 占位符的动态消息匹配；切换语言时广播事件 |

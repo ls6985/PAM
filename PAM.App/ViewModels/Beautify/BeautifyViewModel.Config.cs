@@ -4,11 +4,14 @@ using PAM.Core;
 namespace PAM.App.ViewModels;
 
 /// <summary>
-/// 配置维护功能：打开 / 恢复 starship.toml，以及恢复 Windows Terminal 的 settings.json 备份。
+/// 配置维护功能：打开 / 恢复 starship.toml，以及恢复 Windows Terminal 的原始配置备份。
 /// 修改配置维护逻辑只看本文件。
 /// </summary>
 public sealed partial class BeautifyViewModel
 {
+    private string _wtBackupPath = string.Empty;
+    private DateTime? _wtBackupCreatedAt;
+
     public bool HasWtSettings => _hasWtSettings;
     public bool HasTomlBackup => _hasTomlBackup;
     public bool HasWtBackup => _hasWtBackup;
@@ -16,6 +19,15 @@ public sealed partial class BeautifyViewModel
     public string WtSettingsPath => _wtSettingsPath;
     public string TomlStatusText => Loc.T(_tomlStatusSource);
     public string InitLineText => Loc.F("starship init 行：{0}", Loc.T(_initLineSource));
+
+    /// <summary>原始快照是什么时候留下的：说明恢复永远回到本软件首次修改前，而不是上一次修改前。</summary>
+    public string WtBackupText => _wtBackupCreatedAt is { } created
+        ? Loc.F("原始配置备份创建于 {0}；恢复时永远回到这份配置。", created.ToString("yyyy-MM-dd HH:mm"))
+        : Loc.T("还没有原始配置备份；第一次通过本程序修改终端配置时会自动生成。");
+
+    public string WtBackupPathText => string.IsNullOrEmpty(_wtBackupPath)
+        ? string.Empty
+        : Loc.F("备份文件：{0}", _wtBackupPath);
 
     public bool CanOpenToml => !IsBusy;
     public bool CanRestoreToml => !IsBusy && _hasTomlBackup;
@@ -54,8 +66,12 @@ public sealed partial class BeautifyViewModel
             static restored => new[]
             {
                 restored
-                    ? (StatusType.Saved, "已从备份恢复 Windows Terminal 的 settings.json。")
+                    ? (StatusType.Saved, "已恢复到本软件首次修改前的 Windows Terminal 配置；原始备份保留，可再次恢复。")
                     : ((StatusType.Warning, "没有可恢复的备份。")),
             });
+
+        // 恢复后界面必须显示这份原始配置，未保存的编辑一律作废（含字体下拉）；
+        // 备份文件仍在，再次修改后仍可回到同一份原始配置。
+        RefreshAppearanceFromDisk(resetFontSelection: true);
     }
 }

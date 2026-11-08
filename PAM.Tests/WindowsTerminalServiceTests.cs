@@ -282,6 +282,267 @@ public sealed class WindowsTerminalServiceTests : IDisposable
         Assert.True(state.BackupExists);
     }
 
+    // ---------------- 外观属性：通用 JSONC 拼接 ----------------
+
+    [Fact]
+    public void SpliceProperty_CreatesMissingProfilesAndDefaults()
+    {
+        const string original = """{ "theme": "dark" }""";
+
+        var updated = WindowsTerminalService.SpliceProperty(
+            original,
+            TerminalAppearanceSchema.GetPath(TerminalAppearanceKey.CursorShape),
+            TerminalAppearanceChange.Quote("filledBox"));
+
+        Assert.Contains("\"profiles\": { \"defaults\": { \"cursorShape\": \"filledBox\" } }", updated);
+        Assert.Contains("\"theme\": \"dark\"", updated);
+        AssertNoTrailingCommaAdded(updated);
+    }
+
+    [Fact]
+    public void SpliceProperty_ReplacesScalar_AndKeepsCommentsVerbatim()
+    {
+        const string original =
+            """
+            // 用户注释
+            {
+                "profiles": {
+                    "defaults": {
+                        // 透明度后面的说明
+                        "opacity": 50,
+                        "colorScheme": "Campbell"
+                    }
+                }
+            }
+            """;
+
+        var updated = WindowsTerminalService.SpliceProperty(
+            original,
+            TerminalAppearanceSchema.GetPath(TerminalAppearanceKey.Opacity),
+            "85");
+
+        Assert.Contains("\"opacity\": 85", updated);
+        Assert.Contains("// 透明度后面的说明", updated);
+        Assert.Contains("\"colorScheme\": \"Campbell\"", updated);
+        AssertNoTrailingCommaAdded(updated);
+    }
+
+    [Fact]
+    public void SpliceProperty_DoesNotTouchSameNamedPropertyInNestedObject()
+    {
+        const string original =
+            """
+            {
+                "profiles": {
+                    "defaults": {
+                        "unfocusedAppearance": { "cursorShape": "emptyBox" },
+                        "cursorShape": "bar"
+                    }
+                }
+            }
+            """;
+
+        var updated = WindowsTerminalService.SpliceProperty(
+            original,
+            TerminalAppearanceSchema.GetPath(TerminalAppearanceKey.CursorShape),
+            TerminalAppearanceChange.Quote("vintage"));
+
+        Assert.Contains("\"unfocusedAppearance\": { \"cursorShape\": \"emptyBox\" }", updated);
+        Assert.Contains("\"cursorShape\": \"vintage\"", updated);
+        AssertNoTrailingCommaAdded(updated);
+    }
+
+    [Fact]
+    public void SpliceProperty_RemoveLastMember_DoesNotLeaveDanglingComma()
+    {
+        const string original =
+            """
+            {
+                "profiles": {
+                    "defaults": {
+                        "colorScheme": "Campbell",
+                        "useAcrylic": true
+                    }
+                }
+            }
+            """;
+
+        var updated = WindowsTerminalService.SpliceProperty(
+            original,
+            TerminalAppearanceSchema.GetPath(TerminalAppearanceKey.UseAcrylic),
+            null);
+
+        Assert.DoesNotContain("useAcrylic", updated);
+        Assert.Contains("\"colorScheme\": \"Campbell\"", updated);
+        AssertNoTrailingCommaAdded(updated);
+    }
+
+    [Fact]
+    public void SpliceProperty_RemoveFirstMember_KeepsOtherMembers()
+    {
+        const string original =
+            """
+            {
+                "profiles": {
+                    "defaults": {
+                        "cursorColor": "#FFFFFF",
+                        "opacity": 70
+                    }
+                }
+            }
+            """;
+
+        var updated = WindowsTerminalService.SpliceProperty(
+            original,
+            TerminalAppearanceSchema.GetPath(TerminalAppearanceKey.CursorColor),
+            null);
+
+        Assert.DoesNotContain("cursorColor", updated);
+        Assert.Contains("\"opacity\": 70", updated);
+        AssertNoTrailingCommaAdded(updated);
+    }
+
+    [Fact]
+    public void ApplyAppearance_WritesEveryProperty_AndKeepsCommentsAndOtherKeys()
+    {
+        WriteSettings(
+            """
+            // 用户注释：别删
+            {
+                "profiles": {
+                    "defaults": {
+                        "colorScheme": "Campbell"
+                    }
+                }
+            }
+            """);
+
+        var changes = new[]
+        {
+            TerminalAppearanceChange.SetString(TerminalAppearanceKey.FontFace, "Cascadia Code NF"),
+            TerminalAppearanceChange.SetBool(TerminalAppearanceKey.RetroTerminalEffect, true),
+            TerminalAppearanceChange.SetString(TerminalAppearanceKey.CursorShape, "filledBox"),
+            TerminalAppearanceChange.SetString(TerminalAppearanceKey.CursorColor, "#FF8800"),
+            TerminalAppearanceChange.SetString(TerminalAppearanceKey.BackgroundImage, @"C:\img\a.png"),
+            TerminalAppearanceChange.SetNumber(TerminalAppearanceKey.BackgroundImageOpacity, 0.5),
+            TerminalAppearanceChange.SetNumber(TerminalAppearanceKey.Opacity, 85),
+            TerminalAppearanceChange.SetBool(TerminalAppearanceKey.UseAcrylic, true),
+        };
+
+        var result = _service.ApplyAppearance(changes, _settingsPath);
+
+        Assert.True(result.Success, result.Message);
+        var appearance = _service.ReadAppearance(_settingsPath);
+        Assert.Equal("Cascadia Code NF", appearance.FontFace);
+        Assert.True(appearance.RetroTerminalEffect);
+        Assert.Equal("filledBox", appearance.CursorShape);
+        Assert.Equal("#FF8800", appearance.CursorColor);
+        Assert.Equal(@"C:\img\a.png", appearance.BackgroundImage);
+        Assert.Equal(0.5, appearance.BackgroundImageOpacity);
+        Assert.Equal(85, appearance.Opacity);
+        Assert.True(appearance.UseAcrylic);
+
+        var text = File.ReadAllText(_settingsPath);
+        Assert.Contains("// 用户注释：别删", text);
+        Assert.Contains("\"colorScheme\": \"Campbell\"", text);
+    }
+
+    [Fact]
+    public void ApplyAppearance_RemoveProperties_AndReadBackAsDefaults()
+    {
+        WriteSettings(
+            """
+            {
+                "profiles": {
+                    "defaults": {
+                        "cursorShape": "bar",
+                        "backgroundImage": "C:/img.png",
+                        "opacity": 70,
+                        "useAcrylic": true,
+                        "font": { "face": "Consolas" }
+                    }
+                }
+            }
+            """);
+
+        var result = _service.ApplyAppearance(
+            [
+                TerminalAppearanceChange.Remove(TerminalAppearanceKey.CursorShape),
+                TerminalAppearanceChange.Remove(TerminalAppearanceKey.BackgroundImage),
+                TerminalAppearanceChange.Remove(TerminalAppearanceKey.FontFace),
+            ],
+            _settingsPath);
+
+        Assert.True(result.Success, result.Message);
+        var appearance = _service.ReadAppearance(_settingsPath);
+        Assert.Null(appearance.CursorShape);
+        Assert.Null(appearance.BackgroundImage);
+        Assert.Null(appearance.FontFace);
+        Assert.Equal(70, appearance.Opacity);
+        Assert.True(appearance.UseAcrylic);
+        AssertNoTrailingCommaAdded(File.ReadAllText(_settingsPath));
+    }
+
+    [Fact]
+    public void ApplyAppearance_WithInvalidValue_FailsWithoutWriting()
+    {
+        WriteSettings("""{ "profiles": { "defaults": {} } }""");
+        var before = File.ReadAllText(_settingsPath);
+
+        var result = _service.ApplyAppearance(
+            [TerminalAppearanceChange.SetString(TerminalAppearanceKey.CursorColor, "not-a-color")],
+            _settingsPath);
+
+        Assert.False(result.Success);
+        Assert.Equal(before, File.ReadAllText(_settingsPath));
+    }
+
+    // ---------------- 备份：安装本软件前的原始配置 ----------------
+
+    [Fact]
+    public void MultipleWrites_NeverOverwriteOriginalBackup_RestoreReturnsPreInstallConfig()
+    {
+        const string original = """{ "profiles": { "defaults": {} } }""";
+        WriteSettings(original);
+
+        Assert.True(_service.ApplyFont("Font A", _settingsPath).Success);
+        Assert.True(_service.ApplyFont("Font B", _settingsPath).Success);
+        Assert.True(_service.ApplyAppearance(
+            [TerminalAppearanceChange.SetNumber(TerminalAppearanceKey.Opacity, 70)],
+            _settingsPath).Success);
+
+        Assert.True(_service.RestoreBackup(_settingsPath));
+        Assert.Equal(original, File.ReadAllText(_settingsPath));
+    }
+
+    [Fact]
+    public void RestoreBackup_KeepsBackup_SoItCanBeRestoredAgainAfterMoreEdits()
+    {
+        const string original = """{ "profiles": { "defaults": {} } }""";
+        WriteSettings(original);
+
+        _service.ApplyFont("Font A", _settingsPath);
+        Assert.True(_service.RestoreBackup(_settingsPath));
+        Assert.True(File.Exists(_settingsPath + ".bak"), "恢复不应消费掉原始备份");
+
+        _service.ApplyFont("Font C", _settingsPath);
+        Assert.True(_service.RestoreBackup(_settingsPath));
+        Assert.Equal(original, File.ReadAllText(_settingsPath));
+    }
+
+    [Fact]
+    public void GetState_ReportsOriginalBackupTime()
+    {
+        WriteSettings("""{ "profiles": { "defaults": {} } }""");
+        _service.ApplyFont("Cascadia Code NF", _settingsPath);
+
+        var state = _service.GetState(_settingsPath);
+
+        Assert.True(state.BackupExists);
+        Assert.Equal(_settingsPath + ".bak", state.BackupPath);
+        Assert.NotNull(state.BackupCreatedAt);
+    }
+
     private static void AssertNoTrailingCommaAdded(string json)
     {
         // 用禁止尾逗号的解析验证插入逻辑没有引入非法 JSON。
