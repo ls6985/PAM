@@ -14,13 +14,19 @@ public enum PromptSegmentKind
 /// <summary>解析「一整行 format」得到的结构化片段：类别 + 取值 + 颜色。</summary>
 public sealed record PromptFormatSegment(PromptSegmentKind Kind, string Value, string Color);
 
-/// <summary>美化页读取到的提示符状态：<c>Format</c> 是一整行 Starship format 语法。</summary>
+/// <summary>
+/// 美化页读取到的提示符状态：<c>Format</c> 是一整行 Starship format 语法；
+/// <c>AddNewline</c> 对应 Starship 的 add_newline（提示符前空一行）；
+/// <c>UseForwardSlash</c> 表示路径分隔符显示为 /（写入 use_os_path_sep = false）。
+/// </summary>
 public sealed record StarshipPromptState(
     string ConfigPath,
     bool ConfigExists,
     bool Customized,
     bool HasBackup,
-    string Format);
+    string Format,
+    bool AddNewline,
+    bool UseForwardSlash);
 
 /// <summary>应用自定义提示符的结果。</summary>
 public sealed record StarshipPromptApplyResult(bool ConfigWritten, bool BackupCreated, string ConfigPath);

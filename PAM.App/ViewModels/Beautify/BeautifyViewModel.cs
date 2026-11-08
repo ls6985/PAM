@@ -57,6 +57,8 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
     private string _promptConfigPath = string.Empty;
     private string _promptStatusSource = "检测中…";
     private string _promptFormat = string.Empty;
+    private bool _promptAddNewline;
+    private bool _promptUseForwardSlash = true;
     private string _currentColor = PromptPalette.Colors[0];
     private ObservableCollection<PromptPreviewItem> _promptPreviewParts = [];
 

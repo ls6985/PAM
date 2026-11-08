@@ -391,6 +391,19 @@
                                 Text="变量（用户名 / 主机名 / 当前路径…）与固定符号（@ : ~ $ 空格）都在下拉里选；颜色选预设色号，选「自定义…」后可在右侧直接填 # 后面的 6 位。" />
                         </StackPanel>
 
+                        <!-- 换行与分隔符：随托管块写入 starship.toml，也从块里读回 -->
+                        <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                            <CheckBox
+                                Content="提示符前空一行"
+                                IsChecked="{Binding PromptAddNewline}"
+                                ToolTip="开启后每个提示符前会空一行（Starship add_newline）。" />
+                            <CheckBox
+                                Margin="16,0,0,0"
+                                Content="路径分隔符用 /"
+                                IsChecked="{Binding PromptUseForwardSlash}"
+                                ToolTip="取消后路径用系统默认的反斜杠 \ 分隔（Starship use_os_path_sep）。" />
+                        </StackPanel>
+
                         <StackPanel Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
                             <ui:Button
                                 Appearance="Secondary"

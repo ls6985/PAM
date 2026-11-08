@@ -67,16 +67,32 @@ public sealed partial class StarshipPromptService
         return modules;
     }
 
-    /// <summary>组装托管块：标记行 + 顶层 format + 各模块段落（含颜色），段落间留空行。</summary>
-    private static List<string> BuildManagedBlock(string format, List<(string Module, string Color)> modules)
+    /// <summary>
+    /// 组装托管块：标记行 + 顶层 format + add_newline + 各模块段落（含颜色），段落间留空行。
+    /// 接管 [directory] 段时显式写入 use_os_path_sep（false = 路径分隔符显示为 /），
+    /// 两种取值都落盘，保证从文件读回时能还原选项。
+    /// </summary>
+    private static List<string> BuildManagedBlock(
+        string format, bool addNewline, bool useForwardSlash, List<(string Module, string Color)> modules)
     {
-        var block = new List<string> { StartMarker, NoticeLine, BuildFormatLine(format) };
+        var block = new List<string>
+        {
+            StartMarker,
+            NoticeLine,
+            BuildFormatLine(format),
+            "add_newline = " + (addNewline ? "true" : "false"),
+        };
         foreach (var (module, color) in modules)
         {
             block.Add("[" + module + "]");
             foreach (var line in ManagedModuleTemplates[module])
             {
                 block.Add(string.Format(CultureInfo.InvariantCulture, line, color));
+            }
+
+            if (module == "directory")
+            {
+                block.Add("use_os_path_sep = " + (useForwardSlash ? "false" : "true"));
             }
 
             block.Add(string.Empty);

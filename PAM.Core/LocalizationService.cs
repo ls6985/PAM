@@ -494,6 +494,12 @@ public sealed class LocalizationService
         ["没有可恢复的应用前备份。"] = "No pre-apply backup to restore.",
         ["已重置为默认内容，点击“应用到 Starship”才会写入。"] =
             "Defaults restored in the editor. Click \"Apply to Starship\" to write them.",
+        ["提示符前空一行"] = "Blank line before prompt",
+        ["路径分隔符用 /"] = "Use / as path separator",
+        ["开启后每个提示符前会空一行（Starship add_newline）。"] =
+            "When enabled, an empty line is inserted before every prompt (Starship add_newline).",
+        ["取消后路径用系统默认的反斜杠 \\ 分隔（Starship use_os_path_sep）。"] =
+            "When disabled, paths use the system backslash separator (Starship use_os_path_sep).",
     };
 
     private string _language = AppSettings.LanguageZhCN;

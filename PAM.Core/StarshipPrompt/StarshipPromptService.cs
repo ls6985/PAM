@@ -10,11 +10,13 @@ namespace PAM.Core;
 /// <para>为什么用变量而不是固定文字：用户名、主机名、当前路径是 Starship 运行时读取的值，
 /// 写死成 Black / ~ 会导致换个目录提示符还显示 ~。变量清单见 <see cref="StarshipVariables" />。</para>
 ///
-/// <para>为什么不整段覆盖 / 不引入 TOML 解析器：配置里还有 <c>add_newline</c>、注释以及
-/// 各模块段落（主题预设尤其如此），应当原样保留。托管块写**顶层 format + format 里引用到的
-/// 模块段落**：顶层 format 的外层 <c>(fg:…)</c> 只能染色裸文字，模块段落里的 format / 样式会
-/// 盖过它，且 TOML 不允许重复定义表，所以被引用的段落整段移走、按段选色内嵌进模块自身
-/// format 重写（模板见 <c>StarshipPromptService.Modules.cs</c>），其余段落 / 注释原样保留。</para>
+/// <para>为什么不整段覆盖 / 不引入 TOML 解析器：配置里还有注释以及各模块段落（主题预设尤其如此），
+/// 应当原样保留。托管块写**顶层 format + add_newline + format 里引用到的模块段落**：顶层 format 的
+/// 外层 (fg:…) 只能染色裸文字，模块段落里的 format / 样式会盖过它，且 TOML 不允许重复定义表，
+/// 所以被引用的段落整段移走、按段选色内嵌进模块自身 format 重写（模板见
+/// <c>StarshipPromptService.Modules.cs</c>），块外的旧顶层 format / add_newline 也一并移走防重复键，
+/// 其余段落 / 注释原样保留。add_newline（提示符前空一行）与 use_os_path_sep（/ 分隔符）随块写入、
+/// 从块读回，不在 settings.json 里另存。</para>
 ///
 /// <para>备份用独立的 <c>starship.toml.pam-prompt.bak</c> 且**只在首次写入时创建**，
 /// 不与主题预设的 <c>starship.toml.bak</c> 抢同一个槽位，也不会被连续两次应用覆盖掉原始配置。

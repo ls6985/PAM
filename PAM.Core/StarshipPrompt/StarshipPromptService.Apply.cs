@@ -10,10 +10,13 @@ namespace PAM.Core;
 public sealed partial class StarshipPromptService
 {
     /// <summary>
-    /// 把一行 format 写入 starship.toml：托管块内写顶层 format，并按段颜色接管 format 里
+    /// 把一行 format 写入 starship.toml：托管块内写顶层 format、add_newline，并按段颜色接管 format 里
     /// 引用到的模块段落；未被引用的段落、注释、编码、换行原样保留。
+    /// <paramref name="addNewline" /> 控制提示符前是否空一行（Starship 默认 true，会空一行）；
+    /// <paramref name="useForwardSlash" /> 为 true 时路径分隔符显示为 /（use_os_path_sep = false）。
+    /// 默认值即 <see cref="CreateDefaultOptions" />。
     /// </summary>
-    public StarshipPromptApplyResult Apply(string format)
+    public StarshipPromptApplyResult Apply(string format, bool addNewline = false, bool useForwardSlash = true)
     {
         Validate(format);
 
@@ -37,7 +40,7 @@ public sealed partial class StarshipPromptService
         var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
         var modules = ExtractManagedModules(format);
         var (clean, insertIndex) = StripManagedParts(lines, modules.Select(static m => m.Module).ToList());
-        clean.InsertRange(insertIndex, BuildManagedBlock(format, modules));
+        clean.InsertRange(insertIndex, BuildManagedBlock(format, addNewline, useForwardSlash, modules));
 
         var output = string.Join(newLine, clean);
         if (!output.EndsWith(newLine, StringComparison.Ordinal)) output += newLine;
@@ -79,8 +82,8 @@ public sealed partial class StarshipPromptService
     }
 
     /// <summary>
-    /// 移除旧 PAM 块、旧顶层 format（含 """\ 多行字符串）以及被引用模块的既有段落
-    /// （[module] 与 [module.x] 子表：段落里的 format / 样式会盖过顶层 format 的外层颜色，
+    /// 移除旧 PAM 块、旧顶层 format（含 """\ 多行字符串）、旧顶层 add_newline 以及被引用模块的
+    /// 既有段落（[module] 与 [module.x] 子表：段落里的 format / 样式会盖过顶层 format 的外层颜色，
     /// 且 TOML 不允许重复定义表，必须整段移走后由托管块重写）。
     /// 返回清理后的行与块插入位置：第一个段落表头之前（无段落时为行尾），
     /// 这样块内的 [module] 表头不会把后面的根级键捕获进自己的表。
@@ -128,12 +131,13 @@ public sealed partial class StarshipPromptService
                 }
             }
 
-            // 只认任何 [section] 之前（= 顶层）的 format，段落内的同名 format 不动。
-            if (topLevel && IsFormatAssignment(trimmed))
+            // 托管块接管这两类根级键（块内每次都会重写），段落内的同名键不动。
+            if (topLevel && IsRootKeyAssignment(trimmed))
             {
                 var equals = trimmed.IndexOf('=');
                 var value = trimmed[(equals + 1)..].TrimStart();
-                if (value.StartsWith("\"\"\"", StringComparison.Ordinal)
+                if (IsFormatAssignment(trimmed)
+                    && value.StartsWith("\"\"\"", StringComparison.Ordinal)
                     && !value[3..].Contains("\"\"\"", StringComparison.Ordinal))
                 {
                     // 多行基本字符串：一直吃到含结束 """ 的那一行。
@@ -176,9 +180,18 @@ public sealed partial class StarshipPromptService
 
     private static bool IsFormatAssignment(string trimmed)
     {
+        return IsKeyAssignment(trimmed, "format");
+    }
+
+    /// <summary>托管的根级键：format 与 add_newline（块内都会重写，块外同名键必须移走防 TOML 重复键）。</summary>
+    private static bool IsRootKeyAssignment(string trimmed)
+        => IsFormatAssignment(trimmed) || IsKeyAssignment(trimmed, "add_newline");
+
+    private static bool IsKeyAssignment(string trimmed, string key)
+    {
         var equals = trimmed.IndexOf('=');
         if (equals <= 0) return false;
-        return trimmed[..equals].Trim().Equals("format", StringComparison.OrdinalIgnoreCase);
+        return trimmed[..equals].Trim().Equals(key, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>只做 TOML 双引号字符串层转义；format 里的 Starship 语法（\[ \] \$ \\）原样保留。</summary>

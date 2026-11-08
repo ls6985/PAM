@@ -88,6 +88,13 @@ public sealed class StarshipPromptServiceTests : IDisposable
     private static int Count(string text, string marker)
         => text.Split('\n').Count(line => line.TrimEnd('\r') == marker);
 
+    /// <summary>取出包含指定子串的行，用于统计键（可能带行内注释）出现次数。</summary>
+    private static List<string> FindLines(string text, string contains)
+        => text.Split('\n')
+            .Select(static line => line.TrimEnd('\r'))
+            .Where(line => line.Contains(contains, StringComparison.Ordinal))
+            .ToList();
+
     [Fact]
     public void Apply_TakesOverReferencedModuleSections_AndKeepsUnreferencedOnes()
     {
@@ -105,25 +112,39 @@ public sealed class StarshipPromptServiceTests : IDisposable
         Assert.DoesNotContain("format = \"[@$hostname]($style)\"", text);
         Assert.DoesNotContain("format = \"[ :$path ]($style)\"", text);
         Assert.DoesNotContain("truncation_length = 0", text);
-        Assert.DoesNotContain("use_os_path_sep = false", text);
+        Assert.DoesNotContain("use_os_path_sep = false   #", text);
         Assert.DoesNotContain("[directory.substitutions]", text);
-        // 顶层键与未被引用的段落原样保留。
-        Assert.Contains("add_newline = false", text);
+        // 顶层 add_newline 被托管块接管：块外的同名键移走防 TOML 重复键，块内重写。
+        Assert.Single(FindLines(text, "add_newline"));
+        // 未被引用的段落与注释原样保留。
         Assert.Contains("# 整体提示符格式：用户名@主机名 :路径 提示符", text);
         Assert.Contains("[os]", text);
         Assert.Contains("disabled = false", text);
-        // 托管块：顶层 format + 按段颜色内嵌的模块段落，插在第一个段落表头之前。
+        // 托管块：顶层 format + add_newline + 按段颜色内嵌的模块段落，插在第一个段落表头之前。
         Assert.Contains(
-            "format = \"[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[:](fg:#BBC4B9)[$directory](fg:#BBC4B9)[$character](fg:#BFA8BF)\"",
+            "format = \"[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[:](fg:#BBC4B9)[$directory](fg:#BBC4B9)[$character](fg:#BFA8BF)\"\r\nadd_newline = false",
             text);
         Assert.Contains("[username]\r\nshow_always = true\r\nformat = \"[$user](fg:#BBC4B9)\"", text);
         Assert.Contains("[hostname]\r\nssh_only = false\r\nformat = \"[@$hostname](fg:#BBC4B9)\"", text);
-        Assert.Contains("[directory]\r\nformat = \"[$path](fg:#BBC4B9)\"", text);
+        Assert.Contains("[directory]\r\nformat = \"[$path](fg:#BBC4B9)\"\r\nuse_os_path_sep = false", text);
         Assert.Contains(
             "[character]\r\nformat = \"$symbol\"\r\nsuccess_symbol = \"[\\\\$](fg:#BFA8BF)\"\r\nerror_symbol = \"[✗](fg:#BFA8BF)\"",
             text);
         Assert.True(text.IndexOf(StarshipPromptService.StartMarker, StringComparison.Ordinal)
                     < text.IndexOf("[os]", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Apply_WithOptionsNonDefaults_WritesExplicitKeys()
+    {
+        Write(ExistingToml());
+
+        _service.Apply(Format(), addNewline: true, useForwardSlash: false);
+        var text = Read();
+
+        Assert.Contains("\r\nadd_newline = true\r\n", text);
+        // 取消 / 分隔符时也显式落盘（use_os_path_sep = true），保证读回还原。
+        Assert.Contains("[directory]\r\nformat = \"[$path](fg:#BBC4B9)\"\r\nuse_os_path_sep = true", text);
     }
 
     [Fact]
@@ -135,12 +156,16 @@ public sealed class StarshipPromptServiceTests : IDisposable
         var text = Read();
 
         Assert.Contains("format = \"hello\"", text);
-        // 没引用变量就不写托管段落；用户的模块段落全部保留。
+        // 托管块仍接管 add_newline（根级键），但没有引用变量就不写托管段落。
+        Assert.Single(FindLines(text, "add_newline"));
+        Assert.Contains("\r\nadd_newline = false\r\n", text);
+        // 用户的模块段落全部保留。
         Assert.DoesNotContain("format = \"[$user](fg:", text);
         Assert.Contains("[username]", text);
         Assert.Contains("format = \"[$user]($style)\"", text);
         Assert.Contains("[hostname]", text);
         Assert.Contains("[directory]", text);
+        Assert.Contains("use_os_path_sep = false   # 使用 / 作为分隔符", text);
         Assert.Contains("[character]", text);
         Assert.Contains("[os]", text);
     }
@@ -249,6 +274,47 @@ public sealed class StarshipPromptServiceTests : IDisposable
         Assert.False(state.Customized);
         Assert.False(state.HasBackup);
         Assert.Equal(StarshipPromptService.CreateDefaultFormat(), state.Format);
+        Assert.False(state.AddNewline);
+        Assert.True(state.UseForwardSlash);
+    }
+
+    [Fact]
+    public void Read_RoundTripsOptions_FromManagedBlock()
+    {
+        Write(ExistingToml());
+
+        _service.Apply(Format(), addNewline: true, useForwardSlash: false);
+        var state = _service.Read();
+
+        Assert.True(state.Customized);
+        Assert.True(state.AddNewline);
+        Assert.False(state.UseForwardSlash);
+
+        _service.Apply(Format(), addNewline: false, useForwardSlash: true);
+        var changed = _service.Read();
+
+        Assert.False(changed.AddNewline);
+        Assert.True(changed.UseForwardSlash);
+    }
+
+    [Fact]
+    public void Read_OldBlockWithoutOptionKeys_FallsBackToDefaults()
+    {
+        // 旧版本写的托管块没有 add_newline / use_os_path_sep：按新默认值回显，应用一次即补上。
+        Write($"""
+            {StarshipPromptService.StartMarker}
+            # 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。
+            format = "{Format()}"
+            [directory]
+            format = "[$path](fg:#BBC4B9)"
+            {StarshipPromptService.EndMarker}
+            """);
+
+        var state = _service.Read();
+
+        Assert.True(state.Customized);
+        Assert.False(state.AddNewline);
+        Assert.True(state.UseForwardSlash);
     }
 
     [Fact]
