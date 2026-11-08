@@ -14,6 +14,9 @@ namespace PAM.App.Views;
 /// 注意：WPF 把模板应用在项内容宿主 <see cref="ContentPresenter" /> 上，而非 <see cref="ComboBoxItem" />，
 /// 所以不能用「container is ComboBoxItem」判断；正确做法是向上遍历视觉树——
 /// 下拉项一定位于 <see cref="ComboBoxItem" /> 内（在 Popup 中），而选中框不在，据此区分两种状态。
+/// 防护：仅当容器本身是 <see cref="Visual" /> 时才向上遍历，否则直接返回短模板。
+/// 否则（如颜色下拉的选中框容器不是 Visual）<see cref="VisualTreeHelper.GetParent" /> 会抛
+/// ArgumentException 导致整个程序闪退。
 /// </summary>
 public sealed class SegmentChoiceTemplateSelector : DataTemplateSelector
 {
@@ -22,65 +25,30 @@ public sealed class SegmentChoiceTemplateSelector : DataTemplateSelector
     public DataTemplate? FullTemplate { get; set; }
 
     public override DataTemplate? SelectTemplate(object item, DependencyObject container)
-    {
-        var current = container;
-        while (current is not null)
-        {
-            if (current is ComboBoxItem)
-            {
-                return FullTemplate;
-            }
-
-            current = VisualTreeHelper.GetParent(current);
-        }
-
-        return ShortTemplate;
-    }
-}
-
-/// <summary>颜色下拉同款：收起只显示色块，展开显示色块 + hex。</summary>
-public sealed class ColorChoiceTemplateSelector : DataTemplateSelector
-{
-    public DataTemplate? ShortTemplate { get; set; }
-
-    public DataTemplate? FullTemplate { get; set; }
-
-    public override DataTemplate? SelectTemplate(object item, DependencyObject container)
-    {
-        var current = container;
-        while (current is not null)
-        {
-            if (current is ComboBoxItem)
-            {
-                return FullTemplate;
-            }
-
-            current = VisualTreeHelper.GetParent(current);
-        }
-
-        return ShortTemplate;
-    }
+        => TemplateSelectorHelper.IsInsideComboBoxItem(container) ? FullTemplate : ShortTemplate;
 }
 
 /// <summary>
-/// 把颜色下拉的绑定对象（<see cref="ColorOption" /> 或 <see cref="string" /> 形式的 hex）统一转成画刷，
-/// 避免选中框在某些绑定路径下拿到非 <see cref="ColorOption" /> 导致色块不显示。
+/// 判断模板宿主是否位于展开的 <see cref="ComboBoxItem" /> 内（即在下拉列表中）。
+/// 只对 <see cref="Visual" /> 向上遍历；遇到非 Visual 容器直接判定为「不在下拉列表中」（即收起态）。
 /// </summary>
-public sealed class ColorBrushConverter : IValueConverter
+internal static class TemplateSelectorHelper
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public static bool IsInsideComboBoxItem(DependencyObject? container)
     {
-        var hex = value switch
+        var current = container as Visual;
+        while (current is not null)
         {
-            ColorOption c => c.Hex,
-            string s => s,
-            _ => "#FFFFFF",
-        };
-        return ColorOption.CreateBrush(hex);
-    }
+            if (current is ComboBoxItem)
+            {
+                return true;
+            }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+            current = VisualTreeHelper.GetParent(current) as Visual;
+        }
+
+        return false;
+    }
 }
 
 /// <summary>选中项为「自定义」时显示编辑框，否则隐藏。</summary>

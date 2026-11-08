@@ -25,26 +25,10 @@
             <TextBlock FontSize="12" Text="{Binding DisplayName}" />
         </DataTemplate>
 
-        <!-- 颜色：收起只显示色块，展开显示色块 + hex -->
-        <DataTemplate x:Key="ColorShortTemplate">
-            <Rectangle Width="16" Height="16" RadiusX="3" RadiusY="3" Fill="{Binding Converter={StaticResource ColorBrushConverter}}" />
-        </DataTemplate>
-        <DataTemplate x:Key="ColorFullTemplate">
-            <StackPanel Orientation="Horizontal">
-                <Rectangle Width="14" Height="14" Margin="0,0,8,0" RadiusX="3" RadiusY="3" Fill="{Binding Converter={StaticResource ColorBrushConverter}}" />
-                <TextBlock FontFamily="{StaticResource MonoFontFamily}" FontSize="12" Text="{Binding Hex}" />
-            </StackPanel>
-        </DataTemplate>
-
-        <local:ColorBrushConverter x:Key="ColorBrushConverter" />
         <local:SegmentChoiceTemplateSelector
             x:Key="SegmentChoiceTemplateSelector"
             FullTemplate="{StaticResource SegmentFullTemplate}"
             ShortTemplate="{StaticResource SegmentShortTemplate}" />
-        <local:ColorChoiceTemplateSelector
-            x:Key="ColorChoiceTemplateSelector"
-            FullTemplate="{StaticResource ColorFullTemplate}"
-            ShortTemplate="{StaticResource ColorShortTemplate}" />
         <local:CustomSelectedToVisibilityConverter x:Key="CustomSelectedToVisibility" />
 
         <Style x:Key="CardStyle" TargetType="{x:Type Border}">
@@ -342,8 +326,13 @@
                                                 Margin="5,0,0,0"
                                                 ItemsSource="{x:Static vm:ColorOption.Palette}"
                                                 SelectedValue="{Binding Color, Mode=TwoWay}"
-                                                SelectedValuePath="Hex"
-                                                ItemTemplateSelector="{StaticResource ColorChoiceTemplateSelector}" />
+                                                SelectedValuePath="Hex">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Rectangle Width="16" Height="16" RadiusX="3" RadiusY="3" Fill="{Binding Brush}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
                                             <Button
                                                 MinWidth="24"
                                                 Margin="5,0,0,0"
