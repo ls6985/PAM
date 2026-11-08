@@ -6,9 +6,10 @@ using Xunit;
 namespace PAM.Tests;
 
 /// <summary>
-/// 自定义提示符：只替换 starship.toml 的顶层 format（含 """\ 多行字符串），
-/// 保留其余段落 / 注释 / 编码 / 换行；一行 format 的往返、备份、恢复、幂等，
-/// 以及精选变量表与预览解析。所有文件都在临时目录，不会碰真实的 starship.toml。
+/// 自定义提示符：托管块写顶层 format + 按段颜色接管 format 引用到的模块段落
+/// （含 """\ 多行 format 与 [module.x] 子表的移除），未被引用的段落 / 注释 / 编码 / 换行保留；
+/// 一行 format 的往返、备份、恢复、幂等，以及精选变量表与预览解析。
+/// 所有文件都在临时目录，不会碰真实的 starship.toml。
 /// </summary>
 public sealed class StarshipPromptServiceTests : IDisposable
 {
@@ -64,8 +65,14 @@ public sealed class StarshipPromptServiceTests : IDisposable
         "truncation_length = 0",
         "use_os_path_sep = false   # 使用 / 作为分隔符",
         "",
+        "[directory.substitutions]",
+        "\"Documents\" = \"doc\"",
+        "",
         "[character]",
         "success_symbol = \"[\\\\$](fg:#BFA8BF)\"",
+        "",
+        "[os]",
+        "disabled = false",
     ];
 
     private static string ExistingToml(string newLine = "\r\n")
@@ -82,7 +89,7 @@ public sealed class StarshipPromptServiceTests : IDisposable
         => text.Split('\n').Count(line => line.TrimEnd('\r') == marker);
 
     [Fact]
-    public void Apply_ReplacesOnlyTopLevelFormat_KeepsEveryOtherLine()
+    public void Apply_TakesOverReferencedModuleSections_AndKeepsUnreferencedOnes()
     {
         Write(ExistingToml());
 
@@ -91,19 +98,51 @@ public sealed class StarshipPromptServiceTests : IDisposable
 
         Assert.Equal(1, Count(text, StarshipPromptService.StartMarker));
         Assert.Equal(1, Count(text, StarshipPromptService.EndMarker));
-        // 旧的多行顶层 format 被整段移除（段落内的局部 format 仍保留）。
+        // 旧的多行顶层 format 与被引用模块的既有段落（含子表）整段移除。
         Assert.DoesNotContain("format = \"\"\"", text);
         Assert.DoesNotContain("$username\\", text);
+        Assert.DoesNotContain("format = \"[$user]($style)\"", text);
+        Assert.DoesNotContain("format = \"[@$hostname]($style)\"", text);
+        Assert.DoesNotContain("format = \"[ :$path ]($style)\"", text);
+        Assert.DoesNotContain("truncation_length = 0", text);
+        Assert.DoesNotContain("use_os_path_sep = false", text);
+        Assert.DoesNotContain("[directory.substitutions]", text);
+        // 顶层键与未被引用的段落原样保留。
         Assert.Contains("add_newline = false", text);
         Assert.Contains("# 整体提示符格式：用户名@主机名 :路径 提示符", text);
+        Assert.Contains("[os]", text);
+        Assert.Contains("disabled = false", text);
+        // 托管块：顶层 format + 按段颜色内嵌的模块段落，插在第一个段落表头之前。
+        Assert.Contains(
+            "format = \"[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[:](fg:#BBC4B9)[$directory](fg:#BBC4B9)[$character](fg:#BFA8BF)\"",
+            text);
+        Assert.Contains("[username]\r\nshow_always = true\r\nformat = \"[$user](fg:#BBC4B9)\"", text);
+        Assert.Contains("[hostname]\r\nssh_only = false\r\nformat = \"[@$hostname](fg:#BBC4B9)\"", text);
+        Assert.Contains("[directory]\r\nformat = \"[$path](fg:#BBC4B9)\"", text);
+        Assert.Contains(
+            "[character]\r\nformat = \"$symbol\"\r\nsuccess_symbol = \"[\\\\$](fg:#BFA8BF)\"\r\nerror_symbol = \"[✗](fg:#BFA8BF)\"",
+            text);
+        Assert.True(text.IndexOf(StarshipPromptService.StartMarker, StringComparison.Ordinal)
+                    < text.IndexOf("[os]", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Apply_WithLiteralOnlyFormat_KeepsAllModuleSections()
+    {
+        Write(ExistingToml());
+
+        _service.Apply("hello");
+        var text = Read();
+
+        Assert.Contains("format = \"hello\"", text);
+        // 没引用变量就不写托管段落；用户的模块段落全部保留。
+        Assert.DoesNotContain("format = \"[$user](fg:", text);
         Assert.Contains("[username]", text);
-        Assert.Contains("style_user = \"fg:#BBC4B9\"", text);
         Assert.Contains("format = \"[$user]($style)\"", text);
-        Assert.Contains("format = \"[@$hostname]($style)\"", text);
-        Assert.Contains("truncation_length = 0", text);
-        Assert.Contains("use_os_path_sep = false   # 使用 / 作为分隔符", text);
-        Assert.Contains("success_symbol = \"[\\\\$](fg:#BFA8BF)\"", text);
-        Assert.Contains("format = \"[$username]", text); // PAM 生成的单行 format
+        Assert.Contains("[hostname]", text);
+        Assert.Contains("[directory]", text);
+        Assert.Contains("[character]", text);
+        Assert.Contains("[os]", text);
     }
 
     [Fact]
@@ -180,6 +219,8 @@ public sealed class StarshipPromptServiceTests : IDisposable
         Assert.True(_service.Restore());
         Assert.Equal(original, Read());
         Assert.DoesNotContain(StarshipPromptService.StartMarker, Read());
+        // 恢复即消费备份：按钮随之禁用，再次应用会重新备份。
+        Assert.False(File.Exists(_service.GetBackupPath()));
     }
 
     [Fact]
@@ -190,20 +231,10 @@ public sealed class StarshipPromptServiceTests : IDisposable
     }
 
     [Fact]
-    public void CreateDefaultFormat_UsesFourVariablesAndReusesExistingColors()
-    {
-        var format = StarshipPromptService.CreateDefaultFormat(ExistingToml());
-
-        Assert.Equal(
-            "[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[$directory](fg:#B6D6F2)[$character](fg:#BFA8BF)",
-            format);
-    }
-
-    [Fact]
-    public void CreateDefaultFormat_WithoutExistingConfig_UsesFallbackPalette()
+    public void CreateDefaultFormat_IsFixedComposition_WithColonLiteralAndTwoColors()
     {
         Assert.Equal(
-            "[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[$directory](fg:#B6D6F2)[$character](fg:#BFA8BF)",
+            "[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[:](fg:#BBC4B9)[$directory](fg:#BBC4B9)[$character](fg:#BFA8BF)",
             StarshipPromptService.CreateDefaultFormat());
     }
 
@@ -217,7 +248,7 @@ public sealed class StarshipPromptServiceTests : IDisposable
         Assert.True(state.ConfigExists);
         Assert.False(state.Customized);
         Assert.False(state.HasBackup);
-        Assert.Equal(StarshipPromptService.CreateDefaultFormat(ExistingToml()), state.Format);
+        Assert.Equal(StarshipPromptService.CreateDefaultFormat(), state.Format);
     }
 
     [Fact]
@@ -287,14 +318,17 @@ public sealed class StarshipPromptServiceTests : IDisposable
     {
         var parts = StarshipPromptService.ParsePreview(StarshipPromptService.CreateDefaultFormat());
 
-        Assert.Equal(4, parts.Count);
+        Assert.Equal(5, parts.Count);
         Assert.Equal(Environment.UserName, parts[0].Text);
         Assert.Equal("#BBC4B9", parts[0].Color);
         Assert.Equal("@" + Environment.MachineName, parts[1].Text);
-        Assert.Equal(" :~ ", parts[2].Text);
-        Assert.Equal("#B6D6F2", parts[2].Color);
-        Assert.Equal(" $", parts[3].Text);
-        Assert.Equal("#BFA8BF", parts[3].Color);
+        Assert.Equal("#BBC4B9", parts[1].Color);
+        Assert.Equal(":", parts[2].Text); // 字面冒号片段
+        Assert.Equal("#BBC4B9", parts[2].Color);
+        Assert.Equal("~", parts[3].Text);
+        Assert.Equal("#BBC4B9", parts[3].Color);
+        Assert.Equal("$", parts[4].Text);
+        Assert.Equal("#BFA8BF", parts[4].Color);
     }
 
     [Fact]

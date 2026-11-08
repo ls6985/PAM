@@ -245,7 +245,7 @@
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="主题预设" Style="{StaticResource SettingLabelStyle}" />
                                 <TextBlock
-                                    Text="应用后写入 starship.toml，并确保 $PROFILE 里有 starship init 行；原配置会自动备份为 starship.toml.bak。"
+                                    Text="{Binding PresetStatusText}"
                                     Style="{StaticResource SettingHintStyle}" />
                                 <TextBlock
                                     Margin="0,6,0,0"
@@ -457,6 +457,14 @@
                                         Style="{StaticResource SettingHintStyle}"
                                         Visibility="{Binding HasTomlBackup, Converter={StaticResource BoolToVisibility}}" />
                                 </StackPanel>
+                                <TextBlock
+                                    Margin="0,10,0,0"
+                                    Style="{StaticResource SettingHintStyle}"
+                                    Text="「恢复 starship.toml 备份」：应用主题前会先把当时的 starship.toml 备份为 starship.toml.bak，点此恢复到最近一次应用主题前的配置。" />
+                                <TextBlock
+                                    Margin="0,4,0,0"
+                                    Style="{StaticResource SettingHintStyle}"
+                                    Text="「恢复 Windows Terminal 备份」：通过本程序修改终端字体前会先备份 settings.json，点此恢复到最近一次修改字体前的终端配置。" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">

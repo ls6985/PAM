@@ -23,8 +23,8 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 | --- | --- |
 | Starship | 探测已装版本与 Scoop；只有一个"一键安装（含 Scoop）"按钮，Scoop 缺失时自动走官方引导脚本（需联网），再用 Scoop 装 Starship。安装输出实时显示在页脚反馈区 |
 | 终端字体 | 下拉列出注册表里的等宽 / Nerd Font 候选，默认选中 Windows Terminal 当前字体；内置 `Assets/Fonts/CascadiaCodeNF.ttf` 未装时提供按当前用户安装（免管理员）；"应用到 Windows Terminal" 写入 `profiles.defaults.font.face`，写前自动备份 |
-| 主题 | 六个官方预设（EmbeddedResource 打包在 PAM.Core），应用 = 备份 → 写 `starship.toml` → 确保 `$PROFILE` init 行；标注"需 Nerd Font"的预设会在字体未装时给出警告 |
-| 自定义提示符 | **一整行 format 编辑器**（可直接改文字与 `fg:#RRGGBB`）+ 精选 20 个中文变量下拉（按身份 / Git / 运行状态 / 开发环境分组，可搜索，选中点"插入变量"）+ 12 色色板（作为"当前颜色"，也能给选中文字重新上色）+ `@ : ~ $ 空格` 固定符号按钮；上方是带真实颜色的深色预览（变量显示示意值）。默认 format 是 `[$username][$hostname][$directory][$character]` 四个动态变量，**用户名 / 主机名 / 当前路径不需要也不允许手填**，路径会随 `cd` 变化；配色复用现有 toml。"应用到 Starship" 只替换顶层 `format`，其余配置原样保留；首次应用单独备份为 `starship.toml.pam-prompt.bak`，"恢复应用前配置" 一键还原；"重置为默认" 只改编辑框、不写文件。配置本身存 toml，不进 `settings.json`。打开新终端窗口即可看到效果 |
+| 主题 | 六个官方预设（EmbeddedResource 打包在 PAM.Core），应用 = 备份 → 写 `starship.toml` → 确保 `$PROFILE` init 行；标注"需 Nerd Font"的预设会在字体未装时给出警告。下拉下方状态行通过比对当前 toml 原文识别已应用的主题并显示名称（重启后也保持选中），应用自定义提示符后改为提示"自定义提示符已接管顶层 format" |
+| 自定义提示符 | **点选片段组合**编辑器：点「添加片段」加入提示符元素，每个片段下拉选变量（精选 20 个中文变量，按身份 / Git / 运行状态 / 开发环境分组）或固定符号（`@ : ~ $ 空格`），单独选 12 色色板颜色（选「自定义…」后右侧直接填 `#` 后面的 6 位色号），变量不再手填、不可直接编辑；上方是带真实颜色的深色预览（变量显示示意值）。默认 format 是 `[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[:](fg:#BBC4B9)[$directory](fg:#BBC4B9)[$character](fg:#BFA8BF)`（即作者当前提示符的组合：用户名 / 主机名 / 冒号 / 路径同色，结束符另一色），**用户名 / 主机名 / 当前路径不需要也不允许手填**，路径会随 `cd` 变化。"应用到 Starship" 写入顶层 `format` 并接管 format 里引用到的模块段落（段选色内嵌进模块自身 format，未被引用的段落原样保留）；首次应用单独备份为 `starship.toml.pam-prompt.bak`，"恢复应用前配置" 一键还原（恢复即删除备份，按钮回到禁用，再次应用会重新备份）；"重置为默认" 只改编辑框、不写文件。配置本身存 toml，不进 `settings.json`。打开新终端窗口即可看到效果 |
 | 配置维护 | 展示 `starship.toml` 路径 / 是否创建 / init 行状态 / 备份存在；打开 `starship.toml`、恢复 toml 备份、恢复 Windows Terminal 备份 |
 
 进入页签（`Loaded` / 页签切换）自动刷新全部状态；所有耗时操作期间 `IsBusy` 禁用按钮。状态文案在 ViewModel 保存中文原文、读取时翻译，语言切换零成本。
@@ -45,7 +45,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 | 别名启动 | "独立进程启动（静默日志）"（默认开启）：别名改由 `$PROFILE` 里的 `Invoke-PamAlias` 公共函数**借 `explorer.exe` 代启动**——无参数直接把路径交给 explorer，带参数先生成临时 `.lnk` 携带参数再交给 explorer。新进程父进程是 explorer，完全脱离终端进程树与控制台，所以关 PowerShell 不会连带关掉软件、Electron 等程序的日志也刷不回终端；不再需要 NUL 重定向，回到 ShellExecute 路径，UAC 提升正常（实测启动耗时反而略快）。关闭则恢复原来的直接启动方式。另有"启动时显示别名备注"（默认开启），启动前 `Write-Host` 一行青色备注（备注为空则不打印）。两个开关由公共函数运行时读 `settings.json`，改设置即时生效，不用重写 `$PROFILE`；别名保存后才会生成 / 更新启动器区块，且 **`$PROFILE` 只在终端启动时加载一次，必须新开终端窗口才能生效** |
 | 恢复默认 | 二次确认后整份设置恢复默认值 |
 
-`settings.json` 字段（camelCase，定义在 `PAM.Core/AppSettings.cs`）：
+`settings.json` 字段（camelCase，定义在 `PAM.Core/Settings/AppSettings.cs`）：
 
 ```json
 {

@@ -85,6 +85,34 @@ public sealed partial class StarshipService
         return new StarshipApplyResult(true, profileUpdated.Updated);
     }
 
+    /// <summary>
+    /// 识别当前 starship.toml 是否与某个内置预设完全一致（忽略换行与结尾空白差异）。
+    /// 应用过预设后没有手动改动就能识别；存在 PAM 提示符块或手动改过则返回 null。
+    /// </summary>
+    public string? DetectAppliedPreset()
+    {
+        var configPath = GetConfigPath();
+        if (!File.Exists(configPath))
+        {
+            return null;
+        }
+
+        var current = Normalize(File.ReadAllText(configPath, Encoding.UTF8));
+        foreach (var preset in GetPresets())
+        {
+            var content = ExtractPreset(preset.Id);
+            if (content is not null && Normalize(content) == current)
+            {
+                return preset.Id;
+            }
+        }
+
+        return null;
+
+        static string Normalize(string text)
+            => text.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd();
+    }
+
     /// <summary>打开 starship.toml（不存在则先创建空文件），交给系统默认编辑器。</summary>
     public StarshipOpenResult OpenConfig()
     {

@@ -20,6 +20,32 @@ public sealed partial class BeautifyViewModel
 
     public bool CanApplyPreset => !IsBusy && PresetOptions.Count > 0;
 
+    /// <summary>
+    /// 主题卡状态行：自定义提示符接管 / 已识别的当前主题 / 未应用预设。
+    /// 依赖 _promptCustomized 与 _detectedPresetId，刷新尾部统一通知。
+    /// </summary>
+    public string PresetStatusText
+    {
+        get
+        {
+            if (_promptCustomized)
+            {
+                return Loc.T("当前使用自定义提示符：美化页的提示符已接管顶层 format，重新应用主题会覆盖它。");
+            }
+
+            if (_detectedPresetId is not null)
+            {
+                var preset = _starshipService.GetPresets().FirstOrDefault(p => p.Id == _detectedPresetId);
+                if (preset is not null)
+                {
+                    return Loc.F("当前主题：{0}", Loc.T(preset.DisplayNameSource));
+                }
+            }
+
+            return Loc.T("当前未应用内置主题预设。");
+        }
+    }
+
     public async Task ApplyPresetAsync()
     {
         var preset = _starshipService.GetPresets().FirstOrDefault(p => p.Id == _selectedPresetId);

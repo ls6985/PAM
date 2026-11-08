@@ -42,6 +42,7 @@ public sealed partial class BeautifyViewModel
             var candidates = await Task.Run(() => FontInstaller.GetMonospaceCandidates());
             var bundledInstalled = await Task.Run(() => FontInstaller.IsBundledFontInstalled());
             var state = await Task.Run(() => _starshipService.GetState(profilePath));
+            var detectedPreset = await Task.Run(() => _starshipService.DetectAppliedPreset());
 
             _starshipStatusSource = detect.Installed ? $"已安装 {detect.Version}" : "未安装";
             _isStarshipInstalled = detect.Installed;
@@ -56,6 +57,7 @@ public sealed partial class BeautifyViewModel
             _tomlStatusSource = state.ConfigExists ? "已创建" : "未创建";
             _hasTomlBackup = state.BackupExists;
             _initLineSource = state.ProfileHasInitLine ? "已写入" : "未写入";
+            _detectedPresetId = detectedPreset;
 
             RebuildFontOptions(candidates, wtState.CurrentFont, bundledInstalled);
             RebuildPresetOptions();
@@ -112,15 +114,22 @@ public sealed partial class BeautifyViewModel
     private void RebuildPresetOptions()
     {
         var presets = _starshipService.GetPresets();
+        // ComboBox 换 ItemsSource 会把选中清空并经 TwoWay 绑定回推 null（字体下拉修过的同类问题），
+        // 先捕获当前选中，换完再恢复；没选过 / 选中失效时优先落到识别出的当前主题。
+        var preserve = _selectedPresetId;
         PresetOptions = presets
             .Select(static preset => new SettingOption(preset.Id, preset.DisplayNameSource))
             .ToList();
         OnPropertyChanged(nameof(PresetOptions));
 
-        if (presets.All(preset => preset.Id != _selectedPresetId))
-        {
-            SelectedPresetId = presets.FirstOrDefault(static p => !p.RequiresNerdFont)?.Id ?? string.Empty;
-        }
+        var fallback = _detectedPresetId
+            ?? presets.FirstOrDefault(static p => !p.RequiresNerdFont)?.Id
+            ?? string.Empty;
+        SelectedPresetId = presets.Any(preset => preset.Id == preserve) ? preserve : fallback;
+
+        // ItemsSource 换新可能清空 ComboBox 内部选中；若值恰好未变，上面的赋值不触发通知，
+        // 这里强制补一次，让 ComboBox 从空选中重新匹配 SelectedItem。
+        OnPropertyChanged(nameof(SelectedPresetId));
     }
 
     private void RaiseStatusChanged()
@@ -139,6 +148,7 @@ public sealed partial class BeautifyViewModel
         OnPropertyChanged(nameof(InitLineText));
         OnPropertyChanged(nameof(HasTomlBackup));
         OnPropertyChanged(nameof(HasWtBackup));
+        OnPropertyChanged(nameof(PresetStatusText));
         OnPropertyChanged(nameof(CanOneClickInstall));
         OnPropertyChanged(nameof(CanInstallBundledFont));
         OnPropertyChanged(nameof(CanApplyFont));

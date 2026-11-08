@@ -190,6 +190,23 @@ public sealed class StarshipServiceTests : IDisposable
         Assert.Throws<InvalidOperationException>(() => _starship.ApplyPreset("不存在的预设", _profilePath));
     }
 
+    // ---------------- 主题预设识别 ----------------
+
+    [Fact]
+    public void DetectAppliedPreset_MatchesPristinePresetContent_AndRejectsModified()
+    {
+        Assert.Null(_starship.DetectAppliedPreset()); // 配置文件不存在
+
+        var content = _starship.ExtractPreset("plain-text-symbols")!;
+        Directory.CreateDirectory(Path.GetDirectoryName(_configPath)!);
+        File.WriteAllText(_configPath, content, Utf8NoBom);
+        Assert.Equal("plain-text-symbols", _starship.DetectAppliedPreset());
+
+        // 之后追加内容（手动调整或应用自定义提示符）就不再识别为预设
+        File.AppendAllText(_configPath, "\n[extra]\nkey = 1\n", Utf8NoBom);
+        Assert.Null(_starship.DetectAppliedPreset());
+    }
+
     // ---------------- 预设资源 ----------------
 
     [Fact]

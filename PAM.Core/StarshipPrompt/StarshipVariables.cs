@@ -17,8 +17,9 @@ public sealed record StarshipVariableDefinition(
 
 /// <summary>
 /// 精选 20 个最常用的 Starship 模块变量，全部来自 <c>starship module --list</c>。
-/// 名称用中文，按用途分四组；<c>Sample</c> 只用于界面预览，模拟当前配置下的显示效果
-/// （例如 [hostname] 段自带 “@”，[directory] 段自带 “ : ”，所以预览里也带上）。
+/// 名称用中文，按用途分四组；<c>Sample</c> 只用于界面预览，模拟应用后的实际渲染效果：
+/// 托管块重写模块段落时按 <c>format = "[$user](fg:…)"</c> 这类裸值渲染，
+/// 所以示例值不带装饰（如 hostname 自带 @、directory 是路径本身、character 是 $）。
 /// 完整清单有 100+ 个，其余变量仍可在单行 format 编辑器里手写，不受限制。
 /// </summary>
 public static class StarshipVariables
@@ -28,12 +29,12 @@ public static class StarshipVariables
         // 身份与位置
         new("$username",     "用户名",       "Username",          "身份与位置", "Identity",  System.Environment.UserName),
         new("$hostname",     "主机名",       "Hostname",          "身份与位置", "Identity",  "@" + System.Environment.MachineName),
-        new("$directory",    "当前路径",     "Current directory", "身份与位置", "Identity",  " :~ "),
-        new("$character",    "结束符",       "Prompt character",  "身份与位置", "Identity",  " $"),
+        new("$directory",    "当前路径",     "Current directory", "身份与位置", "Identity",  "~"),
+        new("$character",    "结束符",       "Prompt character",  "身份与位置", "Identity",  "$"),
         new("$shell",        "当前终端",     "Shell",             "身份与位置", "Identity",  "pwsh"),
 
         // Git
-        new("$git_branch",   "Git 分支",     "Git branch",        "Git",       "Git",       " main"),
+        new("$git_branch",   "Git 分支",     "Git branch",        "Git",       "Git",       "main"),
         new("$git_status",   "Git 状态",     "Git status",        "Git",       "Git",       "!?"),
         new("$git_commit",   "Git 提交",     "Git commit",        "Git",       "Git",       "a1b2c3d"),
         new("$git_state",    "Git 操作",     "Git state",         "Git",       "Git",       "merge"),

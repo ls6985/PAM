@@ -48,6 +48,7 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
     private string _initLineSource = "未知";
     private string? _selectedFont;
     private string _selectedPresetId = string.Empty;
+    private string? _detectedPresetId;
     private ObservableCollection<string> _fontOptions = [];
 
     private bool _promptLoaded;
@@ -86,8 +87,10 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
         RebuildPresetOptions();
         RaiseStatusChanged();
 
-        // 默认选中无需特殊字体的预设，保证"应用"之后立即可用。
-        SelectedPresetId = _starshipService.GetPresets().FirstOrDefault(static p => !p.RequiresNerdFont)?.Id
+        // 初始选中优先识别已应用的预设（重启后也能看到当前主题），识别不出选无需特殊字体的预设。
+        _detectedPresetId = _starshipService.DetectAppliedPreset();
+        SelectedPresetId = _detectedPresetId
+            ?? _starshipService.GetPresets().FirstOrDefault(static p => !p.RequiresNerdFont)?.Id
             ?? string.Empty;
 
         // 片段内容可选项：自定义（可自由输入）放在第一条，其余是变量 + 固定符号；

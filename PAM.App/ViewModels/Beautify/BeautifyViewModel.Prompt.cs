@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Text;
 using PAM.Core;
 
@@ -236,18 +235,7 @@ public sealed partial class BeautifyViewModel
     /// <summary>只把编辑框重置为默认值，不写文件；需要再点"应用到 Starship"。</summary>
     public void ResetPrompt()
     {
-        string? original = null;
-        try
-        {
-            var backup = _promptService.GetBackupPath();
-            if (File.Exists(backup)) original = File.ReadAllText(backup);
-        }
-        catch (IOException)
-        {
-            // 读不到备份就退回内置配色，不影响重置。
-        }
-
-        LoadFormat(StarshipPromptService.CreateDefaultFormat(original));
+        LoadFormat(StarshipPromptService.CreateDefaultFormat());
         SetFeedback(StatusType.Info, "已重置为默认内容，点击“应用到 Starship”才会写入。");
     }
 }

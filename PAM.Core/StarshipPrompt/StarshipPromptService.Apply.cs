@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -8,7 +9,10 @@ namespace PAM.Core;
 
 public sealed partial class StarshipPromptService
 {
-    /// <summary>把一行 format 写入 starship.toml（只替换顶层 format，其他内容原样保留）。</summary>
+    /// <summary>
+    /// 把一行 format 写入 starship.toml：托管块内写顶层 format，并按段颜色接管 format 里
+    /// 引用到的模块段落；未被引用的段落、注释、编码、换行原样保留。
+    /// </summary>
     public StarshipPromptApplyResult Apply(string format)
     {
         Validate(format);
@@ -31,12 +35,9 @@ public sealed partial class StarshipPromptService
             : content.Contains('\n') ? "\n" : Environment.NewLine;
 
         var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
-        var (clean, insertIndex) = StripManagedParts(lines);
-
-        clean.Insert(insertIndex, StartMarker);
-        clean.Insert(insertIndex + 1, NoticeLine);
-        clean.Insert(insertIndex + 2, BuildFormatLine(format));
-        clean.Insert(insertIndex + 3, EndMarker);
+        var modules = ExtractManagedModules(format);
+        var (clean, insertIndex) = StripManagedParts(lines, modules.Select(static m => m.Module).ToList());
+        clean.InsertRange(insertIndex, BuildManagedBlock(format, modules));
 
         var output = string.Join(newLine, clean);
         if (!output.EndsWith(newLine, StringComparison.Ordinal)) output += newLine;
@@ -60,7 +61,11 @@ public sealed partial class StarshipPromptService
         return new StarshipPromptApplyResult(true, backupCreated, path);
     }
 
-    /// <summary>恢复首次应用前的原始 starship.toml；没有备份时返回 false。</summary>
+    /// <summary>
+    /// 恢复首次应用前的原始 starship.toml；没有备份时返回 false。
+    /// 恢复即消费备份（删除文件）：按钮的可用性就是"有未撤销的应用前备份"，
+    /// 恢复后回到禁用，再次应用会重新备份。
+    /// </summary>
     public bool Restore()
     {
         var backupPath = GetBackupPath();
@@ -69,27 +74,32 @@ public sealed partial class StarshipPromptService
         var path = GetConfigPath();
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.Copy(backupPath, path, overwrite: true);
+        File.Delete(backupPath);
         return true;
     }
 
-    /// <summary>移除旧的 PAM 块和旧的顶层 format（含 """\ 多行字符串），返回插入位置。</summary>
-    private static (List<string> Lines, int InsertIndex) StripManagedParts(List<string> lines)
+    /// <summary>
+    /// 移除旧 PAM 块、旧顶层 format（含 """\ 多行字符串）以及被引用模块的既有段落
+    /// （[module] 与 [module.x] 子表：段落里的 format / 样式会盖过顶层 format 的外层颜色，
+    /// 且 TOML 不允许重复定义表，必须整段移走后由托管块重写）。
+    /// 返回清理后的行与块插入位置：第一个段落表头之前（无段落时为行尾），
+    /// 这样块内的 [module] 表头不会把后面的根级键捕获进自己的表。
+    /// </summary>
+    private static (List<string> Lines, int InsertIndex) StripManagedParts(
+        List<string> lines, IReadOnlyCollection<string> managedModules)
     {
         var result = new List<string>(lines.Count);
         var inBlock = false;
         var topLevel = true;
-        var blockIndex = -1;
-        var formatIndex = -1;
+        string? skippingModule = null;
 
         for (var i = 0; i < lines.Count; i++)
         {
-            var line = lines[i];
-            var trimmed = line.TrimStart();
+            var trimmed = lines[i].TrimStart();
 
             if (trimmed.Equals(StartMarker, StringComparison.OrdinalIgnoreCase))
             {
                 inBlock = true;
-                if (blockIndex < 0) blockIndex = result.Count;
                 continue;
             }
 
@@ -99,10 +109,28 @@ public sealed partial class StarshipPromptService
                 continue;
             }
 
-            // 只认任何 [section] 之前（= 顶层）的 format，段落内的同名 format 不动。
-            if (formatIndex < 0 && topLevel && IsFormatAssignment(trimmed))
+            if (skippingModule is not null)
             {
-                formatIndex = result.Count;
+                if (trimmed.Length == 0) continue;
+                if (TryGetHeaderName(trimmed, out var pending))
+                {
+                    if (pending == skippingModule
+                        || pending.StartsWith(skippingModule + ".", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    skippingModule = null; // 到了别的段落：落回正常流程处理这一行
+                }
+                else
+                {
+                    continue;
+                }
+            }
+
+            // 只认任何 [section] 之前（= 顶层）的 format，段落内的同名 format 不动。
+            if (topLevel && IsFormatAssignment(trimmed))
+            {
                 var equals = trimmed.IndexOf('=');
                 var value = trimmed[(equals + 1)..].TrimStart();
                 if (value.StartsWith("\"\"\"", StringComparison.Ordinal)
@@ -116,14 +144,34 @@ public sealed partial class StarshipPromptService
                 continue;
             }
 
-            if (trimmed.StartsWith('[') && trimmed.Contains(']')) topLevel = false;
-            result.Add(line);
+            if (TryGetHeaderName(trimmed, out var header))
+            {
+                topLevel = false;
+                if (managedModules.Contains(header))
+                {
+                    skippingModule = header;
+                    continue;
+                }
+            }
+
+            result.Add(lines[i]);
         }
 
-        var insertIndex = blockIndex >= 0 ? Math.Min(blockIndex, result.Count)
-            : formatIndex >= 0 ? formatIndex
-            : 0;
+        var insertIndex = result.FindIndex(static line => TryGetHeaderName(line.TrimStart(), out _));
+        if (insertIndex < 0) insertIndex = result.Count;
         return (result, insertIndex);
+    }
+
+    /// <summary>识别段落表头行（[module] / [module.sub]）并取出表名；其余行返回 false。</summary>
+    private static bool TryGetHeaderName(string trimmed, out string name)
+    {
+        name = string.Empty;
+        if (!trimmed.StartsWith('[')) return false;
+        var end = trimmed.IndexOf(']');
+        if (end <= 1) return false;
+
+        name = trimmed[1..end].Trim();
+        return name.Length > 0;
     }
 
     private static bool IsFormatAssignment(string trimmed)

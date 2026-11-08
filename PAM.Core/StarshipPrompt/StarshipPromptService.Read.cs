@@ -1,13 +1,11 @@
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace PAM.Core;
 
 public sealed partial class StarshipPromptService
 {
-    /// <summary>读取当前状态。没有 PAM 标记块时按现有配置的配色生成一行默认的变量式 format。</summary>
+    /// <summary>读取当前状态。没有 PAM 标记块时返回固定的默认 format。</summary>
     public StarshipPromptState Read()
     {
         var path = GetConfigPath();
@@ -20,41 +18,28 @@ public sealed partial class StarshipPromptService
             exists,
             parsed is not null,
             File.Exists(GetBackupPath()),
-            parsed ?? CreateDefaultFormat(content));
+            parsed ?? CreateDefaultFormat());
     }
 
     /// <summary>
-    /// 默认 format：四个动态变量。颜色优先复用现有 starship.toml 里出现过的 fg:#RRGGBB
-    /// （去重按出现顺序），这样第一次点「应用」也不会把用户手工配的配色冲掉。
-    /// 实测在用户现有配置上渲染结果仍是 Black@DESKTOP-J64G5VA :~ $，且路径随 cd 变化。
+    /// 默认 format：用户名 / 主机名 / 冒号 / 路径同用一色，结束符单独一色。
+    /// 固定组合（作者确认过的观感），不再从现有配置取色——托管块接管模块段落后，
+    /// 应用本来就会按段颜色重写配色。
     /// </summary>
-    public static string CreateDefaultFormat(string? existingContent = null)
-    {
-        var colors = new List<string>();
-        if (!string.IsNullOrEmpty(existingContent))
-        {
-            foreach (Match match in HexColorRegex.Matches(existingContent))
-            {
-                var hex = match.Value.ToUpperInvariant();
-                if (!colors.Contains(hex, StringComparer.Ordinal)) colors.Add(hex);
-            }
-        }
+    public static string CreateDefaultFormat()
+        => "[$username](fg:#BBC4B9)[$hostname](fg:#BBC4B9)[:](fg:#BBC4B9)[$directory](fg:#BBC4B9)[$character](fg:#BFA8BF)";
 
-        string Pick(int index, string fallback) => index < colors.Count ? colors[index] : fallback;
-        var primary = Pick(0, "#BBC4B9");
-        var path = Pick(1, "#B6D6F2");
-        var tail = Pick(2, "#BFA8BF");
-
-        return $"[$username](fg:{primary})[$hostname](fg:{primary})"
-            + $"[$directory](fg:{path})[$character](fg:{tail})";
-    }
-
-    /// <summary>从自有标记块里读回一行 Starship format；块不存在或格式不符时返回 null。</summary>
+    /// <summary>
+    /// 从自有标记块里读回一行 Starship format；块不存在或格式不符时返回 null。
+    /// 只认块内第一个段落表头之前的 format 行——托管块把模块段落写在顶层 format 之后，
+    /// 段落里的 format = "…" 是模块局部样式，不是顶层 format。
+    /// </summary>
     private static string? TryParse(string content)
     {
         if (string.IsNullOrEmpty(content)) return null;
 
         var inside = false;
+        var pastHeader = false;
         string? formatLine = null;
         foreach (var rawLine in content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
         {
@@ -67,7 +52,8 @@ public sealed partial class StarshipPromptService
 
             if (!inside) continue;
             if (line.Equals(EndMarker, StringComparison.OrdinalIgnoreCase)) break;
-            if (IsFormatAssignment(line)) formatLine = line;
+            if (!pastHeader && TryGetHeaderName(line, out _)) pastHeader = true;
+            if (!pastHeader && IsFormatAssignment(line)) formatLine = line;
         }
 
         if (formatLine is null) return null;
