@@ -117,9 +117,6 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
         set => SetField(ref _currentColor, value ?? PromptPalette.Colors[0]);
     }
 
-    /// <summary>颜色下拉的预设色板，选中项显示色块 + hex。</summary>
-    public IReadOnlyList<ColorOption> ColorOptions => ColorOption.Palette;
-
     /// <summary>一行 Starship format 语法，用户可直接编辑整行。</summary>
     public string PromptFormat
     {
@@ -799,6 +796,13 @@ public sealed class ColorOption
     public static IReadOnlyList<ColorOption> Palette { get; } =
         PromptPalette.Colors.Select(static hex => new ColorOption(hex)).ToList();
 
+    /// <summary>下拉首项「自定义…」：选中后由右侧输入框自由填色号。</summary>
+    public static ColorOption Custom { get; } = new ColorOption(string.Empty) { IsCustom = true };
+
+    /// <summary>带「自定义」项的完整下拉列表（每个片段共享同一份）。</summary>
+    public static IReadOnlyList<ColorOption> ChoicesWithCustom { get; } =
+        new List<ColorOption> { Custom }.Concat(Palette).ToList();
+
     public ColorOption(string hex)
     {
         Hex = hex;
@@ -808,6 +812,9 @@ public sealed class ColorOption
     public string Hex { get; }
 
     public SolidColorBrush Brush { get; }
+
+    /// <summary>是否为「自定义…」项；自定义项 Hex 为空、Brush 取中性灰。</summary>
+    public bool IsCustom { get; set; }
 
     public static SolidColorBrush CreateBrush(string hex)
     {
@@ -946,13 +953,16 @@ public sealed class PromptSegment : INotifyPropertyChanged
     private readonly IReadOnlyList<ISegmentChoice> _choices;
     private ISegmentChoice _selectedOption;
     private string _color;
+    private string _hexInput;
     private string _customText = string.Empty;
+    private ColorOption? _selectedColorOption;
 
     public PromptSegment(IReadOnlyList<ISegmentChoice> choices, ISegmentChoice initial, string color)
     {
         _choices = choices;
         _selectedOption = initial;
         _color = color;
+        _hexInput = GetHexDigitsOrEmpty(color);
     }
 
     /// <summary>选「自定义」时自由输入的文字；原样作为片段内容（可写任意文字或 $变量）。</summary>
@@ -985,6 +995,9 @@ public sealed class PromptSegment : INotifyPropertyChanged
         }
     }
 
+    /// <summary>下拉项来源：自定义项 + 12 色预设，每个片段共享同一份。</summary>
+    public IReadOnlyList<ColorOption> ColorChoices => ColorOption.ChoicesWithCustom;
+
     public string Color
     {
         get => _color;
@@ -993,9 +1006,113 @@ public sealed class PromptSegment : INotifyPropertyChanged
             if (value is not null && !string.Equals(_color, value, StringComparison.Ordinal))
             {
                 _color = value;
+                _hexInput = GetHexDigitsOrEmpty(value);
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HexInput));
+                OnPropertyChanged(nameof(SelectedColorOption));
             }
         }
+    }
+
+    /// <summary>
+    /// 当前选中的颜色项（下拉的 SelectedItem）。自定义项被选中时不改动 <see cref="Color" />，
+    /// 只让右侧输入框可见；选中预设项则把 <see cref="Color" /> 设为该色号。
+    /// </summary>
+    public ColorOption? SelectedColorOption
+    {
+        get
+        {
+            _selectedColorOption ??= ColorOption.Palette
+                .FirstOrDefault(c => string.Equals(c.Hex, _color, StringComparison.OrdinalIgnoreCase))
+                ?? ColorOption.Custom;
+            return _selectedColorOption;
+        }
+        set
+        {
+            if (value is null || ReferenceEquals(_selectedColorOption, value))
+            {
+                return;
+            }
+
+            _selectedColorOption = value;
+            OnPropertyChanged();
+            if (!value.IsCustom)
+            {
+                Color = value.Hex;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 颜色编辑框用的色号（<c>#</c> 后面的 6 位，不含 <c>#</c>）。
+    /// 只有凑满 6 位合法十六进制才写回 <see cref="Color" />，半成品只留在输入框里，
+    /// 避免每敲一个字符就把 format 改成无效颜色。非标准色号（如命名色）显示为空。
+    /// </summary>
+    public string HexInput
+    {
+        get => _hexInput;
+        set
+        {
+            var digits = SanitizeHexDigits(value);
+            if (string.Equals(_hexInput, digits, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _hexInput = digits;
+            OnPropertyChanged();
+
+            if (digits.Length == 6 && !string.Equals(_color, "#" + digits, StringComparison.OrdinalIgnoreCase))
+            {
+                _color = "#" + digits;
+                OnPropertyChanged(nameof(Color));
+                OnPropertyChanged(nameof(SelectedColorOption));
+            }
+        }
+    }
+
+    /// <summary>键入过程中的宽松清洗：只留十六进制字符、大写、最多 6 位。</summary>
+    private static string SanitizeHexDigits(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(6);
+        foreach (var ch in value)
+        {
+            if (builder.Length == 6)
+            {
+                break;
+            }
+
+            if (char.IsAsciiHexDigit(ch))
+            {
+                builder.Append(char.ToUpperInvariant(ch));
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>把已有的颜色字符串取成 6 位色号；不是 <c>#RRGGBB</c> 时返回空串（命名色不显示半截）。</summary>
+    private static string GetHexDigitsOrEmpty(string? value)
+    {
+        var text = value?.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        if (text.StartsWith('#'))
+        {
+            text = text[1..];
+        }
+
+        return text.Length == 6 && text.All(char.IsAsciiHexDigit)
+            ? text.ToUpperInvariant()
+            : string.Empty;
     }
 
     /// <summary>包成一段 Starship format：自定义原样、变量原样、固定文字做反转义，再外加 fg 颜色；自定义为空时不产出片段。</summary>

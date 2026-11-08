@@ -62,3 +62,27 @@ public sealed class CustomSelectedToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>
+/// 颜色下拉模板选择：自定义项显示「自定义…」，其余显示色块 + 色号。
+/// 收起（选中框）与展开（下拉项）使用同一套模板，与「内容」下拉的 ComboBox 实现方式保持一致。
+/// </summary>
+public sealed class ColorChoiceTemplateSelector : DataTemplateSelector
+{
+    public DataTemplate? SwatchTemplate { get; set; }
+
+    public DataTemplate? CustomTemplate { get; set; }
+
+    public override DataTemplate? SelectTemplate(object item, DependencyObject container)
+        => item is ColorOption { IsCustom: true } ? CustomTemplate : SwatchTemplate;
+}
+
+/// <summary>颜色下拉选中「自定义…」时显示右侧色号输入框，否则隐藏。</summary>
+public sealed class ColorCustomToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ColorOption { IsCustom: true } ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

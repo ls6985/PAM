@@ -31,6 +31,34 @@
             ShortTemplate="{StaticResource SegmentShortTemplate}" />
         <local:CustomSelectedToVisibilityConverter x:Key="CustomSelectedToVisibility" />
 
+        <!-- 颜色项模板：预设显示色块 + 色号，自定义显示「自定义…」 -->
+        <DataTemplate x:Key="ColorSwatchTemplate">
+            <StackPanel Orientation="Horizontal">
+                <Rectangle
+                    Width="13"
+                    Height="13"
+                    VerticalAlignment="Center"
+                    Fill="{Binding Brush}"
+                    RadiusX="3"
+                    RadiusY="3" />
+                <TextBlock
+                    Margin="6,0,0,0"
+                    VerticalAlignment="Center"
+                    FontFamily="{StaticResource MonoFontFamily}"
+                    FontSize="12"
+                    Text="{Binding Hex}" />
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="ColorCustomTemplate">
+            <TextBlock FontSize="12" Text="自定义…" />
+        </DataTemplate>
+
+        <local:ColorChoiceTemplateSelector
+            x:Key="ColorChoiceTemplateSelector"
+            CustomTemplate="{StaticResource ColorCustomTemplate}"
+            SwatchTemplate="{StaticResource ColorSwatchTemplate}" />
+        <local:ColorCustomToVisibilityConverter x:Key="ColorCustomToVisibility" />
+
         <Style x:Key="CardStyle" TargetType="{x:Type Border}">
             <Setter Property="Padding" Value="20,16" />
             <Setter Property="Margin" Value="0,0,0,12" />
@@ -321,18 +349,24 @@
                                                 Text="{Binding CustomText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                 ToolTip="输入任意文字或 $变量"
                                                 Visibility="{Binding SelectedOption, Converter={StaticResource CustomSelectedToVisibility}}" />
+                                            <!-- 颜色选择：与「内容」下拉用同一个 WPF-UI ComboBox，
+                                                 预设 12 色带色号，首项「自定义…」选中后右侧出现可编辑色号框。 -->
                                             <ComboBox
-                                                Width="46"
+                                                Width="118"
                                                 Margin="5,0,0,0"
-                                                ItemsSource="{x:Static vm:ColorOption.Palette}"
-                                                SelectedValue="{Binding Color, Mode=TwoWay}"
-                                                SelectedValuePath="Hex">
-                                                <ComboBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Rectangle Width="16" Height="16" RadiusX="3" RadiusY="3" Fill="{Binding Brush}" />
-                                                    </DataTemplate>
-                                                </ComboBox.ItemTemplate>
-                                            </ComboBox>
+                                                ItemsSource="{Binding ColorChoices}"
+                                                ItemTemplateSelector="{StaticResource ColorChoiceTemplateSelector}"
+                                                SelectedItem="{Binding SelectedColorOption, Mode=TwoWay}"
+                                                ToolTip="{Binding Color}" />
+                                            <TextBox
+                                                Width="66"
+                                                Margin="5,0,0,0"
+                                                FontFamily="{StaticResource MonoFontFamily}"
+                                                FontSize="12"
+                                                Padding="4,2"
+                                                Text="{Binding HexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                ToolTip="输入 6 位十六进制色号（即 # 后面的部分）"
+                                                Visibility="{Binding SelectedColorOption, Converter={StaticResource ColorCustomToVisibility}}" />
                                             <Button
                                                 MinWidth="24"
                                                 Margin="5,0,0,0"
@@ -355,7 +389,7 @@
                                 Margin="12,0,0,0"
                                 VerticalAlignment="Center"
                                 Style="{StaticResource SettingHintStyle}"
-                                Text="变量（用户名 / 主机名 / 当前路径…）与固定符号（@ : ~ $ 空格）都在下拉里选，颜色可单独调。" />
+                                Text="变量（用户名 / 主机名 / 当前路径…）与固定符号（@ : ~ $ 空格）都在下拉里选；颜色选预设色号，选「自定义…」后可在右侧直接填 # 后面的 6 位。" />
                         </StackPanel>
 
                         <StackPanel Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
