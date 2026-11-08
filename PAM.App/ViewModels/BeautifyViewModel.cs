@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
+using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -18,8 +18,6 @@ namespace PAM.App.ViewModels;
 public sealed class BeautifyViewModel : INotifyPropertyChanged
 {
     private const string BundledFontFileName = "CascadiaCodeNF.ttf";
-
-    private static readonly Regex HexInSelection = new(@"#[0-9A-Fa-f]{6}", RegexOptions.Compiled);
 
     private readonly StarshipService _starshipService = new();
     private readonly StarshipPromptService _promptService = new();
@@ -55,10 +53,12 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
     private string _promptStatusSource = "检测中…";
     private string _promptFormat = string.Empty;
     private string _currentColor = PromptPalette.Colors[0];
-    private string _variableSearchText = string.Empty;
-    private VariableOption? _selectedVariable;
-    private ObservableCollection<VariableOption> _filteredVariables = [];
     private ObservableCollection<PromptPreviewItem> _promptPreviewParts = [];
+
+    // 点选组合：提示符由一串可选项片段拼成，不再允许直接编辑 format 文本。
+    private readonly IReadOnlyList<ISegmentChoice> _segmentChoices;
+    private readonly ObservableCollection<PromptSegment> _promptSegments = [];
+    private bool _suppressRecompose;
 
 
     private string _feedbackSource = string.Empty;
@@ -86,7 +86,14 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
         // 默认选中无需特殊字体的预设，保证"应用"之后立即可用。
         SelectedPresetId = _starshipService.GetPresets().FirstOrDefault(static p => !p.RequiresNerdFont)?.Id
             ?? string.Empty;
-        ApplyVariableFilter();
+
+        // 片段内容可选项：自定义（可自由输入）放在第一条，其余是变量 + 固定符号；
+        // 变量项复用 VariableOptions 同一批实例，语言切换时刷新显示名即可同步到每个片段的下拉。
+        _segmentChoices = new List<ISegmentChoice> { new CustomOption() }
+            .Concat(VariableOptions.Cast<ISegmentChoice>())
+            .Concat(PromptSegment.LiteralChoices)
+            .ToList();
+
         RefreshPromptState();
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
     }
@@ -97,37 +104,13 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
     public IReadOnlyList<VariableOption> VariableOptions { get; } =
         StarshipVariables.All.Select(static item => new VariableOption(item)).ToList();
 
-    /// <summary>按搜索词过滤后的变量下拉项。</summary>
-    public ObservableCollection<VariableOption> FilteredVariableOptions
-    {
-        get => _filteredVariables;
-        private set
-        {
-            _filteredVariables = value;
-            OnPropertyChanged();
-        }
-    }
+    /// <summary>片段「内容」可选项：变量 + 固定符号，供每个片段的下拉选内容。</summary>
+    public IReadOnlyList<ISegmentChoice> SegmentChoices => _segmentChoices;
 
-    public string VariableSearchText
-    {
-        get => _variableSearchText;
-        set
-        {
-            if (SetField(ref _variableSearchText, value ?? string.Empty)) ApplyVariableFilter();
-        }
-    }
+    /// <summary>提示符片段集合：整体由这些片段组合而成，变量不再手填、不可直接编辑。</summary>
+    public ObservableCollection<PromptSegment> PromptSegments => _promptSegments;
 
-    public VariableOption? SelectedVariable
-    {
-        get => _selectedVariable;
-        set
-        {
-            _selectedVariable = value;
-            OnPropertyChanged();
-        }
-    }
-
-    /// <summary>当前颜色：插入变量 / 固定符号、给选中文字上色时都用它。</summary>
+    /// <summary>当前颜色：新片段默认取它；每个片段也能单独改自己的颜色。</summary>
     public string CurrentColor
     {
         get => _currentColor;
@@ -419,7 +402,7 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
 
         if (forceReload || !_promptLoaded)
         {
-            PromptFormat = state.Format;
+            LoadFormat(state.Format);
             _promptLoaded = true;
         }
 
@@ -439,51 +422,106 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CurrentColor));
     }
 
-    /// <summary>按搜索词过滤变量下拉；整体换新集合，避免 ComboBox 显示空白。</summary>
-    private void ApplyVariableFilter()
-    {
-        var query = _variableSearchText.Trim();
-        var matched = VariableOptions.Where(item => item.Matches(query)).ToList();
-        FilteredVariableOptions = new ObservableCollection<VariableOption>(matched);
-        // 没有选中项（首次进入 / 搜索把原选中项过滤掉）时自动落到第一项，
-        // 否则下拉看着是空的、点「添加」也没有任何反应。
-        if (_selectedVariable is null || !matched.Contains(_selectedVariable))
-        {
-            SelectedVariable = matched.FirstOrDefault();
-        }
-    }
-
     private void RebuildPreview()
         => PromptPreviewParts = new ObservableCollection<PromptPreviewItem>(
             StarshipPromptService.ParsePreview(_promptFormat)
                 .Select(static part => new PromptPreviewItem(part.Text, part.Color)));
 
 
-    /// <summary>把当前选中的变量包成一段带当前颜色的 Starship format。</summary>
-    public string BuildVariableSnippet()
-        => SelectedVariable is null
-            ? string.Empty
-            : $"[{SelectedVariable.Variable}](fg:{CurrentColor})";
-
-    /// <summary>把一段固定文字（@ : ~ $ 空格等）包成带当前颜色的 format 片段。</summary>
-    public string BuildLiteralSnippet(string text)
-        => $"[{EscapeStarshipLiteral(text)}](fg:{CurrentColor})";
-
-    /// <summary>给选区重新上色：已有 #RRGGBB 就替换颜色，否则把选区整段包成一个块。</summary>
-    public string ColorizeSelection(string selected)
+    /// <summary>外部载入（初始读取 / 重置 / 恢复）一行 format：先更新字段与预览，再还原成可选项片段。</summary>
+    private void LoadFormat(string format)
     {
-        if (string.IsNullOrEmpty(selected)) return selected;
-        return HexInSelection.IsMatch(selected)
-            ? HexInSelection.Replace(selected, CurrentColor)
-            : BuildLiteralSnippet(selected);
+        _promptFormat = format ?? string.Empty;
+        OnPropertyChanged(nameof(PromptFormat));
+        RebuildPreview();
+        OnPropertyChanged(nameof(CanApplyPrompt));
+        SyncSegmentsFromFormat();
     }
 
-    private static string EscapeStarshipLiteral(string text)
-        => text
-            .Replace("\\", @"\\", StringComparison.Ordinal)
-            .Replace("[", @"\[", StringComparison.Ordinal)
-            .Replace("]", @"\]", StringComparison.Ordinal)
-            .Replace("$", @"\$", StringComparison.Ordinal);
+    /// <summary>把当前片段组合重组成一行 Starship format，写回 <see cref="PromptFormat" />（预览随之刷新）。</summary>
+    private void Recompose()
+    {
+        if (_suppressRecompose) return;
+        var builder = new StringBuilder(_promptSegments.Count * 12);
+        foreach (var segment in _promptSegments)
+        {
+            builder.Append(segment.ToSnippet());
+        }
+
+        // 直接写字段避免再次触发同步；RebuildPreview + CanApplyPrompt 仍需刷新。
+        _promptFormat = builder.ToString();
+        OnPropertyChanged(nameof(PromptFormat));
+        RebuildPreview();
+        OnPropertyChanged(nameof(CanApplyPrompt));
+    }
+
+    /// <summary>把一行 format 反向拆成片段集合；用 <see cref="_suppressRecompose" /> 防止填充时回写。</summary>
+    private void SyncSegmentsFromFormat()
+    {
+        _suppressRecompose = true;
+        try
+        {
+            _promptSegments.Clear();
+            foreach (var data in StarshipPromptService.ParseFormatSegments(_promptFormat))
+            {
+                var segment = new PromptSegment(_segmentChoices, FindChoice(data.Kind, data.Value), data.Color);
+                segment.PropertyChanged += OnSegmentChanged;
+                _promptSegments.Add(segment);
+            }
+
+            if (_promptSegments.Count == 0)
+            {
+                AddBlankSegment();
+            }
+        }
+        finally
+        {
+            _suppressRecompose = false;
+        }
+    }
+
+    /// <summary>新增一个空白片段（默认选第一个变量，颜色取当前默认色）。</summary>
+    public void AddSegment()
+    {
+        AddBlankSegment();
+        Recompose();
+    }
+
+    private void AddBlankSegment()
+    {
+        // 新片段默认选第一个变量（用户名），而不是排在最前面的「自定义」空项。
+        var initial = _segmentChoices.FirstOrDefault(static c => c.Kind == PromptSegmentKind.Variable)
+            ?? _segmentChoices[0];
+        var segment = new PromptSegment(_segmentChoices, initial, CurrentColor);
+        segment.PropertyChanged += OnSegmentChanged;
+        _promptSegments.Add(segment);
+    }
+
+    /// <summary>删除一个片段（先解绑事件，再移除，最后重组成 format）。</summary>
+    public void RemoveSegment(PromptSegment segment)
+    {
+        segment.PropertyChanged -= OnSegmentChanged;
+        _promptSegments.Remove(segment);
+        Recompose();
+    }
+
+    private void OnSegmentChanged(object? sender, PropertyChangedEventArgs e) => Recompose();
+
+    /// <summary>按类别 + 取值在可选项里找对应项；清单外的变量 / 符号建一个临时项兜底显示。</summary>
+    private ISegmentChoice FindChoice(PromptSegmentKind kind, string value)
+    {
+        foreach (var choice in _segmentChoices)
+        {
+            if (choice.Kind == kind && string.Equals(choice.Value, value, StringComparison.Ordinal))
+            {
+                return choice;
+            }
+        }
+
+        return kind == PromptSegmentKind.Variable
+            ? new VariableOption(new StarshipVariableDefinition(value, value, value, "其他", "Other", value))
+            : new SymbolOption(value, value, value);
+    }
 
     public async Task ApplyPromptAsync()
     {
@@ -526,7 +564,7 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
             // 读不到备份就退回内置配色，不影响重置。
         }
 
-        PromptFormat = StarshipPromptService.CreateDefaultFormat(original);
+        LoadFormat(StarshipPromptService.CreateDefaultFormat(original));
         SetFeedback(StatusType.Info, "已重置为默认内容，点击“应用到 Starship”才会写入。");
     }
 
@@ -736,8 +774,6 @@ public sealed class BeautifyViewModel : INotifyPropertyChanged
             option.Refresh();
         }
 
-
-        ApplyVariableFilter();
         RaiseStatusChanged();
         FeedbackMessage = Loc.F(_feedbackSource, _feedbackArgs);
     }
@@ -791,8 +827,8 @@ public sealed class ColorOption
     }
 }
 
-/// <summary>变量下拉的一项：中文名 + 分组 + 变量名，语言切换时刷新显示名。</summary>
-public sealed class VariableOption : INotifyPropertyChanged
+/// <summary>变量下拉的一项：中文名 + 分组 + 变量名，语言切换时刷新显示名；同时作为片段「内容」可选项。</summary>
+public sealed class VariableOption : ISegmentChoice
 {
     private readonly StarshipVariableDefinition _definition;
 
@@ -800,9 +836,16 @@ public sealed class VariableOption : INotifyPropertyChanged
 
     public string Variable => _definition.Variable;
 
+    public PromptSegmentKind Kind => PromptSegmentKind.Variable;
+
+    public string Value => Variable;
+
     public string DisplayName => IsEnglish
         ? $"{_definition.GroupEn} · {_definition.NameEn}"
         : $"{_definition.GroupZh} · {_definition.NameZh}";
+
+    /// <summary>收起时只显示名称（· 后面的部分），不显示分类。</summary>
+    public string ShortName => IsEnglish ? _definition.NameEn : _definition.NameZh;
 
     public string ToolTipText => $"{_definition.Variable} · {_definition.Sample}";
 
@@ -841,4 +884,145 @@ public sealed class PromptPreviewItem
     public string? Color { get; }
 
     public SolidColorBrush Brush { get; }
+}
+
+/// <summary>片段「内容」可选项的统一接口：变量与固定符号共用同一个下拉。</summary>
+public interface ISegmentChoice
+{
+    PromptSegmentKind Kind { get; }
+    string Value { get; }
+    /// <summary>下拉收起时显示的短名（变量取名称、符号取符号本身）。</summary>
+    string ShortName { get; }
+    /// <summary>下拉展开时显示的完整名（分类 · 名称）。</summary>
+    string DisplayName { get; }
+    string ToolTipText { get; }
+}
+
+/// <summary>固定符号（@ : ~ $ 空格）作为片段内容时的可选项；语言无关，无需刷新。</summary>
+public sealed class SymbolOption : ISegmentChoice
+{
+    public SymbolOption(string value, string displayName, string toolTip)
+    {
+        Value = value;
+        DisplayName = displayName;
+        ToolTipText = toolTip;
+    }
+
+    public PromptSegmentKind Kind => PromptSegmentKind.Literal;
+    public string Value { get; }
+    public string DisplayName { get; }
+    public string ToolTipText { get; }
+
+    /// <summary>收起时显示符号本身（空格显示为“空格”）。</summary>
+    public string ShortName => string.Equals(Value, " ", StringComparison.Ordinal) ? "空格" : Value;
+}
+
+/// <summary>片段内容下拉的第一项：用户可自由输入的自定义内容（任意文字或 $变量）。</summary>
+public sealed class CustomOption : ISegmentChoice
+{
+    public PromptSegmentKind Kind => PromptSegmentKind.Custom;
+    public string Value => string.Empty;
+    public string DisplayName => "自定义…";
+    public string ShortName => "自定义";
+    public string ToolTipText => "选此项后可自由输入任意文字或 $变量";
+}
+
+/// <summary>
+/// 提示符里的一个可选项片段：内容来自下拉（变量或固定符号），颜色单独选。
+/// 任意属性变化都会通知外层重组 format；<see cref="ToSnippet" /> 把内容包成一段 Starship format。
+/// </summary>
+public sealed class PromptSegment : INotifyPropertyChanged
+{
+    // 固定符号清单：与 VariableOptions 合并成下拉项。语言无关，无需刷新。
+    public static IReadOnlyList<ISegmentChoice> LiteralChoices { get; } =
+    [
+        new SymbolOption("@", "固定符号 @", "@"),
+        new SymbolOption(":", "固定符号 :", ":"),
+        new SymbolOption("~", "固定符号 ~", "~"),
+        new SymbolOption("$", "固定符号 $", "$"),
+        new SymbolOption(" ", "空格", "空格"),
+    ];
+
+    private readonly IReadOnlyList<ISegmentChoice> _choices;
+    private ISegmentChoice _selectedOption;
+    private string _color;
+    private string _customText = string.Empty;
+
+    public PromptSegment(IReadOnlyList<ISegmentChoice> choices, ISegmentChoice initial, string color)
+    {
+        _choices = choices;
+        _selectedOption = initial;
+        _color = color;
+    }
+
+    /// <summary>选「自定义」时自由输入的文字；原样作为片段内容（可写任意文字或 $变量）。</summary>
+    public string CustomText
+    {
+        get => _customText;
+        set
+        {
+            if (!string.Equals(_customText, value ?? string.Empty, StringComparison.Ordinal))
+            {
+                _customText = value ?? string.Empty;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    /// <summary>下拉项来源（变量 + 固定符号），每个片段共享同一份。</summary>
+    public IReadOnlyList<ISegmentChoice> Choices => _choices;
+
+    public ISegmentChoice SelectedOption
+    {
+        get => _selectedOption;
+        set
+        {
+            if (value is not null && !ReferenceEquals(_selectedOption, value))
+            {
+                _selectedOption = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string Color
+    {
+        get => _color;
+        set
+        {
+            if (value is not null && !string.Equals(_color, value, StringComparison.Ordinal))
+            {
+                _color = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    /// <summary>包成一段 Starship format：自定义原样、变量原样、固定文字做反转义，再外加 fg 颜色；自定义为空时不产出片段。</summary>
+    public string ToSnippet()
+    {
+        var inner = _selectedOption.Kind == PromptSegmentKind.Custom
+            ? _customText
+            : _selectedOption.Kind == PromptSegmentKind.Variable
+                ? _selectedOption.Value
+                : EscapeLiteral(_selectedOption.Value);
+        if (string.IsNullOrEmpty(inner))
+        {
+            return string.Empty;
+        }
+
+        return $"[{inner}](fg:{_color})";
+    }
+
+    private static string EscapeLiteral(string text)
+        => text
+            .Replace("\\", @"\\", StringComparison.Ordinal)
+            .Replace("[", @"\[", StringComparison.Ordinal)
+            .Replace("]", @"\]", StringComparison.Ordinal)
+            .Replace("$", @"\$", StringComparison.Ordinal);
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

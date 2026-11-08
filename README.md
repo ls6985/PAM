@@ -22,7 +22,7 @@
 - 托盘的 700ms 定时器除消费信号外，在 `switchImeToEnglish` 开启时还会检测新打开的终端窗口，用 UI Automation 判断任务栏输入指示器的中/英状态，仅在中文模式时模拟一次 Shift 把当前中文输入法切到英文模式（不更换输入法 / 键盘布局，见 [PAM.Tray/README.md](PAM.Tray/README.md)）。
 - App 关闭后托盘是否继续驻留，由 `KeepTrayOnClose` 决定（默认保留，热键不受影响）。
 - 别名启动行为由 `$PROFILE` 里 `AliasLaunchService` 维护的自有标记块承担：公共函数 `Invoke-PamAlias` 借 `explorer.exe` 代启动（带参数时经临时 `.lnk`），新进程父进程是 explorer、**完全脱离终端进程树与控制台**，因此关终端不会带走软件、程序日志也刷不回终端，不需要重定向 NUL，UAC 提升正常。开关写在 `settings.json`，公共函数运行时读取，改设置无需重写 `$PROFILE`；`$PROFILE` 只在终端启动时加载一次，改完要新开终端窗口。
-- 自定义提示符由 `StarshipPromptService` 只接管 `~/.config/starship.toml` 的**顶层 `format`**（自有标记块内一行 Starship format）。美化页用「一整行编辑器 + 精选 20 个中文变量下拉 + 12 色色板 + 固定符号按钮」组合：用户名 / 主机名 / 当前路径等是 Starship 运行时读取的值，不做可编辑文字；配置本身就是 toml，无需额外持久化。其余段落 / 注释原样保留，首次应用用独立的 `starship.toml.pam-prompt.bak` 保存原始文件（见 [PAM.Core/README.md](PAM.Core/README.md)）。
+- 自定义提示符由 `StarshipPromptService` 只接管 `~/.config/starship.toml` 的**顶层 `format`**（自有标记块内一行 Starship format）。美化页用「点选片段组合」：每个片段在下拉里选变量或固定符号、单独选颜色，整体由选择拼成 Starship format，变量不再手填、不可直接编辑；精选 20 个中文变量 + 固定符号（@ : ~ $ 空格）+ 12 色色板。用户名 / 主机名 / 当前路径等是 Starship 运行时读取的值，不做可编辑文字；配置本身就是 toml，无需额外持久化。其余段落 / 注释原样保留，首次应用用独立的 `starship.toml.pam-prompt.bak` 保存原始文件（见 [PAM.Core/README.md](PAM.Core/README.md)）。
 
 ## 环境与运行
 

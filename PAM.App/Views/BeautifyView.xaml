@@ -5,6 +5,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vm="clr-namespace:PAM.App.ViewModels"
+    xmlns:local="clr-namespace:PAM.App.Views"
     d:DesignHeight="700"
     d:DesignWidth="900"
     Focusable="False"
@@ -14,6 +16,36 @@
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- 片段内容：收起显示短名，展开显示分类·名称 -->
+        <DataTemplate x:Key="SegmentShortTemplate">
+            <TextBlock FontSize="12" Text="{Binding ShortName}" />
+        </DataTemplate>
+        <DataTemplate x:Key="SegmentFullTemplate">
+            <TextBlock FontSize="12" Text="{Binding DisplayName}" />
+        </DataTemplate>
+
+        <!-- 颜色：收起只显示色块，展开显示色块 + hex -->
+        <DataTemplate x:Key="ColorShortTemplate">
+            <Rectangle Width="16" Height="16" RadiusX="3" RadiusY="3" Fill="{Binding Converter={StaticResource ColorBrushConverter}}" />
+        </DataTemplate>
+        <DataTemplate x:Key="ColorFullTemplate">
+            <StackPanel Orientation="Horizontal">
+                <Rectangle Width="14" Height="14" Margin="0,0,8,0" RadiusX="3" RadiusY="3" Fill="{Binding Converter={StaticResource ColorBrushConverter}}" />
+                <TextBlock FontFamily="{StaticResource MonoFontFamily}" FontSize="12" Text="{Binding Hex}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <local:ColorBrushConverter x:Key="ColorBrushConverter" />
+        <local:SegmentChoiceTemplateSelector
+            x:Key="SegmentChoiceTemplateSelector"
+            FullTemplate="{StaticResource SegmentFullTemplate}"
+            ShortTemplate="{StaticResource SegmentShortTemplate}" />
+        <local:ColorChoiceTemplateSelector
+            x:Key="ColorChoiceTemplateSelector"
+            FullTemplate="{StaticResource ColorFullTemplate}"
+            ShortTemplate="{StaticResource ColorShortTemplate}" />
+        <local:CustomSelectedToVisibilityConverter x:Key="CustomSelectedToVisibility" />
 
         <Style x:Key="CardStyle" TargetType="{x:Type Border}">
             <Setter Property="Padding" Value="20,16" />
@@ -235,7 +267,7 @@
                         <TextBlock Text="自定义提示符" Style="{StaticResource CardTitleStyle}" />
                         <TextBlock
                             Margin="0,6,0,0"
-                            Text="用户名、主机名、当前路径等是 Starship 读取到的值，不用手填：从下面的下拉里选一个变量插入即可；@ : ~ $ 这些固定符号也能插入，颜色单独选。整行格式可以直接编辑，应用时只替换 starship.toml 的顶层 format，其余配置原样保留。"
+                            Text="用户名、主机名、当前路径等是 Starship 读取到的值，不用手填：点「添加片段」加入一个提示符元素，再用下拉选变量或固定符号，每个片段可单独选颜色，整体由选择组合而成，变量不再手填、不能直接编辑。下方预览实时反映，应用时只替换 starship.toml 的顶层 format，其余配置原样保留。"
                             Style="{StaticResource SettingHintStyle}" />
 
                         <!-- 实时预览（深色底模拟终端） -->
@@ -266,128 +298,75 @@
                             Text="预览为示意值，实际文字由 Starship 按系统状态生成（切换目录时路径会跟着变）。"
                             Style="{StaticResource SettingHintStyle}" />
 
-                        <!-- 一整行 format 编辑器 -->
+                        <!-- 格式：点选片段组合，不直接编辑 -->
                         <TextBlock
                             Margin="0,12,0,0"
                             Style="{StaticResource SettingLabelStyle}"
-                            Text="格式（一整行 Starship format）" />
-                        <TextBox
-                            x:Name="PromptFormatBox"
-                            Padding="8,6"
-                            AcceptsReturn="False"
-                            FontFamily="{StaticResource MonoFontFamily}"
-                            FontSize="12"
-                            HorizontalScrollBarVisibility="Auto"
-                            Text="{Binding PromptFormat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            TextWrapping="NoWrap"
-                            VerticalScrollBarVisibility="Disabled" />
+                            Text="格式" />
 
-                        <!-- 变量下拉 + 插入 + 选中文字上色 -->
-                        <Grid Margin="0,10,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="160" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ui:TextBox
-                                Grid.Column="0"
-                                PlaceholderText="搜索变量"
-                                Text="{Binding VariableSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <ComboBox
-                                Grid.Column="1"
-                                Margin="8,0,0,0"
-                                DisplayMemberPath="DisplayName"
-                                ItemsSource="{Binding FilteredVariableOptions}"
-                                SelectedItem="{Binding SelectedVariable, Mode=TwoWay}"
-                                ToolTip="{Binding SelectedVariable.ToolTipText}" />
-                            <ui:Button
-                                Grid.Column="2"
-                                Margin="8,0,0,0"
-                                Appearance="Secondary"
-                                Click="InsertVariableButton_Click"
-                                Content="插入变量" />
-                            <ui:Button
-                                Grid.Column="3"
-                                Margin="8,0,0,0"
-                                Appearance="Secondary"
-                                Click="ColorizeButton_Click"
-                                Content="给选中文字上色" />
-                        </Grid>
-
-                        <!-- 当前颜色 + 固定符号 -->
-                        <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
-                            <TextBlock
-                                Margin="0,0,8,0"
-                                VerticalAlignment="Center"
-                                Style="{StaticResource SettingLabelStyle}"
-                                Text="当前颜色" />
-                            <ComboBox
-                                Width="160"
-                                ItemsSource="{Binding ColorOptions}"
-                                SelectedValue="{Binding CurrentColor, Mode=TwoWay}"
-                                SelectedValuePath="Hex">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
+                        <!-- 片段组合区：水平一排可选项，每个片段选内容 + 颜色，可加 / 删 -->
+                        <ItemsControl
+                            x:Name="PromptSegmentBuilder"
+                            Margin="0,8,0,0"
+                            ItemsSource="{Binding PromptSegments}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Margin="0,0,6,6"
+                                        Padding="6,4"
+                                        Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                        CornerRadius="6">
                                         <StackPanel Orientation="Horizontal">
-                                            <Rectangle
-                                                Width="14"
-                                                Height="14"
-                                                Margin="0,0,8,0"
-                                                RadiusX="3"
-                                                RadiusY="3"
-                                                Fill="{Binding Brush}" />
-                                            <TextBlock
+                                            <ComboBox
+                                                Width="100"
+                                                ItemsSource="{Binding Choices}"
+                                                ItemTemplateSelector="{StaticResource SegmentChoiceTemplateSelector}"
+                                                SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
+                                                ToolTip="{Binding SelectedOption.ToolTipText}" />
+                                            <TextBox
+                                                Width="110"
+                                                Margin="5,0,0,0"
                                                 FontFamily="{StaticResource MonoFontFamily}"
                                                 FontSize="12"
-                                                Text="{Binding Hex}" />
+                                                Padding="4,2"
+                                                Text="{Binding CustomText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                ToolTip="输入任意文字或 $变量"
+                                                Visibility="{Binding SelectedOption, Converter={StaticResource CustomSelectedToVisibility}}" />
+                                            <ComboBox
+                                                Width="46"
+                                                Margin="5,0,0,0"
+                                                ItemsSource="{x:Static vm:ColorOption.Palette}"
+                                                SelectedValue="{Binding Color, Mode=TwoWay}"
+                                                SelectedValuePath="Hex"
+                                                ItemTemplateSelector="{StaticResource ColorChoiceTemplateSelector}" />
+                                            <Button
+                                                MinWidth="24"
+                                                Margin="5,0,0,0"
+                                                Padding="5,2"
+                                                Click="RemoveSegmentButton_Click"
+                                                Content="×"
+                                                ToolTip="删除该片段" />
                                         </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
+                            <ui:Button
+                                Appearance="Secondary"
+                                Click="AddSegmentButton_Click"
+                                Content="添加片段" />
                             <TextBlock
-                                Margin="14,0,8,0"
+                                Margin="12,0,0,0"
                                 VerticalAlignment="Center"
-                                Style="{StaticResource SettingLabelStyle}"
-                                Text="插入固定符号" />
-                            <Button
-                                MinWidth="34"
-                                Margin="0,0,6,0"
-                                Padding="8,4"
-                                Click="SymbolButton_Click"
-                                Content="@"
-                                FontFamily="{StaticResource MonoFontFamily}"
-                                Tag="@" />
-                            <Button
-                                MinWidth="34"
-                                Margin="0,0,6,0"
-                                Padding="8,4"
-                                Click="SymbolButton_Click"
-                                Content=":"
-                                FontFamily="{StaticResource MonoFontFamily}"
-                                Tag=":" />
-                            <Button
-                                MinWidth="34"
-                                Margin="0,0,6,0"
-                                Padding="8,4"
-                                Click="SymbolButton_Click"
-                                Content="~"
-                                FontFamily="{StaticResource MonoFontFamily}"
-                                Tag="~" />
-                            <Button
-                                MinWidth="34"
-                                Margin="0,0,6,0"
-                                Padding="8,4"
-                                Click="SymbolButton_Click"
-                                Content="$"
-                                FontFamily="{StaticResource MonoFontFamily}"
-                                Tag="$" />
-                            <Button
-                                Margin="0,0,6,0"
-                                Padding="8,4"
-                                Click="SymbolButton_Click"
-                                Content="空格"
-                                Tag="__space__" />
+                                Style="{StaticResource SettingHintStyle}"
+                                Text="变量（用户名 / 主机名 / 当前路径…）与固定符号（@ : ~ $ 空格）都在下拉里选，颜色可单独调。" />
                         </StackPanel>
 
                         <StackPanel Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">

@@ -8,6 +8,17 @@ namespace PAM.Core;
 /// <summary>预览中的一段文字及其颜色（null = 跟随默认前景色）。</summary>
 public sealed record PromptPreviewPart(string Text, string? Color);
 
+/// <summary>一个提示符片段的类别：动态变量（如 $username）、固定文字（如 @ : ~ $）或用户自由输入的自定义内容。</summary>
+public enum PromptSegmentKind
+{
+    Variable,
+    Literal,
+    Custom,
+}
+
+/// <summary>解析「一整行 format」得到的结构化片段：类别 + 取值 + 颜色。</summary>
+public sealed record PromptFormatSegment(PromptSegmentKind Kind, string Value, string Color);
+
 /// <summary>美化页读取到的提示符状态：<c>Format</c> 是一整行 Starship format 语法。</summary>
 public sealed record StarshipPromptState(
     string ConfigPath,
@@ -213,6 +224,40 @@ public sealed class StarshipPromptService
         }
 
         return parts;
+    }
+
+    /// <summary>
+    /// 把一整行 format 拆成结构化片段，供美化页「点选组合」编辑器还原成可选项：
+    /// 每个 <c>[内容](样式)</c> 块拆成一段（变量或固定文字 + 颜色），块之间的零散文字也按固定文字处理。
+    /// 颜色取样式里的 fg:#RRGGBB（转大写），缺失时回退色板首色。
+    /// </summary>
+    public static IReadOnlyList<PromptFormatSegment> ParseFormatSegments(string? format)
+    {
+        var segments = new List<PromptFormatSegment>();
+        if (string.IsNullOrEmpty(format)) return segments;
+
+        var index = 0;
+        foreach (Match match in BlockRegex.Matches(format))
+        {
+            if (match.Index > index)
+            {
+                segments.Add(new PromptFormatSegment(PromptSegmentKind.Literal, UnescapeStarship(format[index..match.Index]), PromptPalette.Colors[0]));
+            }
+
+            var inner = UnescapeStarship(match.Groups[1].Value);
+            var hexMatch = HexColorRegex.Match(match.Groups[2].Value);
+            var color = hexMatch.Success ? hexMatch.Value.ToUpperInvariant() : PromptPalette.Colors[0];
+            var kind = StarshipVariables.IsVariable(inner) ? PromptSegmentKind.Variable : PromptSegmentKind.Literal;
+            segments.Add(new PromptFormatSegment(kind, inner, color));
+            index = match.Index + match.Length;
+        }
+
+        if (index < format.Length)
+        {
+            segments.Add(new PromptFormatSegment(PromptSegmentKind.Literal, UnescapeStarship(format[index..]), PromptPalette.Colors[0]));
+        }
+
+        return segments;
     }
 
     /// <summary>从自有标记块里读回一行 Starship format；块不存在或格式不符时返回 null。</summary>
