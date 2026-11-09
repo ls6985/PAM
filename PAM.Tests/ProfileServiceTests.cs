@@ -73,7 +73,7 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.Contains("# @pam-custom hello 打招呼", lines);
         Assert.Contains("function hello {", lines);
 
-        var entry = Assert.Single(_custom.Load(_profilePath).Entries);
+        var entry = Assert.Single(LoadUserCommands());
         Assert.Equal("hello", entry.Name);
         Assert.Equal("打招呼", entry.Remark);
         Assert.Equal("function hello {\n    Write-Host \"hi\"\n}", entry.Code);
@@ -117,12 +117,12 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.Single(lines, IsRegionHeader);
         Assert.Single(lines, IsRegionFooter);
 
-        var entries = _custom.Load(_profilePath).Entries;
+        var entries = LoadUserCommands();
         Assert.Equal(new[] { "gpr", "hello" }, entries.Select(static e => e.Name).ToArray());
     }
 
     [Fact]
-    public void CustomSave_WithEmptyList_RemovesWholeRegion()
+    public void CustomSave_WithEmptyList_WritesOnlyBuiltinCommand()
     {
         WriteProfile(Block(
             "Write-Host \"x\"",
@@ -136,8 +136,99 @@ public sealed class ProfileServiceTests : IDisposable
         var result = _custom.Save(_profilePath, Array.Empty<CustomCommandEntry>());
 
         Assert.Equal(0, result.EntryCount);
-        Assert.Equal(new[] { "Write-Host \"x\"", "# 结尾" }, ProfileLines());
-        Assert.Empty(_custom.Load(_profilePath).Entries);
+
+        var lines = ProfileLines();
+        Assert.Equal("Write-Host \"x\"", lines[0]);
+        Assert.Equal(RegionFooter, lines[^1]);
+        Assert.Contains("# 结尾", lines);
+        Assert.DoesNotContain("# @pam-custom a", lines);
+        Assert.Single(lines, IsRegionHeader);
+        Assert.Single(lines, IsRegionFooter);
+        Assert.Single(lines, static line => line.StartsWith("# @pam-custom pls", StringComparison.Ordinal));
+        Assert.Contains("function pls {", lines);
+
+        // 区块里只有内置命令：解析后带 IsBuiltin 标记出现在列表里。
+        var builtin = Assert.Single(_custom.Load(_profilePath).Entries);
+        Assert.Equal("pls", builtin.Name);
+        Assert.True(builtin.IsBuiltin);
+    }
+
+    [Fact]
+    public void CustomSave_AlwaysRewritesBuiltinCommand_AndLoadMarksItReadOnly()
+    {
+        // 手工塞进区块的同名 pls 也算内置命令：保存后由内置版本覆盖，并带 IsBuiltin 标记。
+        WriteProfile(Block(
+            RegionHeader,
+            "# @pam-custom pls 旧的手工版本",
+            "function pls { Write-Host old }",
+            "# @pam-custom-end",
+            RegionFooter));
+
+        _custom.Save(_profilePath, [new CustomCommandEntry("hello", "function hello { 1 }")]);
+
+        var lines = ProfileLines();
+        Assert.Equal(RegionFooter, lines[^1]);
+        Assert.Single(lines, static line => line.StartsWith("# @pam-custom pls", StringComparison.Ordinal));
+        Assert.Contains("function hello { 1 }", lines);
+
+        var entries = _custom.Load(_profilePath).Entries;
+        Assert.Equal(new[] { "hello", "pls" }, entries.Select(static e => e.Name).ToArray());
+        Assert.False(entries[0].IsBuiltin);
+        Assert.True(entries[1].IsBuiltin);
+    }
+
+    [Fact]
+    public void TryValidateName_RejectsBuiltinCommandName()
+    {
+        Assert.False(CustomCommandService.TryValidateName("pls", out _));
+        Assert.False(CustomCommandService.TryValidateName("PLS", out _));
+        Assert.True(CustomCommandService.TryValidateName("pls2", out _));
+    }
+
+    [Fact]
+    public void EnsureBuiltinPresent_AddsPlsWhenRegionMissing()
+    {
+        WriteProfile(Block("Write-Host \"x\"", "# 结尾"));
+
+        Assert.True(_custom.EnsureBuiltinPresent(_profilePath));
+
+        var lines = ProfileLines();
+        Assert.Contains("Write-Host \"x\"", lines);
+        Assert.Contains("# 结尾", lines);
+        Assert.Single(lines, IsRegionHeader);
+        Assert.Single(lines, IsRegionFooter);
+        Assert.Single(lines, static line => line.StartsWith("# @pam-custom pls", StringComparison.Ordinal));
+        Assert.Empty(LoadUserCommands());
+
+        // 已有内置命令时不再重复写入，文件保持不变。
+        var before = ProfileLines();
+        Assert.False(_custom.EnsureBuiltinPresent(_profilePath));
+        Assert.Equal(before, ProfileLines());
+    }
+
+    [Fact]
+    public void EnsureBuiltinPresent_KeepsExistingUserCommands()
+    {
+        WriteProfile(Block(
+            RegionHeader,
+            "# @pam-custom hello",
+            "function hello { 1 }",
+            "# @pam-custom-end",
+            RegionFooter));
+
+        Assert.True(_custom.EnsureBuiltinPresent(_profilePath));
+
+        var entries = _custom.Load(_profilePath).Entries;
+        Assert.Equal(new[] { "hello", "pls" }, entries.Select(static e => e.Name).ToArray());
+        Assert.False(entries[0].IsBuiltin);
+        Assert.True(entries[1].IsBuiltin);
+    }
+
+    [Fact]
+    public void EnsureBuiltinPresent_MissingFileDoesNothing()
+    {
+        Assert.False(_custom.EnsureBuiltinPresent(_profilePath));
+        Assert.False(File.Exists(_profilePath));
     }
 
     [Theory]
@@ -164,7 +255,7 @@ public sealed class ProfileServiceTests : IDisposable
             Assert.Contains(isEnabled ? line : (line.Length == 0 ? "#" : "# " + line), lines);
         }
 
-        var loaded = Assert.Single(_custom.Load(_profilePath).Entries);
+        var loaded = Assert.Single(LoadUserCommands());
         Assert.Equal("gpr", loaded.Name);
         Assert.Equal(isEnabled, loaded.IsEnabled);
         Assert.Equal(code, loaded.Code);
@@ -172,7 +263,7 @@ public sealed class ProfileServiceTests : IDisposable
         // 重新启用后代码原样还原，缩进与空行不丢失。
         loaded.IsEnabled = true;
         _custom.Save(_profilePath, [loaded]);
-        Assert.Equal(code, Assert.Single(_custom.Load(_profilePath).Entries).Code);
+        Assert.Equal(code, Assert.Single(LoadUserCommands()).Code);
     }
 
     [Fact]
@@ -202,7 +293,7 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.Equal("blbl", alias.Name);
         Assert.Equal(@"C:\Program Files\app.exe", alias.Path);
         Assert.Equal("打开哔哩哔哩", alias.Remark);
-        Assert.Single(_custom.Load(_profilePath).Entries);
+        Assert.Single(LoadUserCommands());
         Assert.Contains("# @alias-meta blbl 打开哔哩哔哩", ProfileLines());
     }
 
@@ -295,7 +386,7 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.Equal("第一行 第二行", Assert.Single(_profile.Load(_profilePath).Entries).Remark);
 
         _custom.Save(_profilePath, [new CustomCommandEntry("y", "function y { 1 }", true, "第一行\n第二行")]);
-        Assert.Equal("第一行 第二行", Assert.Single(_custom.Load(_profilePath).Entries).Remark);
+        Assert.Equal("第一行 第二行", Assert.Single(LoadUserCommands()).Remark);
     }
 
     [Fact]
@@ -369,7 +460,7 @@ public sealed class ProfileServiceTests : IDisposable
 
         _custom.Save(_profilePath, [new CustomCommandEntry("你好", "function 你好 { Write-Host \"hi\" }", true, "中文命令")]);
         Assert.True(HasUtf8Bom(ProfileBytes()));
-        Assert.Equal("中文命令", Assert.Single(_custom.Load(_profilePath).Entries).Remark);
+        Assert.Equal("中文命令", Assert.Single(LoadUserCommands()).Remark);
     }
 
     [Fact]
@@ -434,7 +525,7 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.Contains(RegionHeader + newLine, text);
         Assert.Contains("function gpr {" + newLine, text);
         Assert.Equal("打开", Assert.Single(_profile.Load(_profilePath).Entries).Remark);
-        Assert.Equal("function gpr {\n    git pull --rebase\n}", Assert.Single(_custom.Load(_profilePath).Entries).Code);
+        Assert.Equal("function gpr {\n    git pull --rebase\n}", Assert.Single(LoadUserCommands()).Code);
     }
 
     // ---------------- 异常与边界 ----------------
@@ -494,7 +585,7 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.Equal(RegionHeader, ProfileLines()[0]);
         Assert.Equal(RegionFooter, ProfileLines()[^1]);
         Assert.True(HasUtf8Bom(ProfileBytes()));
-        Assert.Equal("function hello { 1 }", Assert.Single(_custom.Load(_profilePath).Entries).Code);
+        Assert.Equal("function hello { 1 }", Assert.Single(LoadUserCommands()).Code);
 
         _profile.Save(_profilePath, [new AliasEntry("blbl", @"C:\app.exe")]);
         var text = File.ReadAllText(_profilePath);
@@ -562,7 +653,7 @@ public sealed class ProfileServiceTests : IDisposable
         var code = "function special {\n    Write-Host \"" + specialPath + "\"\n    $env:TEST = 1\n}";
         _custom.Save(_profilePath, [new CustomCommandEntry("special", code, false, "含特殊字符")]);
 
-        var loaded = Assert.Single(_custom.Load(_profilePath).Entries);
+        var loaded = Assert.Single(LoadUserCommands());
         Assert.False(loaded.IsEnabled);
         Assert.Equal("含特殊字符", loaded.Remark);
         Assert.Equal(code, loaded.Code);
@@ -586,7 +677,7 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.DoesNotContain("broken", string.Join('\n', lines));
         Assert.Single(lines, IsRegionHeader);
         Assert.Equal(RegionFooter, lines[^1]);
-        Assert.Equal(new[] { "hello" }, _custom.Load(_profilePath).Entries.Select(static e => e.Name).ToArray());
+        Assert.Equal(new[] { "hello" }, LoadUserCommands().Select(static e => e.Name).ToArray());
     }
 
     // ---------------- 辅助方法 ----------------
@@ -595,6 +686,10 @@ public sealed class ProfileServiceTests : IDisposable
         => File.WriteAllText(_profilePath, content, encoding ?? Utf8Bom);
 
     private string[] ProfileLines() => File.ReadAllLines(_profilePath);
+
+    /// <summary>加载并只取用户命令；内置 pls 单独断言（标记 IsBuiltin、总是存在）。</summary>
+    private IReadOnlyList<CustomCommandEntry> LoadUserCommands()
+        => _custom.Load(_profilePath).Entries.Where(static e => !e.IsBuiltin).ToList();
 
     private byte[] ProfileBytes() => File.ReadAllBytes(_profilePath);
 

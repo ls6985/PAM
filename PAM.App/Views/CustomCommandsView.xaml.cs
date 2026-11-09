@@ -11,7 +11,7 @@ using PAM.Core.Models;
 namespace PAM.App.Views;
 
 /// <summary>
-/// “自定义命令”页签：列表 + 内联编辑条，交互模式与别名管理保持一致。
+/// “自定义命令”页签：列表 + 内联编辑条，交互模式与别名启动保持一致。
 /// 只负责 UI 交互（焦点、空状态文案），读写与校验在 <see cref="CustomCommandsViewModel"/> 中。
 /// </summary>
 public partial class CustomCommandsView : UserControl

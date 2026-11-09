@@ -16,7 +16,6 @@ public sealed class LocalizationService
     {
         // ---- 通用 / 窗口 ----
         ["PowerShell 管理器"] = "PowerShell Manager",
-        ["别名管理"] = "Aliases",
         ["自定义命令"] = "Custom Commands",
         ["设置"] = "Settings",
         ["取消"] = "Cancel",
@@ -94,6 +93,10 @@ public sealed class LocalizationService
         ["命令名称不能包含空格。"] = "Command name cannot contain spaces.",
         ["命令名称包含 PowerShell 不支持的字符。"] = "Command name contains characters not supported by PowerShell.",
         ["该名称已存在，请换一个。"] = "This name already exists. Choose another.",
+        ["pls 是内置命令，请换一个名称。"] = "\"pls\" is reserved for the built-in command. Choose another.",
+        ["内置"] = "Built-in",
+        ["内置命令，随保存自动维护，不可编辑或删除"] =
+            "Built-in command, maintained automatically on save; cannot be edited or deleted.",
         ["命令代码不能为空。"] = "Command code cannot be empty.",
         ["还没有自定义命令"] = "No custom commands yet",
         ["点击右上角“新建命令”，把常用函数或脚本片段写进 $PROFILE 的受控区块。"] =

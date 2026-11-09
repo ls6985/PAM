@@ -14,12 +14,18 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
     private bool _isEnabled;
     private bool _deletePending;
 
-    public CustomCommandEntry(string name, string code, bool isEnabled = true, string remark = "")
+    public CustomCommandEntry(
+        string name,
+        string code,
+        bool isEnabled = true,
+        string remark = "",
+        bool isBuiltin = false)
     {
         _name = name;
         _code = NormalizeCode(code);
         _isEnabled = isEnabled;
         _remark = remark;
+        IsBuiltin = isBuiltin;
     }
 
     /// <summary>命令名（写入区块头部行的第一个字段），同时用作唯一键。</summary>
@@ -110,6 +116,12 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
 
     public bool IsDeleteIdle => !_deletePending;
 
+    /// <summary>
+    /// 是否为随区块固定写入的内置命令（如 pls）：在列表里展示，但不可编辑、删除或切换启停，
+    /// 保存时也不会写入快照（内置命令总是追加最新版本）。
+    /// </summary>
+    public bool IsBuiltin { get; internal set; }
+
     public string StateText => LocalizationService.Instance.T(_isEnabled ? "已启用" : "已禁用");
 
     /// <summary>语言切换后由 ViewModel 调用，通知界面重新读取本地化文本。</summary>
@@ -160,7 +172,7 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
         return string.Join("\n", lines);
     }
 
-    public CustomCommandEntry Clone() => new(_name, _code, _isEnabled, _remark);
+    public CustomCommandEntry Clone() => new(_name, _code, _isEnabled, _remark, IsBuiltin);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

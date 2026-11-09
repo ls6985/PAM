@@ -14,6 +14,7 @@ public enum StatusType { Info, Saved, Dirty, Written, Warning, Error }
 public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly ProfileService _profileService = new();
+    private readonly CustomCommandService _customCommandService = new();
 
     private string _searchText = string.Empty;
     private string _profilePathRaw = "正在读取 $PROFILE…";
@@ -229,6 +230,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
             {
                 _profileService.Save(_profilePathRaw, snapshot);
                 AliasLaunchService.Sync(_profilePathRaw, snapshot);
+                // 别名页保存时也把内置 pls 补进受控区块，不用专门去自定义命令页保存一次。
+                _customCommandService.EnsureBuiltinPresent(_profilePathRaw);
             });
 
             HasUnsavedChanges = false;

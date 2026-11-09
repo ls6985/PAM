@@ -82,7 +82,7 @@ Invoke-Expression (&starship init powershell)
 | `Profile/ProfileService.cs` | 定位 `$PROFILE`、读写别名、`OpenProfileFile`、按终端启动 shell |
 | `Profile/PamCustomRegion.cs` | 识别受控区块与行掩码 |
 | `Profile/AliasLaunchService.cs` | 维护别名启动器标记块（见上节） |
-| `Profile/CustomCommandService.cs` | 受控区块内自定义命令的读写与名称校验 |
+| `Profile/CustomCommandService.cs` | 受控区块内自定义命令的读写与名称校验；内置命令 `pls`（列出全部别名启动项）随区块固定写入、列表中只读展示（`IsBuiltin`）；`EnsureBuiltinPresent` 供别名页保存后补写 |
 | `Profile/ShellResolver.cs` | `pwsh` / `powershell` / `auto` → 实际 shell，判断是否装了 PowerShell 7 |
 | `Starship/StarshipService.cs` | Starship 探测 / Scoop 一键安装 / `starship.toml` 路径与备份恢复 / init 区块 / 内置主题预设（`Presets\*.toml` EmbeddedResource） |
 | `StarshipPrompt/StarshipPromptService.cs` | 自定义提示符：托管块 `# >>> PAM Prompt >>>` 写顶层 `format`、`add_newline`，并接管 format 引用到的 `[module]` 段（TOML 不允许重复定义表，段选色内嵌进模块自身 format 重写）；独立备份 `.pam-prompt.bak` 只在首次写入创建，恢复即删除；不引入 TOML 库 |

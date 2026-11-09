@@ -376,7 +376,7 @@ public partial class MainWindow : FluentWindow
 
         if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
         {
-            // 快捷键只在“别名管理”页签生效。
+            // 快捷键只在“别名启动”页签生效。
             if (IsAliasTabSelected)
             {
                 SaveButton_Click(SaveButton, new RoutedEventArgs());
@@ -416,7 +416,7 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    /// <summary>当前选中的是否为“别名管理”页签。</summary>
+    /// <summary>当前选中的是否为“别名启动”页签。</summary>
     private bool IsAliasTabSelected => ReferenceEquals(MainTabs.SelectedItem, AliasTab);
 
     /// <summary>上一次选中的页签，用于“无选中”时兜底恢复。</summary>

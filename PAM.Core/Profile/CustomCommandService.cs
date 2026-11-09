@@ -29,6 +29,10 @@ public sealed record CustomCommandSaveResult(
 /// 禁用状态会写入 <c># @pam-custom-state disabled</c>，并把代码逐行注释掉；
 /// 重新启用时去掉注释前缀即可完整还原，不会破坏缩进与空行。
 /// </para>
+/// <para>
+/// 内置命令 <c>pls</c>（列出别名启动里注册的全部别名）随区块一起写入，
+/// 不出现在界面列表、不可编辑或删除；名称 pls 保留给内置命令。
+/// </para>
 /// </summary>
 public sealed class CustomCommandService
 {
@@ -51,6 +55,38 @@ public sealed class CustomCommandService
         @"^\s*#\s*@pam-custom-state\s+(?<state>\w+)\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    /// <summary>内置命令名：终端里输入 pls 可列出全部别名启动项。该名称保留给内置命令。</summary>
+    public const string BuiltinCommandName = "pls";
+
+    private const string BuiltinCommandRemark = "内置命令：列出全部别名";
+
+    // 运行时枚举"调用了 Invoke-PamAlias -Path "…""的函数（即别名启动器写出的包装函数），
+    // 按别名 / 路径 / 备注 三列输出；pls 与 Invoke-PamAlias 自身的函数体不会命中该模式。
+    private const string BuiltinCommandCode = """
+        function pls {
+            # PAM 内置命令：列出别名启动里注册的全部别名
+            $rows = foreach ($cmd in (Get-Command -CommandType Function)) {
+                $body = "$($cmd.ScriptBlock)"
+                if (-not ($body -match 'Invoke-PamAlias\s+-Path\s+"(?<path>[^"]*)"')) { continue }
+                $path = [regex]::Replace($Matches['path'], '`(.)', '$1')
+                $remark = ''
+                if ($body -match '-Remark\s+"(?<remark>[^"]*)"') { $remark = [regex]::Replace($Matches['remark'], '`(.)', '$1') }
+                [pscustomobject]@{
+                    别名 = $cmd.Name
+                    路径 = $path
+                    备注 = $remark
+                }
+            }
+            if (-not $rows) {
+                Write-Host '当前没有已注册的别名。' -ForegroundColor Yellow
+                return
+            }
+            Write-Host ('共 {0} 个别名' -f @($rows).Count) -ForegroundColor Cyan
+            $rows | Sort-Object -Property '别名' | Format-Table -AutoSize | Out-Host
+        }
+        """;
+
+
     public CustomCommandLoadResult Load(string profilePath)
     {
         if (string.IsNullOrWhiteSpace(profilePath))
@@ -68,7 +104,8 @@ public sealed class CustomCommandService
     }
 
     /// <summary>
-    /// 重写整个受控区块：先移除已有的 PAM-Custom 区块，再按当前列表追加新内容。
+    /// 重写整个受控区块：先移除已有的 PAM-Custom 区块，再按当前列表追加新内容
+    /// （内置命令 pls 不来自快照，最后固定追加最新版本；列表为空时也会写入仅含 pls 的区块）。
     /// 区块之外的配置、编码、BOM 与换行风格保持不变。
     /// </summary>
     public CustomCommandSaveResult Save(string profilePath, IEnumerable<CustomCommandEntry> entries)
@@ -79,7 +116,7 @@ public sealed class CustomCommandService
         }
 
         var snapshot = entries
-            .Where(static entry => !string.IsNullOrWhiteSpace(entry.Name))
+            .Where(static entry => !string.IsNullOrWhiteSpace(entry.Name) && !entry.IsBuiltin)
             .ToList();
 
         var existed = File.Exists(profilePath);
@@ -88,28 +125,29 @@ public sealed class CustomCommandService
         var lines = new List<string>(document.Lines);
         RemoveRegions(lines);
 
-        if (snapshot.Count > 0)
+        // 区块始终写入：即使用户没有自定义命令，内置的 pls 也随区块一起写入，
+        // 保存过一次自定义命令后终端里就能使用。
+        if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
         {
-            if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
+            lines.Add(string.Empty);
+        }
+
+        lines.Add(PamCustomRegion.Header);
+        lines.Add("# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。");
+
+        var allEntries = snapshot.Append(CreateBuiltinEntry()).ToList();
+
+        for (var i = 0; i < allEntries.Count; i++)
+        {
+            if (i > 0)
             {
                 lines.Add(string.Empty);
             }
 
-            lines.Add(PamCustomRegion.Header);
-            lines.Add("# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。");
-
-            for (var i = 0; i < snapshot.Count; i++)
-            {
-                if (i > 0)
-                {
-                    lines.Add(string.Empty);
-                }
-
-                lines.AddRange(BuildEntryLines(snapshot[i]));
-            }
-
-            lines.Add(PamCustomRegion.Footer);
+            lines.AddRange(BuildEntryLines(allEntries[i]));
         }
+
+        lines.Add(PamCustomRegion.Footer);
 
         var output = new ProfileDocument(lines, document.Encoding, document.NewLine);
         output.WriteTo(profilePath);
@@ -137,6 +175,12 @@ public sealed class CustomCommandService
         if (value.IndexOfAny(ForbiddenNameChars) >= 0)
         {
             error = LocalizationService.Instance.T("命令名称包含 PowerShell 不支持的字符。");
+            return false;
+        }
+
+        if (string.Equals(value, BuiltinCommandName, StringComparison.OrdinalIgnoreCase))
+        {
+            error = LocalizationService.Instance.T("pls 是内置命令，请换一个名称。");
             return false;
         }
 
@@ -187,7 +231,15 @@ public sealed class CustomCommandService
 
             TrimBlankEdges(codeLines);
 
-            var entry = new CustomCommandEntry(name, string.Join("\n", codeLines), isEnabled, remark);
+            // 内置命令带标记进入列表（界面只读展示）；保存时总是重写为最新版本，快照里不带它。
+            var isBuiltin = string.Equals(name, BuiltinCommandName, StringComparison.OrdinalIgnoreCase);
+
+            var entry = new CustomCommandEntry(
+                name,
+                string.Join("\n", codeLines),
+                isEnabled,
+                remark,
+                isBuiltin);
 
             // 同名命令以最后一条为准，保持首次出现的位置（与别名解析策略一致）。
             if (indexByName.TryGetValue(name, out var existingIndex))
@@ -210,6 +262,51 @@ public sealed class CustomCommandService
         {
             lines.RemoveRange(start, endExclusive - start);
         }
+    }
+
+    /// <summary>内置命令 pls：运行时枚举别名启动器写出的包装函数，列出全部别名。</summary>
+    private static CustomCommandEntry CreateBuiltinEntry()
+        => new(BuiltinCommandName, BuiltinCommandCode, isEnabled: true, remark: BuiltinCommandRemark, isBuiltin: true);
+
+    /// <summary>
+    /// 确保受控区块里已有内置命令 pls：别名启动页保存后也会调用，
+    /// 让用户不用专门去自定义命令页保存一次就能用上 pls。
+    /// 文件不存在时不动（由保存流程负责创建）；区块里已有 pls 时原样返回，已有用户命令全部保留。
+    /// </summary>
+    public bool EnsureBuiltinPresent(string profilePath)
+    {
+        if (string.IsNullOrWhiteSpace(profilePath))
+        {
+            throw new ArgumentException("配置文件路径不能为空。", nameof(profilePath));
+        }
+
+        if (!File.Exists(profilePath))
+        {
+            return false;
+        }
+
+        var document = ProfileDocument.Read(profilePath);
+
+        var mask = PamCustomRegion.BuildMask(document.Lines);
+        var hasBuiltin = false;
+        for (var i = 0; i < document.Lines.Count; i++)
+        {
+            if (mask[i] && TryParseHeader(document.Lines[i], out var name, out _) &&
+                string.Equals(name, BuiltinCommandName, StringComparison.OrdinalIgnoreCase))
+            {
+                hasBuiltin = true;
+                break;
+            }
+        }
+
+        if (hasBuiltin)
+        {
+            return false;
+        }
+
+        // 区块里没有 pls：按文件现状重建（旧的用户命令原样保留），Save 会固定追加内置命令。
+        Save(profilePath, Parse(document.Lines));
+        return true;
     }
 
     private static IEnumerable<string> BuildEntryLines(CustomCommandEntry entry)

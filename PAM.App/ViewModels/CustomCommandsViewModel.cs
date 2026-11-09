@@ -11,7 +11,7 @@ namespace PAM.App.ViewModels;
 
 /// <summary>
 /// “自定义命令”页签的视图模型：列表、搜索、内联编辑与受控区块读写。
-/// 交互与校验策略与别名管理保持一致。
+/// 交互与校验策略与别名启动保持一致。
 /// </summary>
 public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 {
@@ -43,6 +43,9 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
     }
 
     public ObservableCollection<CustomCommandEntry> Commands { get; } = [];
+
+    /// <summary>用户命令数（不含内置命令），用于状态栏文案。</summary>
+    public int UserCommandCount => Commands.Count(static entry => !entry.IsBuiltin);
 
     public string SearchText
     {
@@ -239,7 +242,8 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 
         try
         {
-            var snapshot = Commands.ToList();
+            // 内置命令不参与快照：Save 会固定追加最新版本。
+            var snapshot = Commands.Where(static entry => !entry.IsBuiltin).ToList();
             var result = await Task.Run(() => _service.Save(path, snapshot));
 
             HasUnsavedChanges = false;
@@ -292,6 +296,11 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 
     public void BeginEdit(CustomCommandEntry entry)
     {
+        if (entry.IsBuiltin)
+        {
+            return;
+        }
+
         IsNewEntry = false;
         EditingEntry = entry;
         IsNameFieldEnabled = false;
@@ -392,9 +401,14 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
                entry.Remark.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>在列表行上直接切换启用状态（无需打开编辑条）。</summary>
+    /// <summary>在列表行上直接切换启用状态（无需打开编辑条）；内置命令不可切换。</summary>
     public void ToggleEnabled(CustomCommandEntry entry)
     {
+        if (entry.IsBuiltin)
+        {
+            return;
+        }
+
         entry.IsEnabled = !entry.IsEnabled;
         MarkDirty();
     }
@@ -402,7 +416,7 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
     public void MarkDirty()
     {
         HasUnsavedChanges = true;
-        _host.SetStatus(StatusType.Dirty, $"有未保存更改 · 共 {Commands.Count} 个自定义命令");
+        _host.SetStatus(StatusType.Dirty, $"有未保存更改 · 共 {UserCommandCount} 个自定义命令");
     }
 
     public void ShowRestingStatus()
@@ -414,11 +428,11 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 
         if (HasUnsavedChanges)
         {
-            _host.SetStatus(StatusType.Dirty, $"有未保存更改 · 共 {Commands.Count} 个自定义命令");
+            _host.SetStatus(StatusType.Dirty, $"有未保存更改 · 共 {UserCommandCount} 个自定义命令");
             return;
         }
 
-        _host.SetStatus(StatusType.Saved, $"已保存 · 共 {Commands.Count} 个自定义命令");
+        _host.SetStatus(StatusType.Saved, $"已保存 · 共 {UserCommandCount} 个自定义命令");
     }
 
     /// <summary>把模型里以 \n 存储的代码转成 TextBox 使用的 CRLF。</summary>

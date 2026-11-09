@@ -40,7 +40,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- 导航：顶部多页签（别名管理 / 自定义命令 / 设置） -->
+            <!-- 导航：顶部多页签（别名启动 / 自定义命令 / 设置） -->
             <ui:TabView
                 x:Name="MainTabs"
                 Grid.Row="0"
@@ -52,10 +52,10 @@
                 PreviewMouseLeftButtonDown="MainTabs_PreviewMouseLeftButtonDown"
                 SelectionChanged="MainTabs_SelectionChanged">
 
-                <!-- ===================== 页 1：别名管理 ===================== -->
+                <!-- ===================== 页 1：别名启动 ===================== -->
                 <ui:TabViewItem
                     x:Name="AliasTab"
-                    Header="别名管理"
+                    Header="别名启动"
                     HorizontalContentAlignment="Stretch"
                     IsSelected="True"
                     VerticalContentAlignment="Stretch">
@@ -76,7 +76,7 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="别名管理" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock Text="别名启动" Style="{StaticResource SectionTitleStyle}" />
                                 <TextBlock
                                     Margin="0,4,0,0"
                                     Text="在 $PROFILE 中集中管理 Set-Alias 快捷启动项，保存后立即在新窗口生效。"

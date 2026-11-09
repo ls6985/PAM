@@ -318,8 +318,16 @@
                                     Padding="0"
                                     AutomationProperties.Name="切换启用状态"
                                     Click="ToggleStateButton_Click"
-                                    Style="{StaticResource RowIconButtonStyle}"
                                     ToolTip="点击启用 / 禁用">
+                                    <ui:Button.Style>
+                                        <Style BasedOn="{StaticResource RowIconButtonStyle}" TargetType="{x:Type ui:Button}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsBuiltin}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Button.Style>
                                     <Border
                                         Padding="8,2"
                                         Background="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -338,6 +346,19 @@
                                         </TextBlock>
                                     </Border>
                                 </ui:Button>
+
+                                <!-- 内置命令只读展示，用徽章代替启停开关。 -->
+                                <Border
+                                    Padding="8,2"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                    CornerRadius="10"
+                                    ToolTip="内置命令，随保存自动维护，不可编辑或删除"
+                                    Visibility="{Binding IsBuiltin, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock
+                                        FontSize="11"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Text="内置" />
+                                </Border>
                             </StackPanel>
 
                             <TextBlock
@@ -364,6 +385,15 @@
                                 VerticalAlignment="Center"
                                 Style="{StaticResource RowActionPanelStyle}">
                                 <StackPanel Orientation="Horizontal">
+                                    <StackPanel.Style>
+                                        <Style TargetType="{x:Type StackPanel}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsBuiltin}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
                                     <ui:Button
                                         AutomationProperties.Name="编辑"
                                         Click="EditButton_Click"
