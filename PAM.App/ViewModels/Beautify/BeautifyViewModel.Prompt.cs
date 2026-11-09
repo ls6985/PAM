@@ -205,7 +205,7 @@ public sealed partial class BeautifyViewModel
 
     private void OnSegmentChanged(object? sender, PropertyChangedEventArgs e) => Recompose();
 
-    /// <summary>按类别 + 取值在可选项里找对应项；清单外的变量 / 符号建一个临时项兜底显示。</summary>
+    /// <summary>按类别与取值匹配可选项；清单外的变量或符号以临时项呈现。</summary>
     private ISegmentChoice FindChoice(PromptSegmentKind kind, string value)
     {
         foreach (var choice in _segmentChoices)

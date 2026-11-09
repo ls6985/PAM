@@ -107,7 +107,7 @@ internal sealed class TrayApplication : IDisposable
 
         _listener = new TrayBridge.Listener();
 
-        // UI 线程上的定时器：消费跨进程信号，并在用户直接编辑 settings.json 时兜底重载。
+        // UI 线程定时器：消费跨进程信号，并在用户直接编辑 settings.json 时重载配置。
         _monitor = new System.Windows.Forms.Timer { Interval = 700 };
         _monitor.Tick += Monitor_Tick;
         _monitor.Start();

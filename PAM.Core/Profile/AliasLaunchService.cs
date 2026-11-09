@@ -3,26 +3,22 @@ using PAM.Core.Models;
 namespace PAM.Core;
 
 /// <summary>
-/// 维护 $PROFILE 里的「别名启动器」自有标记块：把 PAM 托管别名的调用改成同名函数包装，
-/// 由公共函数 <c>Invoke-PamAlias</c> 统一负责独立进程启动与打印备注。
+/// 维护 $PROFILE 中的「别名启动器」标记块：将 PAM 托管的别名调用包装为同名函数，
+/// 由 <c>Invoke-PamAlias</c> 统一处理独立进程启动与备注输出。
 ///
-/// 为什么保留 ProfileService 写出的 Set-Alias 行：那仍是唯一数据源，也保证旧配置、解析逻辑
-/// 与既有测试不变；但 PowerShell 里 Alias 优先级高于 Function，所以块内先 Remove-Item 删掉
-/// 同名别名，再定义同名 function 才会生效。
+/// <para><c>ProfileService</c> 写出的 <c>Set-Alias</c> 行仍是数据源，用于兼容既有配置、解析逻辑与测试。
+/// PowerShell 中 Alias 优先于 Function，因此块内先移除同名别名，再定义同名函数。</para>
 ///
-/// 「关闭终端连带关掉软件」的根因：Start-Process 只保证 PowerShell 不阻塞等待，子进程仍在
-/// 终端的控制台 / 进程树里；Electron 等程序还会 AttachConsole(ATTACH_PARENT_PROCESS) 把日志
-/// 刷回终端。把 stdout/stderr 重定向到 NUL 只能掐掉日志，控制台归属没变。
+/// <para>由 <c>Start-Process</c> 启动的子进程仍依附终端控制台与进程树；部分程序会通过
+/// <c>AttachConsole(ATTACH_PARENT_PROCESS)</c> 回写日志。重定向 stdout/stderr 仅抑制输出，不改变控制台归属。
+/// 本实现改由 <c>explorer.exe</c> 经 ShellExecute 代启动：其子进程不属于终端进程树，关闭终端不影响已启动的程序，
+/// 且无需重定向，UAC 提升行为保持不变。</para>
 ///
-/// 现在的做法：借 explorer.exe 代启动。explorer 不属于任何终端控制台，由它 ShellExecute 启动
-/// 的程序父进程就是 explorer，完全脱离终端进程树 → 关终端无影响、日志自然不显示、UAC 提升
-/// 照常，也不需要重定向（回到 ShellExecute 路径，实测启动耗时反而略快）。无参数时直接把
-/// exe 路径交给 explorer；带参数时先生成一个临时 .lnk 快捷方式（WScript.Shell COM）再交给
-/// explorer，参数原样传入。.lnk 用路径 hash 固定文件名、每次覆盖复用，不删除以免 explorer
-/// 还没读取就被删掉；实测删除快捷方式后进程仍稳定存活。
+/// <para>无参数时直接传递 exe 路径；带参数时生成临时 .lnk（WScript.Shell COM）承载参数。
+/// .lnk 按路径哈希固定文件名、每次覆盖复用且不删除，以避免 explorer 异步读取时文件已移除。</para>
 ///
-/// 开关值不由本服务烘焙：公共函数运行时读 settings.json，改设置即时生效，无需重写 $PROFILE。
-/// 标记块放在 PAM-Custom 之外，避免被 CustomCommandService 整块重写。
+/// <para>开关值在运行时由公共函数读取 settings.json，修改设置无需重写 $PROFILE。
+/// 标记块位于 PAM-Custom 之外，不受 CustomCommandService 整块重写影响。</para>
 /// </summary>
 public static class AliasLaunchService
 {
@@ -52,7 +48,7 @@ public static class AliasLaunchService
         @"        if ($Rest) { & $Path @Rest } else { & $Path }",
         @"        return",
         @"    }",
-        @"    # 无参数：直接把路径交给 explorer.exe，由它 ShellExecute 启动。",
+        @"    # 无参数时将路径直接传给 explorer.exe，由 ShellExecute 启动。",
         @"    if (-not $Rest) {",
         @"        if (Test-Path -LiteralPath $Path) {",
         @"            try {",
@@ -78,7 +74,7 @@ public static class AliasLaunchService
         @"            return",
         @"        } catch { }",
         @"    }",
-        @"    # 兜底：路径不存在 / COM 不可用 / explorer 失败时仍要能把程序拉起来。",
+        @"    # 回退路径：路径不存在、COM 不可用或 explorer 启动失败时，以 Start-Process 直接启动。",
         @"    if ($Rest) { Start-Process -FilePath $Path -ArgumentList $Rest }",
         @"    else { Start-Process -FilePath $Path }",
         @"}",

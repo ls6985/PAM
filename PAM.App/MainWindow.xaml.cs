@@ -38,9 +38,8 @@ public partial class MainWindow : FluentWindow
     }
 
     /// <summary>
-    /// 界面没有定义任何 Alt 访问键；单独按 Alt 只会让 WPF 把键盘焦点框
-    /// 画到当前聚焦的大容器上（视觉上出现一个大框），这里直接拦掉。
-    /// Alt 组合键（Key.System 且 SystemKey 为普通键）不受影响，热键录制照常工作。
+    /// 界面未定义 Alt 访问键；单独按 Alt 会使 WPF 将键盘焦点框绘制到当前聚焦的容器上，此处予以拦截。
+    /// Alt 组合键（Key.System 且 SystemKey 为普通键）不受影响，热键录制保持可用。
     /// </summary>
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
@@ -92,8 +91,8 @@ public partial class MainWindow : FluentWindow
 
         await ViewModel.InitializeAsync();
 
-        // 加载一结束就刷新视图并更新空状态，确保 IsLoading 变 false 时列表状态已就绪，
-        // 不会在切页/渲染间隙闪现“还没有别名”。
+        // 加载完成后刷新视图并更新空状态，确保 IsLoading 置为 false 前列表状态已就绪，
+        // 避免切页与渲染间隙短暂显示“还没有别名”。
         _entriesView?.Refresh();
         UpdateEmptyState();
 
@@ -419,19 +418,19 @@ public partial class MainWindow : FluentWindow
     /// <summary>当前选中的是否为“别名启动”页签。</summary>
     private bool IsAliasTabSelected => ReferenceEquals(MainTabs.SelectedItem, AliasTab);
 
-    /// <summary>上一次选中的页签，用于“无选中”时兜底恢复。</summary>
+    /// <summary>上一次选中的页签，用于无选中项时恢复。</summary>
     private TabViewItem? _lastSelectedTab;
 
     /// <summary>
-    /// 页签选中态由模板里的 ToggleButton 双向绑定：再次点击已选中的页签会把勾选取消，
-    /// 整个 TabView 变成无选中项、内容区空白。这里直接吃掉这类点击，保证“点击 = 选中”。
+    /// 页签选中态由模板中的 ToggleButton 双向绑定：再次点击已选中的页签会取消勾选，
+    /// 使 TabView 无选中项并显示空白内容区。此处拦截该类点击，维持“点击即选中”的行为。
     /// </summary>
     private void MainTabs_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource is not DependencyObject source) return;
 
-        // 只认模板里名为 HeaderBorder 的页签标题区域：内容区的点击必须照常传递，
-        // 否则页面里的按钮会被一起吃掉。
+        // 仅处理模板中名为 HeaderBorder 的标题区域；内容区点击需继续传递，
+        // 否则页签内的按钮事件会被一并拦截。
         DependencyObject? current = source;
         var clickedHeader = false;
         TabViewItem? clickedTab = null;
@@ -460,8 +459,8 @@ public partial class MainWindow : FluentWindow
             return;
         }
 
-        // 兜底：不论因为鼠标、键盘还是代码造成“没有选中任何页签”，都立刻恢复上一次的页签，
-        // 内容区永远不会空白（正常情况下点击拦截已在 PreviewMouseLeftButtonDown 生效）。
+        // 无论鼠标、键盘或代码导致无选中项，均恢复上一次的页签，避免内容区空白。
+        // 常规场景下点击拦截已在 PreviewMouseLeftButtonDown 处理。
         if (MainTabs.SelectedItem is null)
         {
             var restore = _lastSelectedTab ?? AliasTab;
@@ -534,7 +533,7 @@ public partial class MainWindow : FluentWindow
     }
 
     /// <summary>
-    /// 更新空状态文案，并把“是否为空”交给 ViewModel.IsListEmpty，
+    /// 更新空状态文案，并将空状态标记写入 ViewModel.IsListEmpty，
     /// 由 XAML 的 MultiBinding（IsLoading + IsListEmpty）决定显隐。
     /// </summary>
     private void UpdateEmptyState()

@@ -24,7 +24,7 @@ public partial class App : Application
         mainWindow.Show();
         UiLocalizer.RefreshAll();
 
-        // 管理器启动时拉起后台托盘，保证全局热键开箱可用（托盘自身有单实例互斥）。
+        // 主窗口启动后拉起后台托盘，使全局热键在本次会话内可用（托盘自身有单实例互斥）。
         TrayBridge.EnsureTrayRunning();
     }
 

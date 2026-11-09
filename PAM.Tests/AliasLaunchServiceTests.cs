@@ -59,8 +59,8 @@ public sealed class AliasLaunchServiceTests : IDisposable
         Assert.Contains("Set-Alias -Name bili -Value \"C:\\App\\bili.exe\"", text);
         Assert.Contains("aliasLaunchEnhanced", text);
         Assert.Contains("showAliasRemarkOnLaunch", text);
-        // 增强模式必须把子进程挪出终端进程树：无参数交给 explorer.exe，带参数用临时 .lnk 再交给 explorer。
-        // 重定向 NUL 只能掐掉日志、改不了控制台归属，所以新版不再使用它。
+        // 增强模式需使子进程脱离终端进程树：无参数由 explorer.exe 启动，带参数经临时 .lnk 转交 explorer。
+        // 将输出重定向到 NUL 仅能抑制日志，无法改变控制台归属，当前实现不再采用该方式。
         Assert.Contains("Start-Process -FilePath 'explorer.exe'", text);
         Assert.Contains("New-Object -ComObject WScript.Shell", text);
         Assert.Contains("'.lnk'", text);

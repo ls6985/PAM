@@ -114,7 +114,7 @@ public partial class CustomCommandsView : UserControl
             return;
         }
 
-        // 编辑已有命令时名称不可改，直接把焦点放到代码上。
+        // 编辑已有命令时名称不可修改，焦点定位到代码输入框。
         CodeEditor.Focus();
     }
 

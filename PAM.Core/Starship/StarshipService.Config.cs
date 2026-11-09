@@ -87,7 +87,7 @@ public sealed partial class StarshipService
 
     /// <summary>
     /// 识别当前 starship.toml 是否与某个内置预设完全一致（忽略换行与结尾空白差异）。
-    /// 应用过预设后没有手动改动就能识别；存在 PAM 提示符块或手动改过则返回 null。
+    /// 应用预设后未手动修改时可识别；存在 PAM 提示符块或已手动修改则返回 null。
     /// </summary>
     public string? DetectAppliedPreset()
     {

@@ -7,18 +7,17 @@ namespace PAM.Tray;
 /// <summary>
 /// 由常驻托盘在检测到新打开的终端窗口时，把当前中文输入法切到「英文输入模式」。
 ///
-/// 用户要的是「输入法还是微软拼音 / 搜狗等，只是处于英文状态」，不是把整个输入法换成
-/// 英文（美国）键盘，所以绝不能用 WM_INPUTLANGCHANGEREQUEST / LoadKeyboardLayout /
-/// ActivateKeyboardLayout 这类换布局的 API。
+/// 约束：保持原输入法与键盘布局不变（微软拼音 / 搜狗等仅切换中英状态），
+/// 因此不使用 WM_INPUTLANGCHANGEREQUEST / LoadKeyboardLayout / ActivateKeyboardLayout 等切换布局的 API。
 ///
-/// Windows Terminal（CASCADIA_HOSTING_WINDOW_CLASS）走 TSF，跨进程调用 ImmGetContext 一律
-/// 返回 0（实测 himc=0x0），WM_IME_CONTROL 也不被处理；IMM32 / TSF compartment 都是线程局部的，
-/// 托盘进程无法直接改另一个进程的输入状态。因此这里采用系统级、输入法自己会响应的方式：
-///   1) 用 UI Automation 读任务栏「托盘输入指示器」的名称判断当前是中/英模式；
-///   2) 仅当是中文模式时，向前台窗口模拟一次单独的 Shift（主流中文输入法的中/英切换键）；
-///   3) 短延迟后复查状态，仍是中文就再试一次，最多 3 轮；已是英文则完全不按键。
-/// 这样幂等、不换输入法、不换键盘布局，也不会把已经处于英文模式的窗口翻回中文。
-/// 不写 $PROFILE、不注册全局钩子：复用 TrayApplication 的 700ms 定时器轮询前台窗口。
+/// Windows Terminal（CASCADIA_HOSTING_WINDOW_CLASS）基于 TSF：跨进程调用 ImmGetContext 返回 0（himc=0x0），
+/// WM_IME_CONTROL 亦不生效；IMM32 / TSF compartment 具有线程局部性，托盘进程无法直接修改其他进程的输入状态。
+/// 实现采用输入法可响应的系统级方式：
+///   1) 通过 UI Automation 读取任务栏输入指示器名称，判定当前中 / 英模式；
+///   2) 仅当处于中文模式时，向前台窗口模拟一次 Shift（主流中文输入法的中英切换键）；
+///   3) 短延迟后复查，仍为中文则重试，最多 3 轮。
+/// 该流程幂等，不更换输入法或键盘布局，且不会将已处于英文模式的窗口切回中文。
+/// 不写入 $PROFILE、不注册全局钩子，复用 TrayApplication 的 700ms 定时器轮询前台窗口。
 /// </summary>
 internal static class ImeSwitcher
 {
@@ -146,7 +145,7 @@ internal static class ImeSwitcher
         keybd_event(VkShift, 0, KeyEventFKeyUp, UIntPtr.Zero);
     }
 
-    /// <summary>只保留最近一次诊断记录，方便排查「切了但没生效」而不用翻大日志。</summary>
+    /// <summary>仅保留最近一次诊断记录，用于定位切换未生效的场景，避免日志持续增长。</summary>
     private static void WriteLog(string className, IntPtr hwnd, ImeMode before, int taps, ImeMode after)
     {
         try

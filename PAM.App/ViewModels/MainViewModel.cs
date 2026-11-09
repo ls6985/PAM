@@ -186,7 +186,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                     ? $"已保存 · 共 {Aliases.Count} 个别名"
                     : "配置文件不存在，点击“保存并生效”时将自动创建。");
 
-            // 同一个 $PROFILE，别名读完后接着加载受控区块里的自定义命令。
+            // 共用同一份 $PROFILE：别名加载完成后，继续加载受控区块中的自定义命令。
             await CustomCommands.InitializeAsync(path);
         }
         catch (Exception ex)
@@ -230,7 +230,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             {
                 _profileService.Save(_profilePathRaw, snapshot);
                 AliasLaunchService.Sync(_profilePathRaw, snapshot);
-                // 别名页保存时也把全部内置命令补进受控区块，不用专门去自定义命令页保存一次。
+                // 别名页保存时同步补齐全部内置命令，无需依赖自定义命令页的保存操作。
                 _customCommandService.EnsureBuiltinPresent(_profilePathRaw);
             });
 

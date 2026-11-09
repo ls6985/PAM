@@ -91,7 +91,7 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
         RefreshAppearanceFromDisk();
         RaiseStatusChanged();
 
-        // 初始选中优先识别已应用的预设（重启后也能看到当前主题），识别不出选无需特殊字体的预设。
+        // 初始选中项优先采用已应用的预设（重启后仍显示当前主题）；无法识别时选用无需特殊字体的预设。
         _detectedPresetId = _starshipService.DetectAppliedPreset();
         SelectedPresetId = _detectedPresetId
             ?? _starshipService.GetPresets().FirstOrDefault(static p => !p.RequiresNerdFont)?.Id

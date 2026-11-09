@@ -162,7 +162,7 @@ public sealed class ProfileServiceTests : IDisposable
     [Fact]
     public void CustomSave_AlwaysRewritesBuiltinCommands_AndLoadMarksThemReadOnly()
     {
-        // 手工塞进区块的同名 pls / sudo 也算内置命令：保存后由定义表里的版本覆盖。
+        // 区块内手工写入的同名 pls / sudo 按内置命令解析，保存后由定义表版本覆盖。
         WriteProfile(Block(
             RegionHeader,
             "# @pam-custom pls 旧的手工版本",
@@ -222,7 +222,7 @@ public sealed class ProfileServiceTests : IDisposable
     [Fact]
     public void BuiltinCode_DoesNotMatchPlsAliasScanner()
     {
-        // sudo 的函数体里如果出现字面的 Invoke-PamAlias -Path "…"，会被 pls 当成别名列出。
+        // 若 sudo 函数体包含字面量 Invoke-PamAlias -Path "…"，将被 pls 识别为别名。
         _custom.Save(_profilePath, Array.Empty<CustomCommandEntry>());
         const string scanner = @"Invoke-PamAlias\s+-Path\s+""(?<path>[^""]*)""";
 
@@ -256,7 +256,7 @@ public sealed class ProfileServiceTests : IDisposable
     [Fact]
     public void EnsureBuiltinPresent_UpgradesLegacyRegionWithOnlyPls()
     {
-        // 老版本 $PROFILE：只有 pls，用户命令也在。保存别名页时应补齐 ongit / sudo。
+        // 旧版 $PROFILE 仅包含 pls 与用户命令；保存别名页时应补齐 ongit / sudo。
         WriteProfile(Block(
             RegionHeader,
             "# @pam-custom hello",

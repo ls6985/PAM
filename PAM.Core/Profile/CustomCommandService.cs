@@ -78,8 +78,8 @@ public sealed class CustomCommandService
     public static bool IsBuiltinName(string? name)
         => !string.IsNullOrWhiteSpace(name) && BuiltinNameSet.Contains(name);
 
-    // 运行时枚举"把目标路径写在 -Path 参数里"的函数（即别名启动器写出的包装函数），
-    // 按别名 / 路径 / 备注 三列输出；pls 自身与 Invoke-PamAlias 的函数体不会命中该模式。
+    // 运行时枚举别名启动器生成的包装函数，从 -Path 参数提取目标路径，
+    // 按别名 / 路径 / 备注 三列输出；pls 与 Invoke-PamAlias 自身不匹配该模式。
     private const string PlsCode = """
         function pls {
             # PAM 内置命令：列出别名启动里注册的全部别名
@@ -104,8 +104,8 @@ public sealed class CustomCommandService
         }
         """;
 
-    // ongit <提交信息>：所有参数合成一条 -m 消息，先 add 再 commit。
-    // 中文消息来自命令行参数；$PROFILE 由 ProfileFileStore 统一写成 UTF-8 BOM，5.1 也能正确读取。
+    // ongit <提交信息>：将全部参数合并为一条 -m 消息，先执行 git add -A，再执行 git commit。
+    // 消息来自命令行参数；$PROFILE 由 ProfileFileStore 统一写成 UTF-8 BOM，PowerShell 5.1 可正确读取。
     private const string OngitCode = """
         function ongit {
             # PAM 内置命令：暂存全部改动，并把剩余参数合成一条提交信息
@@ -130,10 +130,10 @@ public sealed class CustomCommandService
         }
         """;
 
-    // sudo [-w] <程序或别名> [参数...]：借 Start-Process -Verb RunAs 弹 UAC 提权。
-    // 目标可为 PATH 上的 exe、完整路径、Set-Alias 别名，或别名启动器生成的同名包装函数
-    // （后者从函数体里取 -Path，与 pls 的扫描方式一致）。
-    // 注意：函数体里不要出现字面的 Invoke-PamAlias -Path "…"，否则会被 pls 当成别名列出。
+    // sudo [-w] <程序或别名> [参数...]：通过 Start-Process -Verb RunAs 触发 UAC 提权。
+    // 目标支持 PATH 上的 exe、完整路径、Set-Alias 别名，以及别名启动器生成的同名包装函数
+    // （后者从函数体提取 -Path，与 pls 的扫描方式一致）。
+    // 别名路径正则以字符串拼接方式构造，避免 sudo 函数体被 pls 的别名扫描模式匹配。
     private const string SudoCode = """
         function sudo {
             # PAM 内置命令：以管理员身份启动程序或 PAM 别名（UAC 由系统弹出）
@@ -157,7 +157,7 @@ public sealed class CustomCommandService
             if ($null -ne $command) {
                 $kind = [string] $command.CommandType
                 if ($kind -eq 'Function') {
-                    # 模式拆开拼接：避免本函数体被 pls 的别名扫描误判。
+                    # 正则以字符串拼接构造，避免本函数体被 pls 的别名扫描模式匹配。
                     $pattern = 'Invoke-PamAlias' + '\s+-Path\s+"(?<path>[^"]*)"'
                     $match = [regex]::Match("$($command.ScriptBlock)", $pattern)
                     if ($match.Success) {
@@ -242,7 +242,7 @@ public sealed class CustomCommandService
         RemoveRegions(lines);
 
         // 区块始终写入：即使用户没有自定义命令，全部内置命令也随区块一起写入，
-        // 保存过一次自定义命令（或别名）后终端里就能使用。
+        // 保存自定义命令或别名后，新终端窗口即可使用。
         if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
         {
             lines.Add(string.Empty);
@@ -387,10 +387,9 @@ public sealed class CustomCommandService
         => new(definition.Name, definition.Code, isEnabled: true, remark: definition.Remark, isBuiltin: true);
 
     /// <summary>
-    /// 确保受控区块里已有全部内置命令：别名启动页保存后也会调用，
-    /// 让用户不用专门去自定义命令页保存一次就能用上这些命令。
-    /// 文件不存在时不动（由保存流程负责创建）；旧配置里只写了部分内置命令时会补齐，
-    /// 已有用户命令全部保留；全部齐备时原样返回、不重写文件。
+    /// 确保受控区块包含全部内置命令；别名启动页保存时同样调用，无需依赖自定义命令页的保存操作。
+    /// 文件不存在时不处理（由保存流程负责创建）；旧配置缺少部分内置命令时补齐，
+    /// 已有用户命令全部保留；全部齐备时不重写文件。
     /// </summary>
     public bool EnsureBuiltinPresent(string profilePath)
     {

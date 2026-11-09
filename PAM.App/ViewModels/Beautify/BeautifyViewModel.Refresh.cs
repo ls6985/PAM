@@ -128,7 +128,7 @@ public sealed partial class BeautifyViewModel
     {
         var presets = _starshipService.GetPresets();
         // ComboBox 换 ItemsSource 会把选中清空并经 TwoWay 绑定回推 null（字体下拉修过的同类问题），
-        // 先捕获当前选中，换完再恢复；没选过 / 选中失效时优先落到识别出的当前主题。
+        // 先保存当前选中项，刷新后恢复；未选中或选中项失效时优先采用识别出的当前主题。
         var preserve = _selectedPresetId;
         PresetOptions = presets
             .Select(static preset => new SettingOption(preset.Id, preset.DisplayNameSource))
