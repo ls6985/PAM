@@ -1,6 +1,7 @@
 # PAM.Tray (后台托盘组件)
 
 > 由 `PAM.App` 自动拉起的无界面常驻进程：托盘图标 + 全局热键 → 拉起 Windows Terminal。
+> 登录时的自动启动由 `PAM.App` 写入的 HKCU 启动项完成，Tray 自身不写注册表、也不负责自己的启动。
 > 它**只读** `%AppData%\PAM\settings.json`，从不写配置；正常流程不需要手动运行它，只有改热键注册 / 托盘行为时才需要看这里。
 
 ## 结构
@@ -14,6 +15,7 @@
 ## 行为
 
 - 单实例 `Mutex` 抢不到时静默退出——App 每次启动都会重复拉起，属正常场景。
+- 登录启动项指向本 exe 的绝对路径；程序路径一律用 `AppContext.BaseDirectory` 解析，因此从启动项唤起时工作目录是系统目录也不影响找配置、找主界面与注册热键。
 - 右键菜单：显示主界面（激活已运行窗口，没开则启动 `PAM.App.exe`）/ 重新加载设置 / 退出；托盘提示显示当前热键，文案按语言本地化。
 - 按 `hotkey` 注册全局热键：系统保留组合直接拒绝，被占用弹气泡提示；`TryRegister` 先注销旧组合，支持运行中改注册。
 - 触发后 `wt.exe {pwsh|powershell} -NoExit -Command ". $PROFILE"`，shell 由 `ShellResolver.Resolve` 决定（未装 PS7 回退 5.1）。

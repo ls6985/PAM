@@ -62,6 +62,7 @@ public sealed class SettingsServiceTests : IDisposable
             Theme = AppSettings.ThemeDark,
             Language = AppSettings.LanguageEnUS,
             KeepTrayOnClose = false,
+            StartTrayWithWindows = false,
             SwitchImeToEnglish = false,
             AliasLaunchEnhanced = false,
             ShowAliasRemarkOnLaunch = false,
@@ -74,7 +75,7 @@ public sealed class SettingsServiceTests : IDisposable
 
         var names = document.RootElement.EnumerateObject().Select(static property => property.Name).ToArray();
         Assert.Equal(
-            new[] { "hotkey", "terminalType", "autoLaunchTerminal", "theme", "language", "keepTrayOnClose", "switchImeToEnglish", "aliasLaunchEnhanced", "showAliasRemarkOnLaunch" }
+            new[] { "hotkey", "terminalType", "autoLaunchTerminal", "theme", "language", "keepTrayOnClose", "startTrayWithWindows", "switchImeToEnglish", "aliasLaunchEnhanced", "showAliasRemarkOnLaunch" }
                 .OrderBy(static name => name, StringComparer.Ordinal).ToArray(),
             names.OrderBy(static name => name, StringComparer.Ordinal).ToArray());
 
@@ -87,6 +88,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal("Dark", document.RootElement.GetProperty("theme").GetString());
         Assert.Equal("en-US", document.RootElement.GetProperty("language").GetString());
         Assert.False(document.RootElement.GetProperty("keepTrayOnClose").GetBoolean());
+        Assert.False(document.RootElement.GetProperty("startTrayWithWindows").GetBoolean());
         Assert.False(document.RootElement.GetProperty("switchImeToEnglish").GetBoolean());
         Assert.False(document.RootElement.GetProperty("aliasLaunchEnhanced").GetBoolean());
         Assert.False(document.RootElement.GetProperty("showAliasRemarkOnLaunch").GetBoolean());
@@ -113,6 +115,7 @@ public sealed class SettingsServiceTests : IDisposable
             Theme = AppSettings.ThemeLight,
             Language = AppSettings.LanguageEnUS,
             KeepTrayOnClose = false,
+            StartTrayWithWindows = false,
             SwitchImeToEnglish = false,
             AliasLaunchEnhanced = false,
             ShowAliasRemarkOnLaunch = false,
@@ -127,6 +130,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(saved.Theme, loaded.Theme);
         Assert.Equal(saved.Language, loaded.Language);
         Assert.Equal(saved.KeepTrayOnClose, loaded.KeepTrayOnClose);
+        Assert.Equal(saved.StartTrayWithWindows, loaded.StartTrayWithWindows);
         Assert.Equal(saved.SwitchImeToEnglish, loaded.SwitchImeToEnglish);
         Assert.Equal(saved.AliasLaunchEnhanced, loaded.AliasLaunchEnhanced);
         Assert.Equal(saved.ShowAliasRemarkOnLaunch, loaded.ShowAliasRemarkOnLaunch);
@@ -147,6 +151,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(AppSettings.LanguageZhCN, loaded.Language);
         Assert.True(loaded.AutoLaunchTerminal);
         Assert.True(loaded.KeepTrayOnClose);
+        Assert.True(loaded.StartTrayWithWindows);
         Assert.True(loaded.SwitchImeToEnglish);
         Assert.True(loaded.AliasLaunchEnhanced);
         Assert.True(loaded.ShowAliasRemarkOnLaunch);
@@ -283,6 +288,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(AppSettings.LanguageZhCN, settings.Language);
         Assert.True(settings.AutoLaunchTerminal);
         Assert.True(settings.KeepTrayOnClose);
+        Assert.True(settings.StartTrayWithWindows);
         Assert.True(settings.SwitchImeToEnglish);
         Assert.True(settings.AliasLaunchEnhanced);
         Assert.True(settings.ShowAliasRemarkOnLaunch);

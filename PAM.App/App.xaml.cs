@@ -26,6 +26,9 @@ public partial class App : Application
 
         // 主窗口启动后拉起后台托盘，使全局热键在本次会话内可用（托盘自身有单实例互斥）。
         TrayBridge.EnsureTrayRunning();
+
+        // 每次启动按当前 exe 路径校准登录启动项，覆盖首次安装与程序目录移动后的情况。
+        AutoStartService.Sync(settings.StartTrayWithWindows, TrayBridge.TrayExePath);
     }
 
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)

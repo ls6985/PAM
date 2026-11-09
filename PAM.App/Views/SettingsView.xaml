@@ -415,21 +415,35 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="14" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="14" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="关闭管理器时保留后台托盘" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock Text="开机自动启动后台托盘" Style="{StaticResource SettingLabelStyle}" />
                                 <TextBlock
-                                    Text="关闭后台托盘后，全局热键立即失效（无法用快捷键唤起终端），托盘菜单也会消失；下次打开管理器或点“立即启动”才会恢复。"
+                                    Text="登录 Windows 后自动启动托盘并注册全局热键，无需先打开管理器。移动程序目录后打开一次管理器即可更新启动项路径。"
                                     Style="{StaticResource SettingHintStyle}" />
                             </StackPanel>
                             <ui:ToggleSwitch
                                 Grid.Row="0"
                                 Grid.Column="1"
                                 HorizontalAlignment="Right"
+                                IsChecked="{Binding StartTrayWithWindows, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="关闭管理器时保留后台托盘" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock
+                                    Text="关闭后台托盘后，全局热键立即失效（无法用快捷键唤起终端），托盘菜单也会消失；下次打开管理器或点“立即启动”才会恢复。"
+                                    Style="{StaticResource SettingHintStyle}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
                                 IsChecked="{Binding KeepTrayOnClose, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <StackPanel Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal">
+                            <StackPanel Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal">
                                 <TextBlock Text="后台托盘状态" Style="{StaticResource SettingLabelStyle}" />
                                 <TextBlock
                                     Margin="8,0,0,0"
@@ -437,7 +451,7 @@
                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                     Text="{Binding TrayStatusText}" />
                             </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
+                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
                                 <ui:Button
                                     Appearance="Secondary"
                                     Click="StartTrayButton_Click"

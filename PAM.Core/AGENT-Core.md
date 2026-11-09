@@ -100,6 +100,7 @@ Invoke-Expression (&starship init powershell)
 | `Data/PamDataService.cs` | 读写 `%AppData%\PAM\pam-data.json`（camelCase、临时文件原子替换）；损坏时回退空数据 |
 | `Settings/AppSettings.cs` | 设置模型；`Normalize()` 修正手工改坏的值 |
 | `Settings/SettingsService.cs` | 读写 `%AppData%\PAM\settings.json`（camelCase、临时文件原子替换）；损坏时回退默认值 |
+| `Settings/AutoStartService.cs` | 当前用户登录启动项的读写与幂等同步（HKCU `Run` 的 `PAM.Tray` 值 + Explorer `StartupApproved\Run` 禁用标记）；`BuildRunValue()` / `ExtractExecutablePath()` / `PointsTo()` 是不碰注册表的纯函数 |
 | `Settings/HotkeyChord.cs` | 与 UI 无关的热键模型、`Ctrl+Alt+T` 风格文本解析、系统保留组合表 |
 | `Profile/ProfileRenderer.cs` | `$PROFILE` 唯一写入方：上下分区、旧生成块归拢、托管区全量重写、哈希与同名冲突检测 |
 | `Profile/ProfileService.cs` | 定位 `$PROFILE`、`OpenProfileFile`、执行策略、按终端启动 shell；另提供路径规范化与 PowerShell 字符串转义的公共静态方法 |

@@ -215,6 +215,9 @@ public sealed class LocalizationService
         ["启动前在终端打印一行该别名的备注；没有备注时不打印。"] =
             "Print the alias remark in the terminal before launching; nothing is printed when the remark is empty.",
         ["后台运行"] = "Background",
+        ["开机自动启动后台托盘"] = "Start the tray automatically at sign-in",
+        ["登录 Windows 后自动启动托盘并注册全局热键，无需先打开管理器。移动程序目录后打开一次管理器即可更新启动项路径。"] =
+            "Start the tray and register the global hotkey when you sign in to Windows, without opening the manager first. If you move the program folder, open the manager once to refresh the startup entry path.",
         ["关闭管理器时保留后台托盘"] = "Keep the tray running when the manager closes",
         ["关闭后台托盘后，全局热键立即失效（无法用快捷键唤起终端），托盘菜单也会消失；下次打开管理器或点“立即启动”才会恢复。"] =
             "Turning off the background tray immediately disables the global hotkey (you can no longer open a terminal with it) and removes the tray menu. It comes back only when you reopen the manager or click \"Start now\".",
@@ -241,6 +244,12 @@ public sealed class LocalizationService
         ["恢复默认设置"] = "Restore defaults",
         ["已恢复默认设置。"] = "Default settings restored.",
         ["后台托盘已启动。"] = "The background tray has been started.",
+        ["已开启开机自动启动：登录 Windows 后会自动运行后台托盘。"] =
+            "Startup enabled: the tray will run automatically when you sign in to Windows.",
+        ["已关闭开机自动启动：下次登录不会自动运行后台托盘。"] =
+            "Startup disabled: the tray will not run automatically at your next sign-in.",
+        ["设置已保存，但开机启动项未能更新；请检查是否被安全软件或系统策略拦截。"] =
+            "Settings saved, but the startup entry could not be updated. Check whether security software or a system policy blocked it.",
         ["无法启动后台托盘，请检查 PAM.Tray.exe 是否与管理程序在同一目录。"] =
             "Could not start the tray. Check that PAM.Tray.exe is next to the manager executable.",
         ["已通知后台托盘退出。"] = "The background tray was asked to exit.",

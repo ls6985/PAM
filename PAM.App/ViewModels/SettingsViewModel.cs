@@ -50,6 +50,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private string _language = AppSettings.LanguageZhCN;
     private string _terminalType = AppSettings.TerminalTypePwsh;
     private bool _keepTrayOnClose = true;
+    private bool _startTrayWithWindows = true;
     private bool _switchImeToEnglish = true;
     private bool _aliasLaunchEnhanced = true;
     private bool _showAliasRemarkOnLaunch = true;
@@ -127,6 +128,18 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         set { if (SetField(ref _keepTrayOnClose, value) && !_isSyncing) Commit(s => s.KeepTrayOnClose = value); }
     }
 
+    /// <summary>登录启动项由 AppServices.Apply 同步；这里在保存后回读注册表，给出可验证的结果。</summary>
+    public bool StartTrayWithWindows
+    {
+        get => _startTrayWithWindows;
+        set
+        {
+            if (!SetField(ref _startTrayWithWindows, value) || _isSyncing) return;
+            Commit(s => s.StartTrayWithWindows = value);
+            ReportAutoStartState(value);
+        }
+    }
+
     public bool SwitchImeToEnglish
     {
         get => _switchImeToEnglish;
@@ -195,6 +208,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         _language = settings.Language;
         _terminalType = settings.TerminalType;
         _keepTrayOnClose = settings.KeepTrayOnClose;
+        _startTrayWithWindows = settings.StartTrayWithWindows;
         _switchImeToEnglish = settings.SwitchImeToEnglish;
         _aliasLaunchEnhanced = settings.AliasLaunchEnhanced;
         _showAliasRemarkOnLaunch = settings.ShowAliasRemarkOnLaunch;
@@ -210,6 +224,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Language));
         OnPropertyChanged(nameof(TerminalType));
         OnPropertyChanged(nameof(KeepTrayOnClose));
+        OnPropertyChanged(nameof(StartTrayWithWindows));
         OnPropertyChanged(nameof(SwitchImeToEnglish));
         OnPropertyChanged(nameof(AliasLaunchEnhanced));
         OnPropertyChanged(nameof(ShowAliasRemarkOnLaunch));
@@ -370,6 +385,21 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     }
 
     // --- 后台托盘 ---
+
+    private void ReportAutoStartState(bool expected)
+    {
+        if (AutoStartService.IsEnabled(TrayBridge.TrayExePath) != expected)
+        {
+            SetFeedback(StatusType.Error,
+                "设置已保存，但开机启动项未能更新；请检查是否被安全软件或系统策略拦截。");
+            return;
+        }
+
+        SetFeedback(StatusType.Saved,
+            expected
+                ? "已开启开机自动启动：登录 Windows 后会自动运行后台托盘。"
+                : "已关闭开机自动启动：下次登录不会自动运行后台托盘。");
+    }
 
     public void RefreshTrayState()
     {

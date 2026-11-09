@@ -12,6 +12,9 @@ public static class TrayBridge
     public const string TrayProcessName = "PAM.Tray";
     public const string TrayFileName = "PAM.Tray.exe";
 
+    /// <summary>与当前进程同目录的托盘 exe 路径，启动探测与登录启动项共用同一份解析结果。</summary>
+    public static string TrayExePath => Path.Combine(AppContext.BaseDirectory, TrayFileName);
+
     private const string SettingsChangedEventName = @"Local\PAM.SettingsChanged";
     private const string ExitRequestedEventName = @"Local\PAM.Tray.ExitRequested";
 
@@ -50,7 +53,7 @@ public static class TrayBridge
     {
         if (IsTrayRunning()) return true;
 
-        var exePath = Path.Combine(AppContext.BaseDirectory, TrayFileName);
+        var exePath = TrayExePath;
         if (!File.Exists(exePath)) return false;
 
         try

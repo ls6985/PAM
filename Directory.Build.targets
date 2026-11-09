@@ -1,25 +1,20 @@
 <Project>
 
   <!--
-    开发期专用钩子，不属于任何项目的编译项，不会进入发布产物。
-
-    Debug 构建前结束正在运行的 PAM.Tray / PAM.App：两者都从各自的 bin 目录启动，
-    进程会锁住目录里的 dll / exe，导致 MSBuild 复制阶段报 MSB3021 / MSB3027。
-
-    跳过条件：Release（dotnet publish 用的配置）、VS 设计时构建、PAM.Tests / PAM.Core，
-    以及手动传入 -p:PamKeepRunning=true 的情况。
+    构建前结束正在运行的 PAM.Tray / PAM.App：托盘在关闭主界面后仍常驻，
+    会持有其所在目录里的 dll / exe，导致 MSBuild 复制阶段报 MSB3021 / MSB3027。
+    对所有配置生效（含 Release 与 publish）；设计时构建和显式保留运行时跳过。
   -->
   <Target Name="PamStopRunningInstances"
           BeforeTargets="Build"
-          Condition="'$(Configuration)' == 'Debug'
-                     and '$(DesignTimeBuild)' != 'true'
+          Condition="'$(DesignTimeBuild)' != 'true'
                      and '$(PamKeepRunning)' != 'true'
                      and ('$(MSBuildProjectName)' == 'PAM.App' or '$(MSBuildProjectName)' == 'PAM.Tray')">
     <Exec Command="taskkill /F /IM PAM.App.exe /T &gt;nul 2&gt;&amp;1" IgnoreExitCode="true" StandardOutputImportance="low" />
     <Exec Command="taskkill /F /IM PAM.Tray.exe /T &gt;nul 2&gt;&amp;1" IgnoreExitCode="true" StandardOutputImportance="low" />
     <!-- 进程退出后文件句柄释放有延迟，稍等再进入复制阶段。 -->
-    <Exec Command="ping -n 2 127.0.0.1 &gt;nul" IgnoreExitCode="true" StandardOutputImportance="low" />
-    <Message Importance="high" Text="已结束运行中的 PAM.App / PAM.Tray，避免输出文件被占用。" Condition="'$(MSBuildProjectName)' == 'PAM.Tray'" />
+    <Exec Command="ping -n 3 127.0.0.1 &gt;nul" IgnoreExitCode="true" StandardOutputImportance="low" />
+    <Message Importance="low" Text="已结束运行中的 PAM.App / PAM.Tray，避免输出文件被占用。" Condition="'$(MSBuildProjectName)' == 'PAM.App'" />
   </Target>
 
 </Project>

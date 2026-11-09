@@ -45,6 +45,9 @@ public sealed class AppSettings
     /// <summary>关闭管理器窗口时是否保留后台 PAM.Tray 继续运行。</summary>
     public bool KeepTrayOnClose { get; set; } = true;
 
+    /// <summary>登录 Windows 后是否自动启动后台托盘；由 PAM.App 同步到当前用户的启动项。</summary>
+    public bool StartTrayWithWindows { get; set; } = true;
+
     /// <summary>后台托盘检测到新打开的终端窗口时，是否把该窗口的输入法切成英文。</summary>
     public bool SwitchImeToEnglish { get; set; } = true;
 

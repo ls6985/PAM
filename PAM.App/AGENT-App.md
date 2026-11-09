@@ -2,7 +2,7 @@
 
 WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.json` 与 `pam-data.json` 的唯一写入方。MVVM 解耦，状态与校验在 ViewModel。
 
-`OnStartup` 完成本地化与主窗口显示后调用 `TrayBridge.EnsureTrayRunning()` 静默拉起同目录的 `PAM.Tray.exe`，失败不影响主界面打开。csproj 只引用 `PAM.Core`，**不引用 PAM.Tray**；bin 里的托盘 exe 由两个项目的构建后推送目标互拷而来，见[根 AGENT 总览](../AGENT-总览.md)。
+`OnStartup` 完成本地化与主窗口显示后调用 `TrayBridge.EnsureTrayRunning()` 静默拉起同目录的 `PAM.Tray.exe`，失败不影响主界面打开；随后按 `startTrayWithWindows` 调用 `AutoStartService.Sync()` 校准当前用户的登录启动项。csproj 只引用 `PAM.Core`，**不引用 PAM.Tray**；交付目录里成对的两个 exe 由根目录的 `publish.ps1` 一次产出，见[根 AGENT 总览](../AGENT-总览.md)。
 
 ## 四个页签
 
@@ -45,6 +45,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 | 快捷键设置 | `KeyInterop` 转 Win32 VK → `HotkeyChord`；`HotkeyConflictDetector` 依次查系统保留 → `RegisterHotKey` 真实占用 → 常见软件软冲突（弹窗二次确认） |
 | 终端输入 | `switchImeToEnglish`（默认开）：托盘对新终端窗口切英文输入法，详见 [PAM.Tray/AGENT-Tray.md](../PAM.Tray/AGENT-Tray.md)；日志 `%AppData%\PAM\ime-switch.log` |
 | 无托盘行为 | `KeepTrayOnClose`（默认开）：关窗口后托盘与热键保留，关闭则发退出信号；设置页可查看 / 启动 / 结束托盘 |
+| 开机自启 | `StartTrayWithWindows`（默认开）：登录 Windows 后直接启动托盘，由 `AppServices.Apply` / `Reload` 与 `OnStartup` 幂等同步 HKCU Run 项；设置页切换后回读注册表给出成功 / 失败反馈。目标 exe 不存在时不创建启动项，任务管理器留下的禁用标记会被清除。程序目录移动后打开一次主界面即可刷新路径 |
 | 别名启动 | `aliasLaunchEnhanced`（默认开）：借 explorer 脱离终端进程树启动；`showAliasRemarkOnLaunch`：启动前打印一行备注。开关运行时读取、即时生效，但 **`$PROFILE` 要新开终端窗口才生效** |
 | 恢复默认 | 二次确认后整份恢复默认值 |
 
@@ -58,6 +59,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
   "theme": "System",
   "language": "zh-CN",
   "keepTrayOnClose": true,
+  "startTrayWithWindows": true,
   "switchImeToEnglish": true,
   "aliasLaunchEnhanced": true,
   "showAliasRemarkOnLaunch": true
@@ -70,7 +72,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 
 ## 其它
 
-- `Services/AppServices.cs`：设置读写唯一入口，广播变更字段；同时持有 `PamData` 内存快照，`SaveData()` 落盘并替换快照，别名页与自定义命令页都基于 `Clone()` 改写各自字段，避免互相覆盖；`ThemeService` / `UiLocalizer` / `HotkeyConflictDetector` / `Loc` 同目录。
+- `Services/AppServices.cs`：设置读写唯一入口，广播变更字段；写入成功后按设置值同步登录启动项（注册表写入失败不影响 settings.json）；同时持有 `PamData` 内存快照，`SaveData()` 落盘并替换快照，别名页与自定义命令页都基于 `Clone()` 改写各自字段，避免互相覆盖；`ThemeService` / `UiLocalizer` / `HotkeyConflictDetector` / `Loc` 同目录。
 - 分层：`MainWindow.xaml.cs`（焦点 / 状态栏 / 关闭时按 `KeepTrayOnClose` 处理托盘）、`ViewModels/`、`Converters/`、`Controls/`。
 - `MainViewModel.IsLoading` 控制空状态显示，避免加载中闪现"还没有别名"。
 - 图标 `Assets/App.ico` 由 `Assets/generate_icon.py` 生成（需 Pillow），改配色后重跑脚本再构建；`PAM.Tray.exe` 复用同一份。

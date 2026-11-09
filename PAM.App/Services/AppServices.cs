@@ -59,6 +59,9 @@ public static class AppServices
         Settings = updated;
 
         TrayBridge.SignalSettingsChanged();
+
+        // 登录启动项由设置值单向决定；注册表写入失败不影响 settings.json 已落盘的结果。
+        AutoStartService.Sync(updated.StartTrayWithWindows, TrayBridge.TrayExePath);
         SettingsChanged?.Invoke(null, new SettingsChangedEventArgs(previous, updated));
     }
 
@@ -67,6 +70,7 @@ public static class AppServices
     {
         var previous = Settings;
         Settings = SettingsService.Load();
+        AutoStartService.Sync(Settings.StartTrayWithWindows, TrayBridge.TrayExePath);
         SettingsChanged?.Invoke(null, new SettingsChangedEventArgs(previous, Settings));
     }
 
