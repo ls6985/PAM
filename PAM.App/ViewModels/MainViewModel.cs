@@ -230,7 +230,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             {
                 _profileService.Save(_profilePathRaw, snapshot);
                 AliasLaunchService.Sync(_profilePathRaw, snapshot);
-                // 别名页保存时也把内置 pls 补进受控区块，不用专门去自定义命令页保存一次。
+                // 别名页保存时也把全部内置命令补进受控区块，不用专门去自定义命令页保存一次。
                 _customCommandService.EnsureBuiltinPresent(_profilePathRaw);
             });
 
@@ -303,6 +303,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         if (alias.Length == 0) error = "别名不能为空。";
         else if (rawAlias.Any(char.IsWhiteSpace)) error = "别名不能包含空格。";
+        else if (CustomCommandService.IsBuiltinName(alias)) error = "该名称是内置命令，请换一个。";
         else if (IsAliasDuplicate(alias)) error = "该别名已存在，请换一个。";
         if (error is null && path.Length == 0) { error = "请选择或填写应用程序路径。"; errorField = "Path"; }
 

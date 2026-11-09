@@ -30,8 +30,8 @@ public sealed record CustomCommandSaveResult(
 /// 重新启用时去掉注释前缀即可完整还原，不会破坏缩进与空行。
 /// </para>
 /// <para>
-/// 内置命令 <c>pls</c>（列出别名启动里注册的全部别名）随区块一起写入，
-/// 不出现在界面列表、不可编辑或删除；名称 pls 保留给内置命令。
+/// 内置命令（<c>pls</c> / <c>ongit</c> / <c>sudo</c>）由定义表统一维护，每次保存固定追加最新版本；
+/// 界面里只读展示、不可编辑或删除，名称均保留，不会被用户命令或别名占用。
 /// </para>
 /// </summary>
 public sealed class CustomCommandService
@@ -55,14 +55,32 @@ public sealed class CustomCommandService
         @"^\s*#\s*@pam-custom-state\s+(?<state>\w+)\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    /// <summary>内置命令名：终端里输入 pls 可列出全部别名启动项。该名称保留给内置命令。</summary>
-    public const string BuiltinCommandName = "pls";
+    private sealed record BuiltinDefinition(string Name, string Remark, string Code);
 
-    private const string BuiltinCommandRemark = "内置命令：列出全部别名";
+    /// <summary>
+    /// 内置命令定义表：新增内置命令只需在这里加一项，Save / Parse / 名称校验 /
+    /// EnsureBuiltinPresent 会自动跟上。数组顺序即写入 $PROFILE 与界面列表的顺序。
+    /// </summary>
+    private static readonly BuiltinDefinition[] BuiltinCommands =
+    [
+        new("pls", "内置命令：列出全部别名", PlsCode),
+        new("ongit", "内置命令：暂存全部改动并提交", OngitCode),
+        new("sudo", "内置命令：以管理员身份启动程序或别名", SudoCode),
+    ];
 
-    // 运行时枚举"调用了 Invoke-PamAlias -Path "…""的函数（即别名启动器写出的包装函数），
-    // 按别名 / 路径 / 备注 三列输出；pls 与 Invoke-PamAlias 自身的函数体不会命中该模式。
-    private const string BuiltinCommandCode = """
+    private static readonly HashSet<string> BuiltinNameSet =
+        new(BuiltinCommands.Select(static command => command.Name), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>全部内置命令名（只读）。</summary>
+    public static IReadOnlyCollection<string> BuiltinCommandNames => BuiltinNameSet;
+
+    /// <summary>判断名称是否被内置命令占用（大小写不敏感）。</summary>
+    public static bool IsBuiltinName(string? name)
+        => !string.IsNullOrWhiteSpace(name) && BuiltinNameSet.Contains(name);
+
+    // 运行时枚举"把目标路径写在 -Path 参数里"的函数（即别名启动器写出的包装函数），
+    // 按别名 / 路径 / 备注 三列输出；pls 自身与 Invoke-PamAlias 的函数体不会命中该模式。
+    private const string PlsCode = """
         function pls {
             # PAM 内置命令：列出别名启动里注册的全部别名
             $rows = foreach ($cmd in (Get-Command -CommandType Function)) {
@@ -86,6 +104,104 @@ public sealed class CustomCommandService
         }
         """;
 
+    // ongit <提交信息>：所有参数合成一条 -m 消息，先 add 再 commit。
+    // 中文消息来自命令行参数；$PROFILE 由 ProfileFileStore 统一写成 UTF-8 BOM，5.1 也能正确读取。
+    private const string OngitCode = """
+        function ongit {
+            # PAM 内置命令：暂存全部改动，并把剩余参数合成一条提交信息
+            $message = ($args -join ' ').Trim()
+            if (-not $message) {
+                Write-Host '用法：ongit <提交信息>，例如 ongit 首次提交' -ForegroundColor Yellow
+                return
+            }
+            if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+                Write-Host '未找到 git，请先安装 Git for Windows。' -ForegroundColor Red
+                return
+            }
+            git add -A
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host 'git add 未成功，已中止提交（当前目录可能不是 git 仓库）。' -ForegroundColor Red
+                return
+            }
+            git commit -m $message
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host 'git commit 未成功，请查看上面的输出。' -ForegroundColor Yellow
+            }
+        }
+        """;
+
+    // sudo [-w] <程序或别名> [参数...]：借 Start-Process -Verb RunAs 弹 UAC 提权。
+    // 目标可为 PATH 上的 exe、完整路径、Set-Alias 别名，或别名启动器生成的同名包装函数
+    // （后者从函数体里取 -Path，与 pls 的扫描方式一致）。
+    // 注意：函数体里不要出现字面的 Invoke-PamAlias -Path "…"，否则会被 pls 当成别名列出。
+    private const string SudoCode = """
+        function sudo {
+            # PAM 内置命令：以管理员身份启动程序或 PAM 别名（UAC 由系统弹出）
+            $items = @($args)
+            $wait = $false
+            if ($items.Count -gt 0 -and $items[0] -in @('-w', '--wait')) {
+                $wait = $true
+                $items = @($items | Select-Object -Skip 1)
+            }
+            if ($items.Count -eq 0) {
+                Write-Host '用法：sudo [-w] <程序或别名> [参数...]' -ForegroundColor Yellow
+                Write-Host '示例：sudo notepad  /  sudo blbl  /  sudo -w setup.exe' -ForegroundColor Yellow
+                return
+            }
+
+            $name = [string] $items[0]
+            $rest = @($items | Select-Object -Skip 1)
+
+            $targetPath = $null
+            $command = Get-Command -Name $name -ErrorAction SilentlyContinue
+            if ($null -ne $command) {
+                $kind = [string] $command.CommandType
+                if ($kind -eq 'Function') {
+                    # 模式拆开拼接：避免本函数体被 pls 的别名扫描误判。
+                    $pattern = 'Invoke-PamAlias' + '\s+-Path\s+"(?<path>[^"]*)"'
+                    $match = [regex]::Match("$($command.ScriptBlock)", $pattern)
+                    if ($match.Success) {
+                        $targetPath = [regex]::Replace($match.Groups['path'].Value, '`(.)', '$1')
+                    }
+                }
+                elseif ($kind -eq 'Alias') {
+                    $targetPath = [string] $command.Definition
+                }
+                elseif ($kind -eq 'Application') {
+                    $targetPath = [string] $command.Source
+                }
+            }
+            if (-not $targetPath -and (Test-Path -LiteralPath $name)) {
+                $targetPath = (Resolve-Path -LiteralPath $name).Path
+            }
+            if (-not $targetPath) {
+                Write-Host ("找不到 {0}，也无法解析成程序路径。" -f $name) -ForegroundColor Red
+                return
+            }
+
+            # -ArgumentList 数组会被空格拼接并丢掉外层引号，所以自己拼成单个字符串。
+            $argLine = ($rest | ForEach-Object {
+                $value = [string] $_
+                if ($value -match '[\s"]') { '"' + ($value -replace '"', '\"') + '"' } else { $value }
+            }) -join ' '
+
+            $parameters = @{
+                FilePath         = $targetPath
+                Verb             = 'RunAs'
+                WorkingDirectory = (Get-Location).Path
+            }
+            if ($argLine) { $parameters['ArgumentList'] = $argLine }
+            if ($wait) { $parameters['Wait'] = $true }
+
+            try {
+                Start-Process @parameters
+            }
+            catch {
+                Write-Host ("提权启动失败：{0}" -f $_.Exception.Message) -ForegroundColor Red
+            }
+        }
+        """;
+
 
     public CustomCommandLoadResult Load(string profilePath)
     {
@@ -105,7 +221,7 @@ public sealed class CustomCommandService
 
     /// <summary>
     /// 重写整个受控区块：先移除已有的 PAM-Custom 区块，再按当前列表追加新内容
-    /// （内置命令 pls 不来自快照，最后固定追加最新版本；列表为空时也会写入仅含 pls 的区块）。
+    /// （内置命令不来自快照，最后固定追加定义表里的最新版本；列表为空时也会写入仅含内置命令的区块）。
     /// 区块之外的配置、编码、BOM 与换行风格保持不变。
     /// </summary>
     public CustomCommandSaveResult Save(string profilePath, IEnumerable<CustomCommandEntry> entries)
@@ -125,8 +241,8 @@ public sealed class CustomCommandService
         var lines = new List<string>(document.Lines);
         RemoveRegions(lines);
 
-        // 区块始终写入：即使用户没有自定义命令，内置的 pls 也随区块一起写入，
-        // 保存过一次自定义命令后终端里就能使用。
+        // 区块始终写入：即使用户没有自定义命令，全部内置命令也随区块一起写入，
+        // 保存过一次自定义命令（或别名）后终端里就能使用。
         if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
         {
             lines.Add(string.Empty);
@@ -135,7 +251,9 @@ public sealed class CustomCommandService
         lines.Add(PamCustomRegion.Header);
         lines.Add("# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。");
 
-        var allEntries = snapshot.Append(CreateBuiltinEntry()).ToList();
+        var allEntries = snapshot
+            .Concat(BuiltinCommands.Select(CreateBuiltinEntry))
+            .ToList();
 
         for (var i = 0; i < allEntries.Count; i++)
         {
@@ -178,9 +296,9 @@ public sealed class CustomCommandService
             return false;
         }
 
-        if (string.Equals(value, BuiltinCommandName, StringComparison.OrdinalIgnoreCase))
+        if (IsBuiltinName(value))
         {
-            error = LocalizationService.Instance.T("pls 是内置命令，请换一个名称。");
+            error = LocalizationService.Instance.F("{0} 是内置命令，请换一个名称。", value);
             return false;
         }
 
@@ -231,8 +349,8 @@ public sealed class CustomCommandService
 
             TrimBlankEdges(codeLines);
 
-            // 内置命令带标记进入列表（界面只读展示）；保存时总是重写为最新版本，快照里不带它。
-            var isBuiltin = string.Equals(name, BuiltinCommandName, StringComparison.OrdinalIgnoreCase);
+            // 内置命令带标记进入列表（界面只读展示）；保存时总是重写为最新版本，快照里不带它们。
+            var isBuiltin = IsBuiltinName(name);
 
             var entry = new CustomCommandEntry(
                 name,
@@ -264,14 +382,15 @@ public sealed class CustomCommandService
         }
     }
 
-    /// <summary>内置命令 pls：运行时枚举别名启动器写出的包装函数，列出全部别名。</summary>
-    private static CustomCommandEntry CreateBuiltinEntry()
-        => new(BuiltinCommandName, BuiltinCommandCode, isEnabled: true, remark: BuiltinCommandRemark, isBuiltin: true);
+    /// <summary>把定义表转换成随区块固定写入的只读条目。</summary>
+    private static CustomCommandEntry CreateBuiltinEntry(BuiltinDefinition definition)
+        => new(definition.Name, definition.Code, isEnabled: true, remark: definition.Remark, isBuiltin: true);
 
     /// <summary>
-    /// 确保受控区块里已有内置命令 pls：别名启动页保存后也会调用，
-    /// 让用户不用专门去自定义命令页保存一次就能用上 pls。
-    /// 文件不存在时不动（由保存流程负责创建）；区块里已有 pls 时原样返回，已有用户命令全部保留。
+    /// 确保受控区块里已有全部内置命令：别名启动页保存后也会调用，
+    /// 让用户不用专门去自定义命令页保存一次就能用上这些命令。
+    /// 文件不存在时不动（由保存流程负责创建）；旧配置里只写了部分内置命令时会补齐，
+    /// 已有用户命令全部保留；全部齐备时原样返回、不重写文件。
     /// </summary>
     public bool EnsureBuiltinPresent(string profilePath)
     {
@@ -288,23 +407,21 @@ public sealed class CustomCommandService
         var document = ProfileDocument.Read(profilePath);
 
         var mask = PamCustomRegion.BuildMask(document.Lines);
-        var hasBuiltin = false;
+        var present = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < document.Lines.Count; i++)
         {
-            if (mask[i] && TryParseHeader(document.Lines[i], out var name, out _) &&
-                string.Equals(name, BuiltinCommandName, StringComparison.OrdinalIgnoreCase))
+            if (mask[i] && TryParseHeader(document.Lines[i], out var name, out _) && IsBuiltinName(name))
             {
-                hasBuiltin = true;
-                break;
+                present.Add(name);
             }
         }
 
-        if (hasBuiltin)
+        if (BuiltinCommands.All(command => present.Contains(command.Name)))
         {
             return false;
         }
 
-        // 区块里没有 pls：按文件现状重建（旧的用户命令原样保留），Save 会固定追加内置命令。
+        // 缺任一内置命令：按文件现状重建（旧的用户命令原样保留），Save 会固定追加全部内置命令。
         Save(profilePath, Parse(document.Lines));
         return true;
     }

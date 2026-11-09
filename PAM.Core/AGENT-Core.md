@@ -58,6 +58,20 @@ function hello {
 - 禁用写 `# @pam-custom-state disabled` 并把代码逐行注释为 `# 原行`（空行写 `#`），重新启用原样还原，缩进与空行不丢失。
 - 保存只重写该区块；区块外的配置、别名、编码、BOM 与换行风格原样保留，别名写入也跳过该区块。区块不存在自动创建，清空后保存整体移除。
 
+### 内置命令（随受控区块固定写入）
+
+`CustomCommandService.BuiltinCommands` 是唯一来源（名称 / 备注 / 代码常量）；新增一项即可，测试里的 `BuiltinNames` 同步即可。
+
+| 命令 | 行为 |
+| --- | --- |
+| `pls` | 列出全部别名及路径、备注 |
+| `ongit <信息>` | `git add -A` 后 `git commit -m`（`$args` 合成一条消息） |
+| `sudo [-w] <程序/别名> [参数]` | `Start-Process -Verb RunAs` 提权；支持 exe、路径、PAM 别名；`-w` 等待 |
+
+- 不在用户快照里：`Save()` 每次固定追加最新版本，`Parse()` 按名称打 `IsBuiltin`（界面只读）；`IsBuiltinName()` 供命令页与别名页保留名称。
+- `EnsureBuiltinPresent()` 缺任一内置命令就重建区块（老配置自动补齐），用户命令原样保留。
+- `sudo` 限制：`RunAs` 必新开窗口、CLI 输出不回写；参数须自拼单个字符串；别名路径正则必须拆开拼接，否则被 `pls` 误列（有测试锁住）。系统 `sudo.exe` 会被本函数覆盖，想用系统版敲 `sudo.exe`。
+
 ### Starship init 行（美化页受控区块）
 
 `StarshipService` 应用主题预设时写入，自有标记对（**不在** PAM-Custom 区块内，避免被整体重写波及）：
@@ -82,7 +96,7 @@ Invoke-Expression (&starship init powershell)
 | `Profile/ProfileService.cs` | 定位 `$PROFILE`、读写别名、`OpenProfileFile`、按终端启动 shell |
 | `Profile/PamCustomRegion.cs` | 识别受控区块与行掩码 |
 | `Profile/AliasLaunchService.cs` | 维护别名启动器标记块（见上节） |
-| `Profile/CustomCommandService.cs` | 受控区块内自定义命令的读写与名称校验；内置命令 `pls`（列出全部别名启动项）随区块固定写入、列表中只读展示（`IsBuiltin`）；`EnsureBuiltinPresent` 供别名页保存后补写 |
+| `Profile/CustomCommandService.cs` | 受控区块内自定义命令的读写与名称校验；内置命令定义表（`pls` / `ongit` / `sudo`）随区块固定写入、列表中只读展示（`IsBuiltin`）、名称保留校验（`IsBuiltinName`）；`EnsureBuiltinPresent` 供别名页保存后补齐全部内置命令 |
 | `Profile/ShellResolver.cs` | `pwsh` / `powershell` / `auto` → 实际 shell，判断是否装了 PowerShell 7 |
 | `Starship/StarshipService.cs` | Starship 探测 / Scoop 一键安装 / `starship.toml` 路径与备份恢复 / init 区块 / 内置主题预设（`Presets\*.toml` EmbeddedResource） |
 | `StarshipPrompt/StarshipPromptService.cs` | 自定义提示符：托管块 `# >>> PAM Prompt >>>` 写顶层 `format`、`add_newline`，并接管 format 引用到的 `[module]` 段（TOML 不允许重复定义表，段选色内嵌进模块自身 format 重写）；独立备份 `.pam-prompt.bak` 只在首次写入创建，恢复即删除；不引入 TOML 库 |

@@ -9,7 +9,8 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 顶部 `TabView`（样式 `Styles.xaml` 的 `NavTabItemStyle`），状态栏各页共用：
 
 - **别名启动**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑（可改名）/ 删除（二次确认）、路径浏览、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限一键修复。
-- **自定义命令**（`Views/CustomCommandsView`）：受控区块内的函数 / 片段，状态胶囊点击切换启用；内联编辑条 `Ctrl+Enter` 确认；内置命令 `pls` 只读展示（「内置」徽章，不可编辑 / 删除 / 切换）。数据格式见 [PAM.Core/AGENT-Core.md](../PAM.Core/AGENT-Core.md)。
+- **自定义命令**（`Views/CustomCommandsView`）：受控区块内的函数 / 片段，状态胶囊点击切换启用；内联编辑条 `Ctrl+Enter` 确认；内置命令 `pls` / `ongit` / `sudo` 只读展示（「内置」徽章，不可编辑 / 删除 / 切换），随每次保存自动维护，无独立开关。数据格式见 [PAM.Core/AGENT-Core.md](../PAM.Core/AGENT-Core.md)。
+- **别名启动** 与自定义命令页的命名校验都会拒绝 `pls` / `ongit` / `sudo`（`CustomCommandService.IsBuiltinName`），避免同名包装函数被区块末尾的内置函数覆盖。
 - **美化**（`Views/BeautifyView` + `ViewModels/Beautify/` 按功能拆分的 partial）：见下节。
 - **设置**（`Views/SettingsView` + `ViewModels/SettingsViewModel`）：见下节。
 

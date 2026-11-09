@@ -20,6 +20,9 @@ public sealed class ProfileServiceTests : IDisposable
     private const string RegionHeader = "#region PAM-Custom";
     private const string RegionFooter = "#endregion";
 
+    /// <summary>内置命令的固定顺序，与 CustomCommandService 的定义表一致。</summary>
+    private static readonly string[] BuiltinNames = ["pls", "ongit", "sudo"];
+
     private readonly string _root;
     private readonly string _profilePath;
     private readonly ProfileService _profile = new();
@@ -122,7 +125,7 @@ public sealed class ProfileServiceTests : IDisposable
     }
 
     [Fact]
-    public void CustomSave_WithEmptyList_WritesOnlyBuiltinCommand()
+    public void CustomSave_WithEmptyList_WritesAllBuiltinCommands()
     {
         WriteProfile(Block(
             "Write-Host \"x\"",
@@ -144,23 +147,29 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.DoesNotContain("# @pam-custom a", lines);
         Assert.Single(lines, IsRegionHeader);
         Assert.Single(lines, IsRegionFooter);
-        Assert.Single(lines, static line => line.StartsWith("# @pam-custom pls", StringComparison.Ordinal));
+        AssertBuiltinHeaders(lines);
         Assert.Contains("function pls {", lines);
+        Assert.Contains("function ongit {", lines);
+        Assert.Contains("function sudo {", lines);
 
-        // 区块里只有内置命令：解析后带 IsBuiltin 标记出现在列表里。
-        var builtin = Assert.Single(_custom.Load(_profilePath).Entries);
-        Assert.Equal("pls", builtin.Name);
-        Assert.True(builtin.IsBuiltin);
+        // 区块里只有内置命令：解析后全部带 IsBuiltin 标记出现在列表里。
+        var entries = _custom.Load(_profilePath).Entries;
+        Assert.Equal(BuiltinNames, entries.Select(static e => e.Name).ToArray());
+        Assert.All(entries, static entry => Assert.True(entry.IsBuiltin));
+        Assert.Empty(LoadUserCommands());
     }
 
     [Fact]
-    public void CustomSave_AlwaysRewritesBuiltinCommand_AndLoadMarksItReadOnly()
+    public void CustomSave_AlwaysRewritesBuiltinCommands_AndLoadMarksThemReadOnly()
     {
-        // 手工塞进区块的同名 pls 也算内置命令：保存后由内置版本覆盖，并带 IsBuiltin 标记。
+        // 手工塞进区块的同名 pls / sudo 也算内置命令：保存后由定义表里的版本覆盖。
         WriteProfile(Block(
             RegionHeader,
             "# @pam-custom pls 旧的手工版本",
             "function pls { Write-Host old }",
+            "# @pam-custom-end",
+            "# @pam-custom sudo 旧的手工版本",
+            "function sudo { Write-Host fake }",
             "# @pam-custom-end",
             RegionFooter));
 
@@ -168,25 +177,63 @@ public sealed class ProfileServiceTests : IDisposable
 
         var lines = ProfileLines();
         Assert.Equal(RegionFooter, lines[^1]);
-        Assert.Single(lines, static line => line.StartsWith("# @pam-custom pls", StringComparison.Ordinal));
+        AssertBuiltinHeaders(lines);
         Assert.Contains("function hello { 1 }", lines);
+        Assert.DoesNotContain("Write-Host old", string.Join('\n', lines));
+        Assert.DoesNotContain("Write-Host fake", string.Join('\n', lines));
+        Assert.Contains("git add -A", string.Join('\n', lines));
+        Assert.Contains("'RunAs'", string.Join('\n', lines));
 
         var entries = _custom.Load(_profilePath).Entries;
-        Assert.Equal(new[] { "hello", "pls" }, entries.Select(static e => e.Name).ToArray());
+        Assert.Equal(new[] { "hello" }.Concat(BuiltinNames).ToArray(), entries.Select(static e => e.Name).ToArray());
         Assert.False(entries[0].IsBuiltin);
-        Assert.True(entries[1].IsBuiltin);
+        Assert.All(entries.Skip(1), static entry => Assert.True(entry.IsBuiltin));
     }
 
     [Fact]
-    public void TryValidateName_RejectsBuiltinCommandName()
+    public void TryValidateName_RejectsAllBuiltinCommandNames()
     {
-        Assert.False(CustomCommandService.TryValidateName("pls", out _));
-        Assert.False(CustomCommandService.TryValidateName("PLS", out _));
+        foreach (var name in BuiltinNames)
+        {
+            Assert.False(CustomCommandService.TryValidateName(name, out _));
+            Assert.False(CustomCommandService.TryValidateName(name.ToUpperInvariant(), out var error));
+            Assert.Contains(name.ToUpperInvariant(), error);
+        }
+
         Assert.True(CustomCommandService.TryValidateName("pls2", out _));
+        Assert.True(CustomCommandService.TryValidateName("sudo2", out _));
     }
 
     [Fact]
-    public void EnsureBuiltinPresent_AddsPlsWhenRegionMissing()
+    public void IsBuiltinName_IsCaseInsensitiveAndCoversAllBuiltins()
+    {
+        Assert.Equal(BuiltinNames.Length, CustomCommandService.BuiltinCommandNames.Count);
+        foreach (var name in BuiltinNames)
+        {
+            Assert.Contains(name, CustomCommandService.BuiltinCommandNames);
+            Assert.True(CustomCommandService.IsBuiltinName(name));
+            Assert.True(CustomCommandService.IsBuiltinName(name.ToUpperInvariant()));
+        }
+
+        Assert.False(CustomCommandService.IsBuiltinName("sudo2"));
+        Assert.False(CustomCommandService.IsBuiltinName(null));
+    }
+
+    [Fact]
+    public void BuiltinCode_DoesNotMatchPlsAliasScanner()
+    {
+        // sudo 的函数体里如果出现字面的 Invoke-PamAlias -Path "…"，会被 pls 当成别名列出。
+        _custom.Save(_profilePath, Array.Empty<CustomCommandEntry>());
+        const string scanner = @"Invoke-PamAlias\s+-Path\s+""(?<path>[^""]*)""";
+
+        foreach (var entry in _custom.Load(_profilePath).Entries)
+        {
+            Assert.DoesNotMatch(scanner, entry.Code);
+        }
+    }
+
+    [Fact]
+    public void EnsureBuiltinPresent_AddsAllBuiltinsWhenRegionMissing()
     {
         WriteProfile(Block("Write-Host \"x\"", "# 结尾"));
 
@@ -197,13 +244,41 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.Contains("# 结尾", lines);
         Assert.Single(lines, IsRegionHeader);
         Assert.Single(lines, IsRegionFooter);
-        Assert.Single(lines, static line => line.StartsWith("# @pam-custom pls", StringComparison.Ordinal));
+        AssertBuiltinHeaders(lines);
         Assert.Empty(LoadUserCommands());
 
-        // 已有内置命令时不再重复写入，文件保持不变。
+        // 全部内置命令齐备时不再重复写入，文件保持不变。
         var before = ProfileLines();
         Assert.False(_custom.EnsureBuiltinPresent(_profilePath));
         Assert.Equal(before, ProfileLines());
+    }
+
+    [Fact]
+    public void EnsureBuiltinPresent_UpgradesLegacyRegionWithOnlyPls()
+    {
+        // 老版本 $PROFILE：只有 pls，用户命令也在。保存别名页时应补齐 ongit / sudo。
+        WriteProfile(Block(
+            RegionHeader,
+            "# @pam-custom hello",
+            "function hello { 1 }",
+            "# @pam-custom-end",
+            "# @pam-custom pls 内置命令：列出全部别名",
+            "function pls { Write-Host 'old' }",
+            "# @pam-custom-end",
+            RegionFooter));
+
+        Assert.True(_custom.EnsureBuiltinPresent(_profilePath));
+
+        var lines = ProfileLines();
+        AssertBuiltinHeaders(lines);
+        Assert.Contains("function hello { 1 }", lines);
+        Assert.Contains("function ongit {", lines);
+        Assert.Contains("function sudo {", lines);
+        Assert.DoesNotContain("Write-Host 'old'", string.Join('\n', lines));
+
+        var entries = _custom.Load(_profilePath).Entries;
+        Assert.Equal(new[] { "hello" }.Concat(BuiltinNames).ToArray(), entries.Select(static e => e.Name).ToArray());
+        Assert.False(_custom.EnsureBuiltinPresent(_profilePath));
     }
 
     [Fact]
@@ -219,9 +294,9 @@ public sealed class ProfileServiceTests : IDisposable
         Assert.True(_custom.EnsureBuiltinPresent(_profilePath));
 
         var entries = _custom.Load(_profilePath).Entries;
-        Assert.Equal(new[] { "hello", "pls" }, entries.Select(static e => e.Name).ToArray());
+        Assert.Equal(new[] { "hello" }.Concat(BuiltinNames).ToArray(), entries.Select(static e => e.Name).ToArray());
         Assert.False(entries[0].IsBuiltin);
-        Assert.True(entries[1].IsBuiltin);
+        Assert.All(entries.Skip(1), static entry => Assert.True(entry.IsBuiltin));
     }
 
     [Fact]
@@ -687,9 +762,17 @@ public sealed class ProfileServiceTests : IDisposable
 
     private string[] ProfileLines() => File.ReadAllLines(_profilePath);
 
-    /// <summary>加载并只取用户命令；内置 pls 单独断言（标记 IsBuiltin、总是存在）。</summary>
+    /// <summary>加载并只取用户命令；内置命令单独断言（标记 IsBuiltin、总是存在）。</summary>
     private IReadOnlyList<CustomCommandEntry> LoadUserCommands()
         => _custom.Load(_profilePath).Entries.Where(static e => !e.IsBuiltin).ToList();
+
+    private static void AssertBuiltinHeaders(string[] lines)
+    {
+        foreach (var name in BuiltinNames)
+        {
+            Assert.Single(lines, line => line.StartsWith($"# @pam-custom {name}", StringComparison.Ordinal));
+        }
+    }
 
     private byte[] ProfileBytes() => File.ReadAllBytes(_profilePath);
 

@@ -117,7 +117,7 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
     public bool IsDeleteIdle => !_deletePending;
 
     /// <summary>
-    /// 是否为随区块固定写入的内置命令（如 pls）：在列表里展示，但不可编辑、删除或切换启停，
+    /// 是否为随区块固定写入的内置命令（如 pls / ongit / sudo）：在列表里展示，但不可编辑、删除或切换启停，
     /// 保存时也不会写入快照（内置命令总是追加最新版本）。
     /// </summary>
     public bool IsBuiltin { get; internal set; }

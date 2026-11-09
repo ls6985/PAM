@@ -93,7 +93,8 @@ public sealed class LocalizationService
         ["命令名称不能包含空格。"] = "Command name cannot contain spaces.",
         ["命令名称包含 PowerShell 不支持的字符。"] = "Command name contains characters not supported by PowerShell.",
         ["该名称已存在，请换一个。"] = "This name already exists. Choose another.",
-        ["pls 是内置命令，请换一个名称。"] = "\"pls\" is reserved for the built-in command. Choose another.",
+        ["{0} 是内置命令，请换一个名称。"] = "\"{0}\" is reserved for a built-in command. Choose another.",
+        ["该名称是内置命令，请换一个。"] = "This name is a built-in command. Choose another.",
         ["内置"] = "Built-in",
         ["内置命令，随保存自动维护，不可编辑或删除"] =
             "Built-in command, maintained automatically on save; cannot be edited or deleted.",
