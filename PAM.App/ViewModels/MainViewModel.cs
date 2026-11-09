@@ -14,7 +14,6 @@ public enum StatusType { Info, Saved, Dirty, Written, Warning, Error }
 public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly ProfileService _profileService = new();
-    private readonly CustomCommandService _customCommandService = new();
 
     private string _searchText = string.Empty;
     private string _profilePathRaw = "正在读取 $PROFILE…";
@@ -85,6 +84,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
 
     public bool HasUnsavedChanges { get => _hasUnsavedChanges; set { if (_hasUnsavedChanges == value) return; _hasUnsavedChanges = value; OnPropertyChanged(); } }
+
+    /// <summary>最近一次保存时，用户区里会遮蔽 PAM 同名包装函数的命令名。</summary>
+    public IReadOnlyList<string> LastConflictingNames { get; private set; } = [];
 
     /// <summary>状态栏文本：保存中文原文，写入界面时按当前语言翻译。</summary>
     public string StatusMessage
@@ -174,20 +176,43 @@ public sealed class MainViewModel : INotifyPropertyChanged
             ProfilePath = path;
             HasProfilePath = true;
 
-            var result = await Task.Run(() => _profileService.Load(path));
+            var data = AppServices.Data;
+            var profileExists = await Task.Run(() => File.Exists(path));
+
+            // 托管区缺失或哈希不符（外部改动、切换到另一个终端的 $PROFILE）时按数据重建一次。
+            var state = await Task.Run(() => ProfileRenderer.Inspect(path));
+            var regenerated = !state.HasMarker ||
+                              !string.Equals(state.Hash, data.ManagedHash, StringComparison.Ordinal);
+            if (regenerated)
+            {
+                var fresh = await Task.Run(() =>
+                {
+                    var render = ProfileRenderer.Render(path, data);
+                    data.ManagedHash = render.ManagedHash;
+                    AppServices.SaveData(data);
+                    return render;
+                });
+
+                LastConflictingNames = fresh.ConflictingNames;
+            }
 
             Aliases.Clear();
-            foreach (var entry in result.Entries) Aliases.Add(entry);
+            foreach (var alias in data.Aliases)
+            {
+                Aliases.Add(new AliasEntry(alias.Name, alias.Path, alias.Remark));
+            }
 
             HasUnsavedChanges = false;
             SetStatus(
-                result.FileExists ? StatusType.Saved : StatusType.Warning,
-                result.FileExists
-                    ? $"已保存 · 共 {Aliases.Count} 个别名"
-                    : "配置文件不存在，点击“保存并生效”时将自动创建。");
+                regenerated ? StatusType.Warning : (profileExists ? StatusType.Saved : StatusType.Warning),
+                regenerated
+                    ? "已按 pam-data.json 重建 $PROFILE 托管区。"
+                    : profileExists
+                        ? $"已保存 · 共 {Aliases.Count} 个别名"
+                        : "配置文件不存在，点击“保存并生效”时将自动创建。");
 
-            // 共用同一份 $PROFILE：别名加载完成后，继续加载受控区块中的自定义命令。
-            await CustomCommands.InitializeAsync(path);
+            // 别名与自定义命令共用同一份 pam-data.json 快照。
+            await CustomCommands.InitializeAsync();
         }
         catch (Exception ex)
         {
@@ -225,15 +250,23 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         try
         {
-            var snapshot = Aliases.ToList();
-            await Task.Run(() =>
+            var data = AppServices.Data.Clone();
+            data.Aliases = Aliases.Select(static entry => new AliasData
             {
-                _profileService.Save(_profilePathRaw, snapshot);
-                AliasLaunchService.Sync(_profilePathRaw, snapshot);
-                // 别名页保存时同步补齐全部内置命令，无需依赖自定义命令页的保存操作。
-                _customCommandService.EnsureBuiltinPresent(_profilePathRaw);
+                Name = entry.Name.Trim(),
+                Path = entry.Path,
+                Remark = entry.Remark,
+            }).ToList();
+
+            var render = await Task.Run(() =>
+            {
+                var result = ProfileRenderer.Render(_profilePathRaw, data);
+                data.ManagedHash = result.ManagedHash;
+                AppServices.SaveData(data);
+                return result;
             });
 
+            LastConflictingNames = render.ConflictingNames;
             HasUnsavedChanges = false;
 
             // 返回 true 表示写入成功，窗口可以启动 PowerShell 了
@@ -304,6 +337,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (alias.Length == 0) error = "别名不能为空。";
         else if (rawAlias.Any(char.IsWhiteSpace)) error = "别名不能包含空格。";
         else if (CustomCommandService.IsBuiltinName(alias)) error = "该名称是内置命令，请换一个。";
+        else if (!CustomCommandService.TryValidateName(alias, out var nameError)) error = nameError;
         else if (IsAliasDuplicate(alias)) error = "该别名已存在，请换一个。";
         if (error is null && path.Length == 0) { error = "请选择或填写应用程序路径。"; errorField = "Path"; }
 

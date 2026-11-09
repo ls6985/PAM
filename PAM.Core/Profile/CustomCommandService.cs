@@ -1,38 +1,10 @@
-using System.IO;
-using System.Text.RegularExpressions;
 using PAM.Core.Models;
 
 namespace PAM.Core;
 
-public sealed record CustomCommandLoadResult(
-    string ProfilePath,
-    bool FileExists,
-    IReadOnlyList<CustomCommandEntry> Entries);
-
-public sealed record CustomCommandSaveResult(
-    bool FileCreated,
-    int EntryCount);
-
 /// <summary>
-/// 负责读写 $PROFILE 中由 PAM 独占维护的自定义命令区块。
-/// <para>
-/// 区块格式（受控，保存时整块重写，区块外的内容原样保留）：
-/// </para>
-/// <code>
-/// #region PAM-Custom
-/// # @pam-custom hello 打招呼
-/// function hello { Write-Host "hi" }
-/// # @pam-custom-end
-/// #endregion
-/// </code>
-/// <para>
-/// 禁用状态会写入 <c># @pam-custom-state disabled</c>，并把代码逐行注释掉；
-/// 重新启用时去掉注释前缀即可完整还原，不会破坏缩进与空行。
-/// </para>
-/// <para>
-/// 内置命令（<c>pls</c> / <c>ongit</c> / <c>sudo</c>）由定义表统一维护，每次保存固定追加最新版本；
-/// 界面里只读展示、不可编辑或删除，名称均保留，不会被用户命令或别名占用。
-/// </para>
+/// 生成 $PROFILE 托管区中的 PAM-Custom 片段，并维护内置命令定义表与名称校验。
+/// 片段文本由 <see cref="ProfileRenderer"/> 统一写入，本类不读写文件。
 /// </summary>
 public sealed class CustomCommandService
 {
@@ -46,14 +18,6 @@ public sealed class CustomCommandService
         '"', '\'', '`', '$', '{', '}', '(', ')', '[', ']', ';', ',', '|', '&',
         '#', '\\', '/', ':', '*', '?', '<', '>', '=', '+', '@'
     ];
-
-    private static readonly Regex HeaderRegex = new(
-        @"^\s*#\s*@pam-custom\s+(?<name>\S+)(?:\s+(?<remark>.*))?\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    private static readonly Regex StateRegex = new(
-        @"^\s*#\s*@pam-custom-state\s+(?<state>\w+)\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private sealed record BuiltinDefinition(string Name, string Remark, string Code);
 
@@ -203,56 +167,30 @@ public sealed class CustomCommandService
         """;
 
 
-    public CustomCommandLoadResult Load(string profilePath)
-    {
-        if (string.IsNullOrWhiteSpace(profilePath))
-        {
-            throw new ArgumentException("配置文件路径不能为空。", nameof(profilePath));
-        }
-
-        if (!File.Exists(profilePath))
-        {
-            return new CustomCommandLoadResult(profilePath, false, Array.Empty<CustomCommandEntry>());
-        }
-
-        var document = ProfileDocument.Read(profilePath);
-        return new CustomCommandLoadResult(profilePath, true, Parse(document.Lines));
-    }
-
     /// <summary>
-    /// 重写整个受控区块：先移除已有的 PAM-Custom 区块，再按当前列表追加新内容
-    /// （内置命令不来自快照，最后固定追加定义表里的最新版本；列表为空时也会写入仅含内置命令的区块）。
-    /// 区块之外的配置、编码、BOM 与换行风格保持不变。
+    /// 生成 PAM-Custom 受控区块的全部文本行，不读写文件。
+    /// 内置命令按定义表固定追加最新版本，不来自数据快照。
     /// </summary>
-    public CustomCommandSaveResult Save(string profilePath, IEnumerable<CustomCommandEntry> entries)
+    public static List<string> BuildLines(IEnumerable<CustomCommandData> commands)
     {
-        if (string.IsNullOrWhiteSpace(profilePath))
-        {
-            throw new ArgumentException("配置文件路径不能为空。", nameof(profilePath));
-        }
-
-        var snapshot = entries
-            .Where(static entry => !string.IsNullOrWhiteSpace(entry.Name) && !entry.IsBuiltin)
+        var snapshot = commands
+            .Where(static command => !string.IsNullOrWhiteSpace(command.Name) && !IsBuiltinName(command.Name))
+            .Select(static command => new CustomCommandEntry(
+                command.Name.Trim(),
+                string.Join("\n", command.CodeLines ?? []),
+                command.IsEnabled,
+                command.Remark))
             .ToList();
 
-        var existed = File.Exists(profilePath);
-        var document = existed ? ProfileDocument.Read(profilePath) : ProfileDocument.CreateNew();
-
-        var lines = new List<string>(document.Lines);
-        RemoveRegions(lines);
-
-        // 区块始终写入：即使用户没有自定义命令，全部内置命令也随区块一起写入，
-        // 保存自定义命令或别名后，新终端窗口即可使用。
-        if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
+        var lines = new List<string>
         {
-            lines.Add(string.Empty);
-        }
-
-        lines.Add(PamCustomRegion.Header);
-        lines.Add("# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。");
+            PamCustomRegion.Header,
+            "# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。",
+        };
 
         var allEntries = snapshot
-            .Concat(BuiltinCommands.Select(CreateBuiltinEntry))
+            .Concat(BuiltinCommands.Select(static command =>
+                new CustomCommandEntry(command.Name, command.Code, true, command.Remark, true)))
             .ToList();
 
         for (var i = 0; i < allEntries.Count; i++)
@@ -266,12 +204,15 @@ public sealed class CustomCommandService
         }
 
         lines.Add(PamCustomRegion.Footer);
-
-        var output = new ProfileDocument(lines, document.Encoding, document.NewLine);
-        output.WriteTo(profilePath);
-
-        return new CustomCommandSaveResult(!existed, snapshot.Count);
+        return lines;
     }
+
+    /// <summary>内置命令的只读展示条目，供界面列表使用；这些条目不写入数据文件。</summary>
+    public static IReadOnlyList<CustomCommandEntry> GetBuiltinEntries()
+        => BuiltinCommands
+            .Select(static command =>
+                new CustomCommandEntry(command.Name, command.Code, true, command.Remark, true))
+            .ToList();
 
     /// <summary>校验命令名是否可作为 PowerShell 函数名使用。</summary>
     public static bool TryValidateName(string? name, out string error)
@@ -306,125 +247,6 @@ public sealed class CustomCommandService
         return true;
     }
 
-    internal static List<CustomCommandEntry> Parse(IReadOnlyList<string> lines)
-    {
-        var mask = PamCustomRegion.BuildMask(lines);
-        var entries = new List<CustomCommandEntry>();
-        var indexByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        var i = 0;
-        while (i < lines.Count)
-        {
-            if (!mask[i] || !TryParseHeader(lines[i], out var name, out var remark))
-            {
-                i++;
-                continue;
-            }
-
-            i++;
-
-            var isEnabled = true;
-            if (i < lines.Count && TryParseState(lines[i], out var state))
-            {
-                isEnabled = state;
-                i++;
-            }
-
-            var codeLines = new List<string>();
-
-            while (i < lines.Count &&
-                   mask[i] &&
-                   !IsEntryEnd(lines[i]) &&
-                   !PamCustomRegion.IsFooter(lines[i]) &&
-                   !HeaderRegex.IsMatch(lines[i]))
-            {
-                codeLines.Add(isEnabled ? lines[i] : Uncomment(lines[i]));
-                i++;
-            }
-
-            if (i < lines.Count && IsEntryEnd(lines[i]))
-            {
-                i++;
-            }
-
-            TrimBlankEdges(codeLines);
-
-            // 内置命令带标记进入列表（界面只读展示）；保存时总是重写为最新版本，快照里不带它们。
-            var isBuiltin = IsBuiltinName(name);
-
-            var entry = new CustomCommandEntry(
-                name,
-                string.Join("\n", codeLines),
-                isEnabled,
-                remark,
-                isBuiltin);
-
-            // 同名命令以最后一条为准，保持首次出现的位置（与别名解析策略一致）。
-            if (indexByName.TryGetValue(name, out var existingIndex))
-            {
-                entries[existingIndex] = entry;
-            }
-            else
-            {
-                indexByName[name] = entries.Count;
-                entries.Add(entry);
-            }
-        }
-
-        return entries;
-    }
-
-    private static void RemoveRegions(List<string> lines)
-    {
-        foreach (var (start, endExclusive) in PamCustomRegion.FindRanges(lines).Reverse())
-        {
-            lines.RemoveRange(start, endExclusive - start);
-        }
-    }
-
-    /// <summary>把定义表转换成随区块固定写入的只读条目。</summary>
-    private static CustomCommandEntry CreateBuiltinEntry(BuiltinDefinition definition)
-        => new(definition.Name, definition.Code, isEnabled: true, remark: definition.Remark, isBuiltin: true);
-
-    /// <summary>
-    /// 确保受控区块包含全部内置命令；别名启动页保存时同样调用，无需依赖自定义命令页的保存操作。
-    /// 文件不存在时不处理（由保存流程负责创建）；旧配置缺少部分内置命令时补齐，
-    /// 已有用户命令全部保留；全部齐备时不重写文件。
-    /// </summary>
-    public bool EnsureBuiltinPresent(string profilePath)
-    {
-        if (string.IsNullOrWhiteSpace(profilePath))
-        {
-            throw new ArgumentException("配置文件路径不能为空。", nameof(profilePath));
-        }
-
-        if (!File.Exists(profilePath))
-        {
-            return false;
-        }
-
-        var document = ProfileDocument.Read(profilePath);
-
-        var mask = PamCustomRegion.BuildMask(document.Lines);
-        var present = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < document.Lines.Count; i++)
-        {
-            if (mask[i] && TryParseHeader(document.Lines[i], out var name, out _) && IsBuiltinName(name))
-            {
-                present.Add(name);
-            }
-        }
-
-        if (BuiltinCommands.All(command => present.Contains(command.Name)))
-        {
-            return false;
-        }
-
-        // 缺任一内置命令：按文件现状重建（旧的用户命令原样保留），Save 会固定追加全部内置命令。
-        Save(profilePath, Parse(document.Lines));
-        return true;
-    }
-
     private static IEnumerable<string> BuildEntryLines(CustomCommandEntry entry)
     {
         var name = entry.Name.Trim();
@@ -456,57 +278,6 @@ public sealed class CustomCommandService
         }
 
         yield return EntryEndMarker;
-    }
-
-    private static bool TryParseHeader(string line, out string name, out string remark)
-    {
-        name = string.Empty;
-        remark = string.Empty;
-
-        var match = HeaderRegex.Match(line);
-        if (!match.Success)
-        {
-            return false;
-        }
-
-        name = match.Groups["name"].Value.Trim();
-        remark = match.Groups["remark"].Value.Trim();
-        return name.Length > 0;
-    }
-
-    private static bool TryParseState(string line, out bool isEnabled)
-    {
-        isEnabled = true;
-
-        var match = StateRegex.Match(line);
-        if (!match.Success)
-        {
-            return false;
-        }
-
-        isEnabled = !string.Equals(
-            match.Groups["state"].Value,
-            "disabled",
-            StringComparison.OrdinalIgnoreCase);
-        return true;
-    }
-
-    private static bool IsEntryEnd(string line)
-        => line.TrimStart().StartsWith(EntryEndMarker, StringComparison.OrdinalIgnoreCase);
-
-    private static string Uncomment(string line)
-    {
-        if (line.Length == 0)
-        {
-            return line;
-        }
-
-        if (line == "#")
-        {
-            return string.Empty;
-        }
-
-        return line.StartsWith("# ", StringComparison.Ordinal) ? line[2..] : line;
     }
 
     private static void TrimBlankEdges(List<string> lines)

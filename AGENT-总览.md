@@ -1,6 +1,6 @@
 # PowerShell 管理器（AI 必读索引）
 
-基于 **WPF + WinForms + .NET 10** 的 Windows 终端配置工具：用图形界面维护 PowerShell `$PROFILE` 中的别名与自定义命令，并由一个后台托盘程序提供全局热键唤醒终端。
+基于 **WPF + WinForms + .NET 10** 的 Windows 终端配置工具：用图形界面维护别名与自定义命令并把它们生成到 PowerShell `$PROFILE` 的托管区，由一个后台托盘程序提供全局热键唤醒终端。
 
 > 本文件是给 AI 的必读索引：只记录项目结构、进程关系、环境与运行方式、数据位置。各模块的实现细节在对应项目的 AGENT 文档里，按下表选读，本文件不重复。
 
@@ -8,7 +8,7 @@
 
 | 项目 | 职责 | 什么时候读 |
 | --- | --- | --- |
-| [PAM.Core](PAM.Core/AGENT-Core.md) | 无 UI 的核心库：设置模型、`$PROFILE` 读写、热键描述、终端探测、本地化词表、跨进程信号、Starship / 字体 / Windows Terminal 外观服务 | 改数据格式、配置字段、`$PROFILE` 读写规则、终端外观或美化功能时 |
+| [PAM.Core](PAM.Core/AGENT-Core.md) | 无 UI 的核心库：托管数据模型与 `pam-data.json` 读写、`$PROFILE` 分区渲染、设置模型、热键描述、终端探测、本地化词表、跨进程信号、Starship / 字体 / Windows Terminal 外观服务 | 改数据格式、配置字段、`$PROFILE` 分区规则、终端外观或美化功能时 |
 | [PAM.App](PAM.App/AGENT-App.md) | WPF 主界面与设置页，用户唯一直接操作的程序，也是 `settings.json` 的唯一写入方 | **最常读**：改界面、页签、主题 / 语言 / 热键交互、终端外观、Starship 美化时 |
 | [PAM.Tray](PAM.Tray/AGENT-Tray.md) | 纯粹的后台组件：常驻托盘、注册全局热键、按下后拉起 Windows Terminal；只读配置，从不写入，也不需要用户手动启动 | 只有改热键注册或托盘行为时才需要看，日常开发基本不用碰 |
 | [PAM.Tests](PAM.Tests/AGENT-测试.md) | xUnit 测试，只覆盖 PAM.Core 的纯逻辑，不涉及 WPF 界面 | 平时不用读；只有改动 `$PROFILE` 区块格式或 `settings.json` 规则时才需要同步维护 |
@@ -23,7 +23,7 @@
 - **PAM.App 写 `settings.json` → PAM.Tray 读**，通过两个命名事件（设置变更 / 请求退出）通知，托盘另用文件时间戳轮询兜底。
 - App 关闭后托盘是否继续驻留，由 `KeepTrayOnClose` 决定（默认保留，热键不受影响）。
 - 托盘在 `switchImeToEnglish` 开启时，会把新打开的终端窗口的中文输入法切成英文输入模式（不换输入法与键盘布局），实现见 [PAM.Tray/AGENT-Tray.md](PAM.Tray/AGENT-Tray.md)。
-- 别名启动由 `$PROFILE` 里 `AliasLaunchService` 维护的自有标记块承担（借 `explorer.exe` 代启动），开关写在 `settings.json`、由公共函数运行时读取，实现见 [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md)。
+- 别名与自定义命令的数据存于 `%AppData%\PAM\pam-data.json`（App 唯一写入方）；`$PROFILE` 以 `# >>> PAM Managed >>>` 分区，用户区原样保留，托管区由 `ProfileRenderer` 按数据单向全量生成。别名启动借 `explorer.exe` 代启动，开关写在 `settings.json`、由公共函数运行时读取，实现见 [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md)。
 - 美化页的外观卡片与自定义提示符分别接管 Windows Terminal `settings.json` 的外观属性与 `starship.toml` 的托管块，界面行为见 [PAM.App/AGENT-App.md](PAM.App/AGENT-App.md)、写入规则见 [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md)。
 
 ## 环境与运行
@@ -53,7 +53,8 @@ dotnet publish PAM.Tray -c Release -o publish
 
 | 数据 | 位置 | 详细说明 |
 | --- | --- | --- |
-| 别名 / 自定义命令 | 默认终端对应的 `$PROFILE`（PowerShell 7 与 5.1 是两个不同文件） | [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md) |
+| 别名 / 自定义命令 | `%AppData%\PAM\pam-data.json`（唯一数据源） | [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md) |
+| `$PROFILE` 托管区 | 默认终端对应的 `$PROFILE`（PowerShell 7 与 5.1 是两个不同文件，按同一份数据分别生成） | [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md) |
 | 主题、语言、默认终端、热键、托盘行为 | `%AppData%\PAM\settings.json` | [PAM.App/AGENT-App.md](PAM.App/AGENT-App.md) |
 | Starship 主题（美化页写入） | `~\.config\starship.toml`（应用主题前单槽备份为 `.bak`）；init 行写入 `$PROFILE` 受控区块 | [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md) |
 | 终端外观（美化页写入） | Windows Terminal `settings.json` 的 `profiles.defaults`：字体、复古效果、光标、背景图、透明度、亚克力；首次修改前的原始配置另存为 `settings.json.bak`，永不覆盖、恢复后保留 | [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md) |

@@ -297,6 +297,15 @@ public partial class MainWindow : FluentWindow
                     ViewModel.SetStatus(StatusType.Error, $"错误：已写入，但启动 PowerShell 失败：{ex.Message}");
                 }
             }
+
+            if (ViewModel.LastConflictingNames.Count > 0)
+            {
+                ViewModel.SetStatus(
+                    StatusType.Warning,
+                    LocalizationService.Instance.F(
+                        "{0} 与 $PROFILE 中已有命令同名，这些别名不会生效。",
+                        string.Join("、", ViewModel.LastConflictingNames)));
+            }
         }
 
         ViewModel.IsLoading = false;

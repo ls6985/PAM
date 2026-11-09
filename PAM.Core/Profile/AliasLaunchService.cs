@@ -1,13 +1,11 @@
-using PAM.Core.Models;
-
 namespace PAM.Core;
 
 /// <summary>
 /// 维护 $PROFILE 中的「别名启动器」标记块：将 PAM 托管的别名调用包装为同名函数，
 /// 由 <c>Invoke-PamAlias</c> 统一处理独立进程启动与备注输出。
 ///
-/// <para><c>ProfileService</c> 写出的 <c>Set-Alias</c> 行仍是数据源，用于兼容既有配置、解析逻辑与测试。
-/// PowerShell 中 Alias 优先于 Function，因此块内先移除同名别名，再定义同名函数。</para>
+/// <para><see cref="BuildLines"/> 只产出片段文本，由 <c>ProfileRenderer</c> 统一写入托管区。
+/// 用户区若已定义同名 alias 或 function，包装函数让位，不覆盖用户原有命令。</para>
 ///
 /// <para>由 <c>Start-Process</c> 启动的子进程仍依附终端控制台与进程树；部分程序会通过
 /// <c>AttachConsole(ATTACH_PARENT_PROCESS)</c> 回写日志。重定向 stdout/stderr 仅抑制输出，不改变控制台归属。
@@ -80,77 +78,48 @@ public static class AliasLaunchService
         @"}",
     ];
 
-    /// <summary>按当前别名快照重写启动器块；空列表时整体移除。</summary>
-    public static void Sync(string profilePath, IEnumerable<AliasEntry> entries)
+    /// <summary>
+    /// 生成别名启动器片段的全部文本行，不读写文件。
+    /// 同名命令由用户区优先：仅当用户尚未定义同名 alias 或 function 时才注册包装函数。
+    /// </summary>
+    public static List<string> BuildLines(IEnumerable<AliasData> aliases)
     {
-        if (string.IsNullOrWhiteSpace(profilePath))
-        {
-            throw new ArgumentException("配置文件路径不能为空。", nameof(profilePath));
-        }
-
-        var snapshot = entries
-            .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
+        var snapshot = aliases
+            .Where(static alias => !string.IsNullOrWhiteSpace(alias.Name))
             .ToList();
 
-        var document = File.Exists(profilePath)
-            ? ProfileDocument.Read(profilePath)
-            : ProfileDocument.CreateNew();
-
-        // 移除旧的启动器块（含标记行）；未闭合的块一直删到文件末尾，和 PAM-Custom 的容错一致。
-        var lines = new List<string>(document.Lines.Count);
-        var inside = false;
-        foreach (var line in document.Lines)
+        if (snapshot.Count == 0)
         {
-            if (IsStart(line))
-            {
-                inside = true;
-                continue;
-            }
-
-            if (inside)
-            {
-                if (IsEnd(line)) inside = false;
-                continue;
-            }
-
-            lines.Add(line);
+            return [];
         }
 
-        // 反复保存不累积尾部空行。
-        while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
+        var lines = new List<string>
         {
-            lines.RemoveAt(lines.Count - 1);
+            StartMarker,
+            "# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。",
+        };
+
+        lines.AddRange(HelperFunctionLines);
+        lines.Add(string.Empty);
+
+        foreach (var alias in snapshot)
+        {
+            var name = alias.Name.Trim();
+            var path = NormalizePath(alias.Path);
+            var remark = ProfileService.NormalizeRemark(alias.Remark);
+
+            lines.Add(
+                $"if (-not (Get-Command -Name {ProfileService.QuoteForPowerShell(name)} " +
+                "-CommandType Alias,Function -ErrorAction SilentlyContinue)) {");
+            lines.Add(
+                $"    function {name} {{ Invoke-PamAlias -Path {ProfileService.QuoteForPowerShell(path)} " +
+                $"-Remark {ProfileService.QuoteForPowerShell(remark)} -Rest $args }}");
+            lines.Add("}");
         }
 
-        if (snapshot.Count > 0)
-        {
-            if (lines.Count > 0) lines.Add(string.Empty);
-            lines.Add(StartMarker);
-            lines.Add("# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。");
-            lines.AddRange(HelperFunctionLines);
-            lines.Add(string.Empty);
-
-            foreach (var entry in snapshot)
-            {
-                var name = entry.Name.Trim();
-                var path = NormalizePath(entry.Path);
-                var remark = ProfileService.NormalizeRemark(entry.Remark);
-
-                lines.Add($"Remove-Item -Path {ProfileService.QuoteForPowerShell("Alias:" + name)} -ErrorAction SilentlyContinue");
-                lines.Add($"function {name} {{ Invoke-PamAlias -Path {ProfileService.QuoteForPowerShell(path)} -Remark {ProfileService.QuoteForPowerShell(remark)} -Rest $args }}");
-            }
-
-            lines.Add(EndMarker);
-        }
-
-        new ProfileDocument(lines, document.Encoding, document.NewLine).WriteTo(profilePath);
+        lines.Add(EndMarker);
+        return lines;
     }
-
-    private static bool IsStart(string line)
-        => line.TrimStart().Equals(StartMarker, StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsEnd(string line)
-        => line.TrimStart().Equals(EndMarker, StringComparison.OrdinalIgnoreCase);
 
     private static string NormalizePath(string? path)
     {

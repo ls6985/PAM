@@ -119,6 +119,10 @@ public sealed class LocalizationService
         ["错误：读取 $PROFILE 失败：{0}"] = "Error: failed to read $PROFILE: {0}",
         ["错误：无法定位 $PROFILE：{0}"] = "Error: cannot locate $PROFILE: {0}",
         ["正在写入 $PROFILE…"] = "Writing $PROFILE…",
+        ["已按 pam-data.json 重建 $PROFILE 托管区。"] =
+            "Rebuilt the managed section of $PROFILE from pam-data.json.",
+        ["{0} 与 $PROFILE 中已有命令同名，这些别名不会生效。"] =
+            "{0} conflicts with an existing command in $PROFILE; these aliases will not take effect.",
         ["错误：写入失败：{0}"] = "Error: failed to write: {0}",
         ["错误：检查执行策略失败：{0}"] = "Error: failed to check execution policy: {0}",
         ["执行策略为 {0}，$PROFILE 可能无法加载。"] = "Execution policy is {0}; $PROFILE may not load.",

@@ -32,6 +32,10 @@ public sealed partial class StarshipService
         var regionMask = PamCustomRegion.BuildMask(document.Lines);
         var outputLines = new List<string>(document.Lines.Count + 6);
 
+        // 用户区（PAM Managed 边界之前）是用户原有配置，游离 init 行不由本服务归拢。
+        var managedMarkerIndex = document.Lines.FindIndex(
+            line => line.TrimStart().Equals(ProfileRenderer.StartMarker, StringComparison.OrdinalIgnoreCase));
+
         var insideBlock = false;
         for (var i = 0; i < document.Lines.Count; i++)
         {
@@ -54,8 +58,9 @@ public sealed partial class StarshipService
                 continue;
             }
 
-            // 手写的 init 行也一并归拢进受控区块；PAM-Custom 区块内的内容不属于这里。
-            if (!regionMask[i] &&
+            // 托管区里手写的 init 行归拢进受控区块；PAM-Custom 区块与用户区的内容不动。
+            var canAbsorb = managedMarkerIndex < 0 || i > managedMarkerIndex;
+            if (!regionMask[i] && canAbsorb &&
                 line.Contains(InitLineKeyword, StringComparison.OrdinalIgnoreCase))
             {
                 continue;

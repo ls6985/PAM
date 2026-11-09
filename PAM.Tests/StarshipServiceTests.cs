@@ -85,6 +85,7 @@ public sealed class StarshipServiceTests : IDisposable
         WriteProfile(
             """
             # 手写的旧配置
+            # >>> PAM Managed >>>
             Invoke-Expression (&starship init powershell)
             # >>> PAM Starship >>>
             Invoke-Expression (&starship init powershell)
@@ -99,6 +100,28 @@ public sealed class StarshipServiceTests : IDisposable
         Assert.DoesNotContain("# 旧区块里的脏行", text);
         Assert.Contains("# 手写的旧配置", text);
         Assert.True(_starship.HasInitLine(_profilePath));
+    }
+
+    [Fact]
+    public void EnsureProfileInit_KeepsStrayInitLineInUserArea()
+    {
+        WriteProfile(
+            """
+            # 我的配置
+            Invoke-Expression (&starship init powershell)
+            # >>> PAM Managed >>>
+            # >>> PAM Starship >>>
+            Invoke-Expression (&starship init powershell)
+            # <<< PAM Starship <<<
+            """);
+
+        _starship.EnsureProfileInit(_profilePath);
+        var text = File.ReadAllText(_profilePath);
+
+        Assert.Equal(2, Occurrences(text, "starship init").Count);
+        Assert.Contains("# 我的配置", text);
+        Assert.True(text.IndexOf(ProfileRenderer.StartMarker, StringComparison.Ordinal)
+                    > text.IndexOf("# 我的配置", StringComparison.Ordinal));
     }
 
     [Fact]

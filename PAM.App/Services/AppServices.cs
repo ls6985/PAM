@@ -18,18 +18,32 @@ public sealed class SettingsChangedEventArgs(AppSettings previous, AppSettings c
 /// <summary>
 /// 应用内唯一的设置入口。负责读写 settings.json、通知后台托盘刷新，
 /// 并把"哪些字段变了"广播给窗口 / 视图模型（例如切换终端后重新加载 $PROFILE）。
+/// 同时持有 PAM 托管的用户数据，别名页与自定义命令页共用同一份快照。
 /// </summary>
 public static class AppServices
 {
     public static SettingsService SettingsService { get; } = new();
 
+    public static PamDataService DataService { get; } = new();
+
     public static AppSettings Settings { get; private set; }
+
+    public static PamData Data { get; private set; }
 
     public static event EventHandler<SettingsChangedEventArgs>? SettingsChanged;
 
     static AppServices()
     {
         Settings = SettingsService.Load();
+        Data = DataService.Load();
+    }
+
+    /// <summary>落盘托管数据并更新内存快照；别名页与自定义命令页都基于最新快照改写各自字段。</summary>
+    public static void SaveData(PamData updated)
+    {
+        ArgumentNullException.ThrowIfNull(updated);
+        DataService.Save(updated);
+        Data = updated;
     }
 
     /// <summary>写入设置并同步托盘。保存失败时抛出异常，由设置页显示错误。</summary>

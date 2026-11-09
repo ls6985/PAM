@@ -1,25 +1,15 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
-using PAM.Core.Models;
 
 namespace PAM.Core;
-
-public sealed record ProfileLoadResult(
-    string ProfilePath,
-    bool FileExists,
-    IReadOnlyList<AliasEntry> Entries);
-
-public sealed record ProfileSaveResult(
-    bool FileCreated,
-    int EntryCount);
 
 /// <summary>打开配置文件的结果。</summary>
 public sealed record ProfileOpenResult(string Path, bool FileCreated);
 
 /// <summary>
-/// 负责定位、读取、解析并安全写回 PowerShell 的 $PROFILE。
+/// 负责定位 $PROFILE、打开配置文件、检查执行策略与启动终端。
+/// 托管区的读写由 <see cref="ProfileRenderer"/> 承担。
 /// </summary>
 public sealed class ProfileService
 {
@@ -27,15 +17,6 @@ public sealed class ProfileService
 
     // PowerShell 5.1 在重定向输出时默认使用控制台代码页；先统一为 UTF-8 再输出路径。
     private const string Utf8Prelude = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; ";
-
-    // 兼容：Set-Alias -Name x -Value "path"、Set-Alias x 'path'、无引号路径。
-    private static readonly Regex AliasLineRegex = new(
-        @"^\s*Set-Alias\s+(?:-Name\s+)?(?<name>[^\s'""]+)\s+(?:-Value\s+)?(?<value>.+?)\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    private static readonly Regex MetaLineRegex = new(
-        @"^\s*#\s*@alias-meta\s+(?<name>\S+)(?:\s+(?<remark>.*))?\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     static ProfileService()
     {
@@ -125,139 +106,6 @@ public sealed class ProfileService
 
         File.WriteAllText(path, "# PowerShell $PROFILE" + Environment.NewLine, new UTF8Encoding(true));
         return true;
-    }
-
-    public ProfileLoadResult Load(string profilePath)
-    {
-        if (string.IsNullOrWhiteSpace(profilePath))
-        {
-            throw new ArgumentException("配置文件路径不能为空。", nameof(profilePath));
-        }
-
-        if (!File.Exists(profilePath))
-        {
-            return new ProfileLoadResult(profilePath, false, Array.Empty<AliasEntry>());
-        }
-
-        var document = ProfileDocument.Read(profilePath);
-        var regionMask = PamCustomRegion.BuildMask(document.Lines);
-        var entries = new List<AliasEntry>();
-        var indexByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        for (var i = 0; i < document.Lines.Count; i++)
-        {
-            // 受控区块内的内容由 CustomCommandService 负责，别名的读取与清理都要绕开它。
-            if (regionMask[i])
-            {
-                continue;
-            }
-
-            if (!TryParseAliasLine(document.Lines[i], out var name, out var value))
-            {
-                continue;
-            }
-
-            var remark = string.Empty;
-            if (i > 0 &&
-                TryParseMetaLine(document.Lines[i - 1], out var metaName, out var metaRemark) &&
-                string.Equals(metaName, name, StringComparison.OrdinalIgnoreCase))
-            {
-                remark = metaRemark;
-            }
-
-            var entry = new AliasEntry(name, value, remark);
-
-            // 配置里若出现重复别名，以最后一条有效记录为准，同时保持它首次出现的位置。
-            if (indexByName.TryGetValue(name, out var existingIndex))
-            {
-                entries[existingIndex] = entry;
-            }
-            else
-            {
-                indexByName[name] = entries.Count;
-                entries.Add(entry);
-            }
-        }
-
-        return new ProfileLoadResult(profilePath, true, entries);
-    }
-
-    /// <summary>
-    /// 删除所有可识别的 Set-Alias 行及其紧邻的 @alias-meta 注释，再追加当前列表。
-    /// 其他内容、编码、BOM 和换行风格保持不变（UTF-8 无 BOM 会升级为 BOM 以兼容 Windows PowerShell 5.1）。
-    /// </summary>
-    public ProfileSaveResult Save(string profilePath, IEnumerable<AliasEntry> entries)
-    {
-        if (string.IsNullOrWhiteSpace(profilePath))
-        {
-            throw new ArgumentException("配置文件路径不能为空。", nameof(profilePath));
-        }
-
-        var snapshot = entries.ToList();
-        var existed = File.Exists(profilePath);
-        var document = existed ? ProfileDocument.Read(profilePath) : ProfileDocument.CreateNew();
-
-        // 受控区块内的 Set-Alias（例如自定义命令里的别名）不能被别名保存逻辑删掉。
-        var regionMask = PamCustomRegion.BuildMask(document.Lines);
-        var remove = new bool[document.Lines.Count];
-
-        for (var i = 0; i < document.Lines.Count; i++)
-        {
-            if (regionMask[i] || !TryParseAliasLine(document.Lines[i], out var name, out _))
-            {
-                continue;
-            }
-
-            remove[i] = true;
-
-            if (i > 0 &&
-                !remove[i - 1] &&
-                TryParseMetaLine(document.Lines[i - 1], out var metaName, out _) &&
-                string.Equals(metaName, name, StringComparison.OrdinalIgnoreCase))
-            {
-                remove[i - 1] = true;
-            }
-        }
-
-        var outputLines = new List<string>(document.Lines.Count + snapshot.Count * 2 + 2);
-
-        for (var i = 0; i < document.Lines.Count; i++)
-        {
-            if (!remove[i])
-            {
-                outputLines.Add(document.Lines[i]);
-            }
-        }
-
-        if (snapshot.Count > 0)
-        {
-            if (outputLines.Count > 0 && !string.IsNullOrWhiteSpace(outputLines[^1]))
-            {
-                outputLines.Add(string.Empty);
-            }
-
-            foreach (var entry in snapshot)
-            {
-                var name = entry.Name.Trim();
-                if (name.Length == 0)
-                {
-                    continue;
-                }
-
-                var path = NormalizePath(entry.Path);
-                var remark = NormalizeRemark(entry.Remark);
-
-                outputLines.Add(remark.Length == 0
-                    ? $"# @alias-meta {name}"
-                    : $"# @alias-meta {name} {remark}");
-                outputLines.Add($"Set-Alias -Name {name} -Value {QuoteForPowerShell(path)}");
-            }
-        }
-
-        var output = new ProfileDocument(outputLines, document.Encoding, document.NewLine);
-        output.WriteTo(profilePath);
-
-        return new ProfileSaveResult(!existed, snapshot.Count);
     }
 
     public string GetExecutionPolicy()
@@ -351,90 +199,6 @@ public sealed class ProfileService
             .Replace("\"", "`\"", StringComparison.Ordinal);
 
         return $"\"{escaped}\"";
-    }
-
-    private static bool TryParseAliasLine(string line, out string name, out string value)
-    {
-        name = string.Empty;
-        value = string.Empty;
-
-        var match = AliasLineRegex.Match(line);
-        if (!match.Success)
-        {
-            return false;
-        }
-
-        name = match.Groups["name"].Value.Trim();
-        if (name.Length == 0)
-        {
-            return false;
-        }
-
-        value = ParseAliasValue(match.Groups["value"].Value);
-        return value.Length > 0;
-    }
-
-    private static string ParseAliasValue(string rawValue)
-    {
-        var value = rawValue.Trim();
-
-        if (value.Length >= 2 && value[0] == '"' && value[^1] == '"')
-        {
-            return UnescapeDoubleQuoted(value[1..^1]);
-        }
-
-        if (value.Length >= 2 && value[0] == '\'' && value[^1] == '\'')
-        {
-            return value[1..^1].Replace("''", "'", StringComparison.Ordinal);
-        }
-
-        return value;
-    }
-
-    private static string UnescapeDoubleQuoted(string value)
-    {
-        var builder = new StringBuilder(value.Length);
-
-        for (var i = 0; i < value.Length; i++)
-        {
-            if (value[i] != '`' || i == value.Length - 1)
-            {
-                builder.Append(value[i]);
-                continue;
-            }
-
-            var next = value[++i];
-            builder.Append(next switch
-            {
-                '0' => '\0',
-                'a' => '\a',
-                'b' => '\b',
-                'f' => '\f',
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                'v' => '\v',
-                _ => next
-            });
-        }
-
-        return builder.ToString();
-    }
-
-    private static bool TryParseMetaLine(string line, out string name, out string remark)
-    {
-        name = string.Empty;
-        remark = string.Empty;
-
-        var match = MetaLineRegex.Match(line);
-        if (!match.Success)
-        {
-            return false;
-        }
-
-        name = match.Groups["name"].Value.Trim();
-        remark = match.Groups["remark"].Value.Trim();
-        return name.Length > 0;
     }
 
     private static PowerShellProcessResult RunPowerShell(string command, TimeSpan timeout)

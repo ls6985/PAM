@@ -15,7 +15,6 @@ namespace PAM.App.ViewModels;
 /// </summary>
 public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 {
-    private readonly CustomCommandService _service = new();
     private readonly ProfileService _profileService = new();
     private readonly MainViewModel _host;
 
@@ -185,19 +184,27 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 
     // --- 初始化与保存 ---
 
-    public async Task InitializeAsync(string profilePath)
+    public async Task InitializeAsync()
     {
         IsLoading = true;
 
         try
         {
-            var path = profilePath ?? string.Empty;
-            var result = await Task.Run(() => _service.Load(path));
+            var data = await Task.Run(() => AppServices.Data.Clone());
 
             Commands.Clear();
-            foreach (var entry in result.Entries)
+            foreach (var command in data.CustomCommands)
             {
-                Commands.Add(entry);
+                Commands.Add(new CustomCommandEntry(
+                    command.Name,
+                    string.Join("\n", command.CodeLines),
+                    command.IsEnabled,
+                    command.Remark));
+            }
+
+            foreach (var builtin in CustomCommandService.GetBuiltinEntries())
+            {
+                Commands.Add(builtin);
             }
 
             HasUnsavedChanges = false;
@@ -242,9 +249,27 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
 
         try
         {
-            // 内置命令不参与快照：Save 会固定追加最新版本。
-            var snapshot = Commands.Where(static entry => !entry.IsBuiltin).ToList();
-            var result = await Task.Run(() => _service.Save(path, snapshot));
+            // 内置命令不进入数据文件：托管区渲染时按定义表固定追加最新版本。
+            var data = AppServices.Data.Clone();
+            data.CustomCommands = Commands
+                .Where(static entry => !entry.IsBuiltin)
+                .Select(static entry => new CustomCommandData
+                {
+                    Name = entry.Name.Trim(),
+                    CodeLines = entry.Code.Split('\n'),
+                    IsEnabled = entry.IsEnabled,
+                    Remark = entry.Remark,
+                })
+                .ToList();
+
+            var commandCount = data.CustomCommands.Count;
+            var result = await Task.Run(() =>
+            {
+                var render = ProfileRenderer.Render(path, data);
+                data.ManagedHash = render.ManagedHash;
+                AppServices.SaveData(data);
+                return render;
+            });
 
             HasUnsavedChanges = false;
 
@@ -254,7 +279,7 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
             {
                 _host.SetStatus(
                     StatusType.Warning,
-                    $"{prefix} · 共 {snapshot.Count} 个自定义命令 · 执行策略受限，未启动新的 PowerShell 窗口。");
+                    $"{prefix} · 共 {commandCount} 个自定义命令 · 执行策略受限，未启动新的 PowerShell 窗口。");
                 return true;
             }
 
@@ -263,7 +288,7 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
                 await Task.Run(() => _profileService.LaunchPowerShell(path, AppServices.Settings.TerminalType));
                 _host.SetStatus(
                     StatusType.Written,
-                    $"{prefix} · 已启动新的 PowerShell 窗口 · 共 {snapshot.Count} 个自定义命令");
+                    $"{prefix} · 已启动新的 PowerShell 窗口 · 共 {commandCount} 个自定义命令");
             }
             catch (Exception ex)
             {

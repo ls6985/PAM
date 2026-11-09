@@ -1,6 +1,6 @@
 # PAM.App (WPF 主界面)
 
-WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.json` 的唯一写入方。MVVM 解耦，状态与校验在 ViewModel。
+WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.json` 与 `pam-data.json` 的唯一写入方。MVVM 解耦，状态与校验在 ViewModel。
 
 `OnStartup` 完成本地化与主窗口显示后调用 `TrayBridge.EnsureTrayRunning()` 静默拉起同目录的 `PAM.Tray.exe`，失败不影响主界面打开。csproj 只引用 `PAM.Core`，**不引用 PAM.Tray**；bin 里的托盘 exe 由两个项目的构建后推送目标互拷而来，见[根 AGENT 总览](../AGENT-总览.md)。
 
@@ -8,8 +8,8 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 
 顶部 `TabView`（样式 `Styles.xaml` 的 `NavTabItemStyle`），状态栏各页共用：
 
-- **别名启动**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑（可改名）/ 删除（二次确认）、路径浏览、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限一键修复。
-- **自定义命令**（`Views/CustomCommandsView`）：受控区块内的函数 / 片段，状态胶囊点击切换启用；内联编辑条 `Ctrl+Enter` 确认；内置命令 `pls` / `ongit` / `sudo` 只读展示（「内置」徽章，不可编辑 / 删除 / 切换），随每次保存自动维护，无独立开关。数据格式见 [PAM.Core/AGENT-Core.md](../PAM.Core/AGENT-Core.md)。
+- **别名启动**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑（可改名）/ 删除（二次确认）、路径浏览、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限一键修复。数据来自 `AppServices.Data.Aliases`，保存时克隆快照、改写别名字段后由 `ProfileRenderer` 重建托管区；同名冲突在状态栏提示。
+- **自定义命令**（`Views/CustomCommandsView`）：函数 / 片段，状态胶囊点击切换启用；内联编辑条 `Ctrl+Enter` 确认；内置命令 `pls` / `ongit` / `sudo` 只读展示（「内置」徽章，不可编辑 / 删除 / 切换），随每次保存自动维护，无独立开关。数据来自 `AppServices.Data.CustomCommands`，内置条目由 `CustomCommandService.GetBuiltinEntries()` 提供。数据格式见 [PAM.Core/AGENT-Core.md](../PAM.Core/AGENT-Core.md)。
 - **别名启动** 与自定义命令页的命名校验都会拒绝 `pls` / `ongit` / `sudo`（`CustomCommandService.IsBuiltinName`），避免同名包装函数被区块末尾的内置函数覆盖。
 - **美化**（`Views/BeautifyView` + `ViewModels/Beautify/` 按功能拆分的 partial）：见下节。
 - **设置**（`Views/SettingsView` + `ViewModels/SettingsViewModel`）：见下节。
@@ -40,7 +40,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 | --- | --- |
 | 主题 | 亮 / 暗 / 跟随系统（`ThemeService`） |
 | 语言 | 简体中文 / English，立即生效（`UiLocalizer` 遍历 XAML，绑定文本由 ViewModel 翻译） |
-| 默认终端 | `pwsh` / `powershell` / `auto`，决定热键唤醒的 shell 与维护哪一份 `$PROFILE`，切换后主界面重新载入数据 |
+| 默认终端 | `pwsh` / `powershell` / `auto`，决定热键唤醒的 shell 与生成哪一份 `$PROFILE`；数据文件始终同一份，切换后主界面重新载入并按新目标重建托管区 |
 | 打开配置文件 | 按当前终端解析 `$PROFILE`，不存在则创建（UTF-8 BOM）后打开 |
 | 快捷键设置 | `KeyInterop` 转 Win32 VK → `HotkeyChord`；`HotkeyConflictDetector` 依次查系统保留 → `RegisterHotKey` 真实占用 → 常见软件软冲突（弹窗二次确认） |
 | 终端输入 | `switchImeToEnglish`（默认开）：托盘对新终端窗口切英文输入法，详见 [PAM.Tray/AGENT-Tray.md](../PAM.Tray/AGENT-Tray.md)；日志 `%AppData%\PAM\ime-switch.log` |
@@ -66,11 +66,11 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 
 - `hotkey` 非法值读取时自动重置；枚举取值见 `AppSettings`。
 - 托盘对文件时间戳有轮询兜底，手工编辑 `settings.json` 也会生效。
-- PowerShell 7 与 5.1 的 `$PROFILE` 是两个不同文件（`Documents\PowerShell\` 与 `Documents\WindowsPowerShell\`），切换默认终端即切换维护对象。
+- PowerShell 7 与 5.1 的 `$PROFILE` 是两个不同文件（`Documents\PowerShell\` 与 `Documents\WindowsPowerShell\`），切换默认终端即切换生成目标。`MainViewModel.InitializeAsync()` 比对 `managedHash`，托管区缺失或被外部修改时按 `pam-data.json` 重建一次；`Inspect()` 只读取边界标记之后的内容。
 
 ## 其它
 
-- `Services/AppServices.cs`：设置读写唯一入口，广播变更字段；`ThemeService` / `UiLocalizer` / `HotkeyConflictDetector` / `Loc` 同目录。
+- `Services/AppServices.cs`：设置读写唯一入口，广播变更字段；同时持有 `PamData` 内存快照，`SaveData()` 落盘并替换快照，别名页与自定义命令页都基于 `Clone()` 改写各自字段，避免互相覆盖；`ThemeService` / `UiLocalizer` / `HotkeyConflictDetector` / `Loc` 同目录。
 - 分层：`MainWindow.xaml.cs`（焦点 / 状态栏 / 关闭时按 `KeepTrayOnClose` 处理托盘）、`ViewModels/`、`Converters/`、`Controls/`。
 - `MainViewModel.IsLoading` 控制空状态显示，避免加载中闪现"还没有别名"。
 - 图标 `Assets/App.ico` 由 `Assets/generate_icon.py` 生成（需 Pillow），改配色后重跑脚本再构建；`PAM.Tray.exe` 复用同一份。
