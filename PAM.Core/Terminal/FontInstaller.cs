@@ -118,7 +118,7 @@ public static class FontInstaller
     {
         if (string.IsNullOrWhiteSpace(ttfPath) || !File.Exists(ttfPath))
         {
-            return new FontInstallResult(false, $"找不到字体文件：{ttfPath}");
+            return new FontInstallResult(false, $"未找到字体文件：{ttfPath}");
         }
 
         if (!string.Equals(Path.GetExtension(ttfPath), ".ttf", StringComparison.OrdinalIgnoreCase))

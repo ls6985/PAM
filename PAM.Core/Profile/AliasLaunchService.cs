@@ -138,10 +138,10 @@ public static class AliasLaunchService
             {
                 var name = entry.Name.Trim();
                 var path = NormalizePath(entry.Path);
-                var remark = NormalizeRemark(entry.Remark);
+                var remark = ProfileService.NormalizeRemark(entry.Remark);
 
-                lines.Add($"Remove-Item -Path {Quote("Alias:" + name)} -ErrorAction SilentlyContinue");
-                lines.Add($"function {name} {{ Invoke-PamAlias -Path {Quote(path)} -Remark {Quote(remark)} -Rest $args }}");
+                lines.Add($"Remove-Item -Path {ProfileService.QuoteForPowerShell("Alias:" + name)} -ErrorAction SilentlyContinue");
+                lines.Add($"function {name} {{ Invoke-PamAlias -Path {ProfileService.QuoteForPowerShell(path)} -Remark {ProfileService.QuoteForPowerShell(remark)} -Rest $args }}");
             }
 
             lines.Add(EndMarker);
@@ -160,22 +160,5 @@ public static class AliasLaunchService
     {
         var value = (path ?? string.Empty).Trim().Trim('"');
         return value;
-    }
-
-    private static string NormalizeRemark(string? remark)
-        => (remark ?? string.Empty)
-            .Replace("\r\n", " ", StringComparison.Ordinal)
-            .Replace('\r', ' ')
-            .Replace('\n', ' ')
-            .Trim();
-
-    /// <summary>与 ProfileService 一致的转义：反引号、美元符号、双引号。</summary>
-    private static string Quote(string value)
-    {
-        var escaped = value
-            .Replace("`", "``", StringComparison.Ordinal)
-            .Replace("$", "`$", StringComparison.Ordinal)
-            .Replace("\"", "`\"", StringComparison.Ordinal);
-        return $"\"{escaped}\"";
     }
 }

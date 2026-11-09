@@ -327,7 +327,8 @@ public sealed class ProfileService
         return value;
     }
 
-    private static string NormalizeRemark(string? remark)
+    /// <summary>备注压成单行；供 $PROFILE 的三个写入方共用，保证空白处理一致。</summary>
+    internal static string NormalizeRemark(string? remark)
     {
         var value = (remark ?? string.Empty)
             .Replace("\r\n", " ", StringComparison.Ordinal)
@@ -340,9 +341,9 @@ public sealed class ProfileService
 
     /// <summary>
     /// 始终用双引号包裹，并转义 PowerShell 双引号字符串中的反引号、美元符号和双引号。
-    /// 路径里的单引号等其他字符无需处理。
+    /// 路径里的单引号等其他字符无需处理；供 $PROFILE 的多个写入方共用。
     /// </summary>
-    private static string QuoteForPowerShell(string path)
+    internal static string QuoteForPowerShell(string path)
     {
         var escaped = path
             .Replace("`", "``", StringComparison.Ordinal)

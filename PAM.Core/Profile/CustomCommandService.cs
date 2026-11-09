@@ -429,7 +429,7 @@ public sealed class CustomCommandService
     private static IEnumerable<string> BuildEntryLines(CustomCommandEntry entry)
     {
         var name = entry.Name.Trim();
-        var remark = NormalizeRemark(entry.Remark);
+        var remark = ProfileService.NormalizeRemark(entry.Remark);
 
         yield return remark.Length == 0
             ? $"{EntryHeaderPrefix} {name}"
@@ -458,13 +458,6 @@ public sealed class CustomCommandService
 
         yield return EntryEndMarker;
     }
-
-    private static string NormalizeRemark(string? remark)
-        => (remark ?? string.Empty)
-            .Replace("\r\n", " ", StringComparison.Ordinal)
-            .Replace('\r', ' ')
-            .Replace('\n', ' ')
-            .Trim();
 
     private static bool TryParseHeader(string line, out string name, out string remark)
     {
