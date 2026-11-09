@@ -15,6 +15,22 @@
             <converters:TextNotEmptyToVisibilityConverter x:Key="TextNotEmptyToVisibilityConverter"/>
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
             <converters:EmptyStateVisibilityConverter x:Key="EmptyStateVisibilityConverter"/>
+
+            <!--
+                全局禁用系统焦点框：Alt+Tab 切回窗口时，WPF 会在键盘焦点元素四周重画一圈白色方框
+                （列表、文本框等都可能出现）。所有控件的默认 FocusVisualStyle 都引用系统资源键
+                FocusVisualStyleKey，这里把它重定义为空模板，一次解决所有页面。
+                各页面里已有的 FocusVisualStyle="{x:Null}" 与其等效，保留作为兜底。
+            -->
+            <Style x:Key="{x:Static SystemParameters.FocusVisualStyleKey}">
+                <Setter Property="Control.Template">
+                    <Setter.Value>
+                        <ControlTemplate>
+                            <Rectangle />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
