@@ -8,7 +8,8 @@ using PAM.App.ViewModels;
 namespace PAM.App.Views;
 
 /// <summary>
-/// "美化"页签的视图壳：事件转发给 <see cref="BeautifyViewModel" />，刷新在进入页签时触发。
+/// "美化"页签的视图壳：仅把按钮事件转发给 <see cref="BeautifyViewModel" />；刷新不再在进入页签时自动触发，
+/// 改由页头「刷新状态」按钮发起，避免切换页签卡顿。
 /// </summary>
 public partial class BeautifyView : UserControl
 {
@@ -18,14 +19,6 @@ public partial class BeautifyView : UserControl
     {
         InitializeComponent();
         DataContextChanged += (_, _) => _viewModel = DataContext as BeautifyViewModel;
-    }
-
-    private async void View_Loaded(object sender, RoutedEventArgs e)
-    {
-        if (_viewModel is not null)
-        {
-            await _viewModel.RefreshStateAsync();
-        }
     }
 
     private void RefreshButton_Click(object sender, RoutedEventArgs e)

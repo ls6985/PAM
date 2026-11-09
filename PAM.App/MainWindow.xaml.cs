@@ -491,7 +491,6 @@ public partial class MainWindow : FluentWindow
         else if (ReferenceEquals(MainTabs.SelectedItem, BeautifyTab))
         {
             ViewModel.SetStatus(StatusType.Info, "为终端配置 Starship 提示符与 Nerd Font 字体。");
-            _ = ViewModel.Beautify.RefreshStateAsync();
         }
         else if (ReferenceEquals(MainTabs.SelectedItem, SettingsTab))
         {

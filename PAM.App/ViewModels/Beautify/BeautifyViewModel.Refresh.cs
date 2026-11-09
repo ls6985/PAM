@@ -7,8 +7,8 @@ using PAM.Core;
 namespace PAM.App.ViewModels;
 
 /// <summary>
-/// 状态探测与展示：进入页签时 / 每次操作后重新探测 Starship、Scoop、字体、配置状态，
-/// 并把结果摊平到只读展示属性。修改刷新逻辑只需看本文件。
+/// 状态探测与展示：构造时探测一次，之后由页头「刷新状态」按钮或各操作（应用外观 / 安装 / 恢复等）
+/// 触发重新探测 Starship、Scoop、字体、配置状态，并把结果摊平到只读展示属性。修改刷新逻辑只需看本文件。
 /// </summary>
 public sealed partial class BeautifyViewModel
 {

@@ -11,7 +11,6 @@
     d:DesignWidth="900"
     Focusable="False"
     FocusVisualStyle="{x:Null}"
-    Loaded="View_Loaded"
     mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -104,14 +103,30 @@
             VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,10,0">
 
-                <!-- 页头 -->
-                <StackPanel Margin="0,4,0,18">
-                    <TextBlock Text="美化" Style="{StaticResource SectionTitleStyle}" />
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Text="配置终端外观、Starship 提示符与 Nerd Font；首次修改终端配置前会自动保存一份原始配置，随时可恢复。"
-                        Style="{StaticResource SecondaryTextStyle}" />
-                </StackPanel>
+                <!-- 页头：标题 + 手动刷新（进入页签不再自动探测，避免切换卡顿） -->
+                <Grid Margin="0,4,0,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="美化" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Text="配置终端外观、Starship 提示符与 Nerd Font；首次修改终端配置前会自动保存一份原始配置，随时可恢复。进入本页不再自动检测，点「刷新状态」可重新探测。"
+                            Style="{StaticResource SecondaryTextStyle}" />
+                    </StackPanel>
+                    <ui:Button
+                        Grid.Column="1"
+                        Margin="0,2,0,0"
+                        VerticalAlignment="Top"
+                        Appearance="Secondary"
+                        Click="RefreshButton_Click"
+                        Content="刷新状态"
+                        Icon="{ui:SymbolIcon ArrowSync24}"
+                        IsEnabled="{Binding CanRefresh}"
+                        ToolTip="重新探测 Starship、Scoop、字体与终端配置状态。" />
+                </Grid>
 
                 <!-- 外观：对应 Windows Terminal「默认值 → 外观」的 7 组设置，统一保存 -->
                 <Border Style="{StaticResource CardStyle}">

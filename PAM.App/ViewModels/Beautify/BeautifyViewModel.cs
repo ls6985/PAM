@@ -14,7 +14,7 @@ namespace PAM.App.ViewModels;
 /// "美化"页签的数据源：Windows Terminal 外观（字体 / 复古 / 光标 / 背景图 / 透明度）、
 /// Starship 探测与一键安装（含 Scoop）、内置 Cascadia Code NF 字体安装、
 /// 主题预设写入 starship.toml，以及配置备份与恢复。
-/// 状态在进入页签时刷新；所有耗时操作走 IsBusy，期间禁用操作按钮。
+/// 状态在构造时探测一次，之后由页头「刷新状态」按钮或各操作（应用外观 / 安装 / 恢复等）触发重新探测；耗时操作走 IsBusy，期间禁用操作按钮。
 ///
 /// 本文件只承载「外壳」：共享字段、INotifyPropertyChanged 基础设施、通用执行（RunBusyAsync）、
 /// 反馈与本地化桥接。各功能（外观与字体 / 状态刷新 / 主题 / 自定义提示符 / Starship 安装 / 配置维护）
@@ -30,7 +30,7 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
     private readonly ProfileService _profileService = new();
     private readonly Dispatcher _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
-    /// <summary>刷新重入保护：页签 Loaded 与 SelectionChanged 可能同时触发刷新。</summary>
+    /// <summary>刷新重入保护：构造时的一次性探测与「刷新状态」按钮点击可能重叠（罕见），用计数器挡掉并发。</summary>
     private int _refreshing;
 
     private bool _isBusy;
@@ -106,6 +106,11 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
 
         RefreshPromptState();
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+
+        // 仅构造时启动一次状态探测以填充界面；之后进入页签不再自动刷新，
+        // 避免每次切换页签都因重新探测（启动 powershell、读 WT 配置、枚举字体等）而卡顿。
+        // 需要最新状态时由页头「刷新状态」按钮触发。
+        _ = RefreshStateAsync();
     }
 
     public bool IsBusy
