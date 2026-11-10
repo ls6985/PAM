@@ -197,8 +197,8 @@ public partial class MainWindow : FluentWindow
     {
         var dialog = new OpenFileDialog
         {
-            Title = Loc.T("选择要启动的应用程序"),
-            Filter = Loc.T("应用程序 (*.exe)|*.exe|所有文件 (*.*)|*.*"),
+            Title = Loc.T(LocKey.SelectAnApplicationToLaunch),
+            Filter = Loc.T(LocKey.ApplicationsExeExeAllFiles),
             CheckFileExists = true,
             Multiselect = false,
             DefaultExt = ".exe",

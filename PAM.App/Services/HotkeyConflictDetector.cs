@@ -23,13 +23,13 @@ public static class HotkeyConflictDetector
     private const int ProbeHotkeyId = 0xBFFE;
 
     public static HotkeyCheckResult Idle() =>
-        new(HotkeyCheckLevel.Idle, Loc.T("尚未检测，点击下方“检测冲突”。"), false, false);
+        new(HotkeyCheckLevel.Idle, Loc.T(LocKey.NotCheckedYetClickCheckConflictsBelow), false, false);
 
     public static HotkeyCheckResult Check(HotkeyChord? chord, string appliedHotkey, bool trayRunning)
     {
         if (chord is null)
         {
-            return new HotkeyCheckResult(HotkeyCheckLevel.Error, Loc.T("热键不能为空。"), false, false);
+            return new HotkeyCheckResult(HotkeyCheckLevel.Error, Loc.T(LocKey.HotkeyCannotBeEmpty), false, false);
         }
 
         if (!HotkeyChord.IsValid(chord, out var validationError))
@@ -42,7 +42,7 @@ public static class HotkeyConflictDetector
         {
             return new HotkeyCheckResult(
                 HotkeyCheckLevel.Error,
-                Loc.F("系统保留：{0}", Loc.T(reserved)),
+                Loc.F(LocKey.ReservedByWindows0,  Loc.T(reserved)),
                 false,
                 false);
         }
@@ -52,7 +52,7 @@ public static class HotkeyConflictDetector
         {
             return new HotkeyCheckResult(
                 HotkeyCheckLevel.Ok,
-                Loc.T("当前由 PAM 托盘占用，可继续使用。"),
+                Loc.T(LocKey.CurrentlyHeldByThePAMTraySafeToKeep),
                 true,
                 false);
         }
@@ -60,12 +60,12 @@ public static class HotkeyConflictDetector
         if (!Probe(chord))
         {
             var hint = HotkeyChord.GetSoftwareHint(chord);
-            var reason = Loc.T("该组合已被系统或其他常驻软件占用，请换一个。");
+            var reason = Loc.T(LocKey.ThisCombinationIsAlreadyTakenByWindowsOrAnotherRunningAppPickAnotherOne);
             if (hint is not null) reason += " " + Loc.T(hint);
 
             return new HotkeyCheckResult(
                 HotkeyCheckLevel.Error,
-                Loc.F("已被占用：{0}", reason),
+                Loc.F(LocKey.AlreadyInUse0,  reason),
                 false,
                 false);
         }
@@ -75,14 +75,14 @@ public static class HotkeyConflictDetector
         {
             return new HotkeyCheckResult(
                 HotkeyCheckLevel.Warning,
-                Loc.F("常见软件快捷键提醒：{0}", Loc.T(common)),
+                Loc.F(LocKey.CommonShortcutWarning0,  Loc.T(common)),
                 true,
                 true);
         }
 
         return new HotkeyCheckResult(
             HotkeyCheckLevel.Ok,
-            Loc.T("可用：该组合当前没有被系统或其他软件占用。"),
+            Loc.T(LocKey.AvailableNotCurrentlyUsedByWindowsOrOtherApps),
             true,
             false);
     }

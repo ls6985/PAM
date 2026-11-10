@@ -69,8 +69,8 @@ public sealed partial class BeautifyViewModel
     public bool IsBundledFontInstalled => _isBundledFontInstalled;
 
     public string CurrentFontText => _currentWtFont is null
-        ? Loc.T("Windows Terminal 当前字体：未设置（跟随 WT 默认）")
-        : Loc.F("Windows Terminal 当前字体：{0}", _currentWtFont);
+        ? Loc.T(LocKey.WindowsTerminalCurrentFontNotSetUsingTheWTDefault)
+        : Loc.F(LocKey.WindowsTerminalCurrentFont0,  _currentWtFont);
 
     public bool CanInstallBundledFont => !IsBusy && !_isBundledFontInstalled;
 
@@ -168,10 +168,10 @@ public sealed partial class BeautifyViewModel
     public bool CanDiscardAppearance => !IsBusy && _appearanceDirty;
 
     public string AppearanceStatusText => !_hasWtSettings
-        ? Loc.T("未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。")
+        ? Loc.T(LocKey.WindowsTerminalSettingsJsonWasNotFoundStartWindowsTerminalOnceFirst)
         : _appearanceDirty
-            ? Loc.T("有尚未保存的修改；保存后打开新终端窗口即可看到效果。")
-            : Loc.T("当前显示的是 settings.json 里已保存的值；改动后点「保存外观设置」。");
+            ? Loc.T(LocKey.UnsavedChangesSaveThemThenOpenANewTerminalWindowToSeeTheEffect)
+            : Loc.T(LocKey.ShowingTheValuesSavedInSettingsJsonClickSaveAppearanceAfterMakingChanges);
 
     // --- 读盘 / 载入界面 ---
 
@@ -321,8 +321,8 @@ public sealed partial class BeautifyViewModel
     {
         var dialog = new OpenFileDialog
         {
-            Title = Loc.T("选择终端背景图"),
-            Filter = Loc.T("图片文件 (*.png;*.jpg;*.jpeg;*.gif;*.bmp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp|所有文件 (*.*)|*.*"),
+            Title = Loc.T(LocKey.ChooseATerminalBackgroundImage),
+            Filter = Loc.T(LocKey.ImageFilesPngJpgJpegGifBmpPngJpgJpegGifBmpAllFiles),
             CheckFileExists = true,
         };
 
@@ -344,7 +344,7 @@ public sealed partial class BeautifyViewModel
 
         if (!_hasWtSettings)
         {
-            SetFeedback(StatusType.Warning, Loc.T("未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。"));
+            SetFeedback(StatusType.Warning, Loc.T(LocKey.WindowsTerminalSettingsJsonWasNotFoundStartWindowsTerminalOnceFirst));
             return;
         }
 

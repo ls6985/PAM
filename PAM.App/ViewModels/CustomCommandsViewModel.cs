@@ -109,7 +109,7 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
     }
 
     public string EditorTitle => IsNewEntry || EditingEntry is null
-        ? Loc.T("新建命令")
+        ? Loc.T(LocKey.NewCommand)
         : Loc.T($"编辑命令 · {EditingEntry.Name}");
 
     public string EditorName

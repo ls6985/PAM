@@ -65,8 +65,8 @@ public partial class SettingsView : UserControl
         if (_viewModel.NeedsConfirmation)
         {
             confirmed = MessageBox.Show(
-                Loc.T("仍然使用这个热键吗？"),
-                Loc.T("热键冲突"),
+                Loc.T(LocKey.UseThisHotkeyAnyway),
+                Loc.T(LocKey.HotkeyConflict),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning,
                 MessageBoxResult.No) == MessageBoxResult.Yes;
@@ -114,7 +114,7 @@ public partial class SettingsView : UserControl
         if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or
             Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
         {
-            _viewModel.SetCapturePreview(Loc.T("请按下组合键…"));
+            _viewModel.SetCapturePreview(Loc.T(LocKey.PressAKeyCombination));
             return;
         }
 
@@ -126,7 +126,7 @@ public partial class SettingsView : UserControl
 
         if (modifiers == HotkeyModifiers.None)
         {
-            _viewModel.SetCapturePreview(Loc.T("至少包含一个修饰键（Ctrl / Alt / Shift / Win）。"));
+            _viewModel.SetCapturePreview(Loc.T(LocKey.IncludeAtLeastOneModifierCtrlAltShiftWin));
             return;
         }
 

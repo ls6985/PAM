@@ -1,7 +1,8 @@
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace PAM.Core;
 
@@ -12,12 +13,6 @@ namespace PAM.Core;
 /// </summary>
 public sealed partial class WindowsTerminalService
 {
-    /// <summary>属性名与值之间允许空白与 // /* */ 注释。</summary>
-    private const string Gap = @"(?:\s|//[^\r\n]*|/\*[\s\S]*?\*/)*";
-
-    /// <summary>本服务只改简单标量；对象 / 数组属性一律拒绝覆盖，避免破坏用户结构。</summary>
-    private const string Scalar = @"(?<value>""(?:\\.|[^""\\])*""|true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)";
-
     /// <summary>读取当前外观值；结构缺失、文件不存在或解析失败时全部返回 null（跟随 WT 默认）。</summary>
     public TerminalAppearance ReadAppearance(string? settingsPath = null)
     {
@@ -32,7 +27,7 @@ public sealed partial class WindowsTerminalService
             using var document = JsonDocument.Parse(File.ReadAllText(path), ParseOptions);
             return ReadAppearanceFrom(document.RootElement);
         }
-        catch (JsonException)
+        catch (System.Text.Json.JsonException)
         {
             return TerminalAppearance.Empty;
         }
@@ -102,7 +97,7 @@ public sealed partial class WindowsTerminalService
                 }
             }
         }
-        catch (JsonException)
+        catch (System.Text.Json.JsonException)
         {
             return new TerminalAppearanceResult(false, "写入后校验未通过，已保持原配置不变。");
         }
@@ -210,7 +205,7 @@ public sealed partial class WindowsTerminalService
 
     /// <summary>
     /// 在 JSONC 原文里把 <paramref name="path" /> 指向的属性设为 JSON 字面量（null = 删除）。
-    /// 逐层补齐缺失的对象；只动目标属性，注释、尾逗号、其它 profile 的同名属性原样保留。
+    /// 结构由 Newtonsoft 解析定位，再只替换目标片段，注释、缩进、其它 profile 的同名属性原样保留。
     /// 属性名带点（如 <c>experimental.retroTerminalEffect</c>）按单个键处理。
     /// </summary>
     internal static string SpliceProperty(string text, IReadOnlyList<string> path, string? jsonValue)
@@ -220,110 +215,201 @@ public sealed partial class WindowsTerminalService
             throw new NotSupportedException("外观设置的属性路径为空。");
         }
 
-        using var document = JsonDocument.Parse(text, ParseOptions);
-        var root = document.RootElement;
-        if (root.ValueKind != JsonValueKind.Object)
-        {
-            throw new NotSupportedException("settings.json 的顶层不是对象，无法自动修改。");
-        }
+        var lineStarts = BuildLineStarts(text);
+        var root = LoadSettings(text);
 
-        var rootOpen = text.IndexOf('{');
-        if (rootOpen < 0)
-        {
-            throw new NotSupportedException("settings.json 结构异常，无法自动修改。");
-        }
-
-        var parentStart = rootOpen;
-        var parentEnd = FindMatchingBrace(text, rootOpen);
-        var current = root;
-
-        // 逐层走进父对象；某一层缺失时直接构造剩下的嵌套子树插入。
+        // 沿路径下钻到父容器；记录第一个缺失的层级（用于补全嵌套）。
+        // Newtonsoft 的 JObject 索引即结构导航，注释会被自动忽略。
+        var parent = root;
+        var missingIndex = -1;
         for (var i = 0; i < path.Count - 1; i++)
         {
-            var key = path[i];
-            if (!TryFindChildObject(text, key, parentStart, parentEnd, out var childOpen, out var childClose))
+            var child = parent[path[i]];
+            if (child is JObject next)
             {
-                return jsonValue is null
-                    ? text
-                    : InsertValueAfter(text, parentStart + 1, BuildNested(path, i, jsonValue) + ",");
+                parent = next;
+                continue;
             }
 
-            if (current.ValueKind == JsonValueKind.Object &&
-                current.TryGetProperty(key, out var childElement))
+            if (child is null)
             {
-                if (childElement.ValueKind != JsonValueKind.Object)
-                {
-                    throw new NotSupportedException("settings.json 的目标层级不是对象，无法自动修改，请手动调整。");
-                }
-
-                current = childElement;
+                missingIndex = i;
+                break;
             }
 
-            parentStart = childOpen;
-            parentEnd = childClose;
+            throw new NotSupportedException("settings.json 的目标层级不是对象，无法自动修改，请手动调整。");
         }
 
-        var propertyKey = path[^1];
-        JsonElement existing = default;
-        var existsAtLevel = current.ValueKind == JsonValueKind.Object &&
-                            current.TryGetProperty(propertyKey, out existing);
-        var expectedRaw = existsAtLevel ? existing.GetRawText() : null;
-
-        // 只认「本层」的属性：用 JsonDocument 给的值原文核对，避免误改嵌套对象里的同名项。
-        Match? target = null;
-        if (existsAtLevel)
+        // 目标属性不存在：在最近存在的祖先里补全缺失层级或插入属性。
+        if (missingIndex >= 0 || parent.Property(path[^1]) is null)
         {
-            foreach (var match in FindProperties(text, propertyKey, parentStart, parentEnd))
+            if (jsonValue is null)
             {
-                if (match.Groups["value"].Value == expectedRaw)
-                {
-                    target = match;
-                    break;
-                }
+                return text; // 删除不存在的属性：保持原文件不变。
             }
 
-            if (target is null)
-            {
-                throw new NotSupportedException(
-                    "settings.json 的目标属性不是简单值或结构异常，无法自动修改，请手动调整。");
-            }
+            var buildStart = missingIndex < 0 ? path.Count - 1 : missingIndex;
+            var braceOff = OffsetOf(lineStarts, (IJsonLineInfo)parent);
+            return InsertValueAfter(text, braceOff + 1, BuildNested(path, buildStart, jsonValue) + ",");
         }
 
-        if (target is null)
-        {
-            return jsonValue is null
-                ? text
-                : InsertValueAfter(text, parentStart + 1, $"\"{propertyKey}\": {jsonValue},");
-        }
-
-        var valueGroup = target.Groups["value"];
-        var valueStart = parentStart + valueGroup.Index;
+        // 目标属性存在：Newtonsoft 给出的 JProperty 行号信息指向键后的冒号，
+        // 据此在原文里做局部扫描，精确取得键 / 值的边界，只替换目标片段。
+        var prop = parent.Property(path[^1])!;
+        var keyStart = ScanKeyStart(text, OffsetOf(lineStarts, (IJsonLineInfo)prop), prop.Name);
+        var valueStart = ScanValueStart(text, keyStart, prop.Name.Length);
+        var valueEnd = ScanValueEnd(text, valueStart);
 
         if (jsonValue is not null)
         {
-            return text[..valueStart] + jsonValue + text[(valueStart + valueGroup.Length)..];
+            return text[..valueStart] + jsonValue + text[valueEnd..];
         }
 
         // 删除整条属性：优先连它后面的逗号一起删；若它是最后一项，则删掉前面那条逗号，
         // 避免留下 JSONC 之外的多余逗号。
-        var removeStart = parentStart + target.Index;
-        var removeEnd = removeStart + target.Length;
-        if (!target.Groups["tail"].Success)
+        var removeStart = keyStart;
+        var after = text[valueEnd..];
+        var k = 0;
+        while (k < after.Length && char.IsWhiteSpace(after[k])) k++;
+        if (k < after.Length && after[k] == ',')
         {
-            var before = text[..removeStart];
-            var j = before.Length - 1;
-            while (j >= 0 && char.IsWhiteSpace(before[j])) j--;
-            if (j >= 0 && before[j] == ',')
-            {
-                // before 已经去掉了那个逗号；后面的 text 仍用原始下标，不能再减一。
-                before = before.Remove(j, 1);
-            }
-
-            return before + text[removeEnd..];
+            return text[..removeStart] + text[(valueEnd + k + 1)..];
         }
 
-        return text[..removeStart] + text[removeEnd..];
+        var before = text[..removeStart];
+        var bi = before.Length - 1;
+        while (bi >= 0 && char.IsWhiteSpace(before[bi])) bi--;
+        if (bi >= 0 && before[bi] == ',')
+        {
+            before = before.Remove(bi, 1);
+        }
+
+        return before + text[valueEnd..];
     }
+
+    private static JObject LoadSettings(string text)
+    {
+        try
+        {
+            using var reader = new JsonTextReader(new StringReader(text));
+            reader.DateParseHandling = DateParseHandling.None;
+            return JObject.Load(
+                reader,
+                new JsonLoadSettings
+                {
+                    CommentHandling = CommentHandling.Ignore,
+                    LineInfoHandling = LineInfoHandling.Load,
+                });
+        }
+        catch (JsonReaderException)
+        {
+            throw new NotSupportedException("settings.json 结构异常，无法自动修改。");
+        }
+    }
+
+    /// <summary>
+    /// 从属性行号信息偏移（指向键后的冒号）向前回扫，定位键名起始的引号。
+    /// 键与冒号之间允许出现空白与块注释。
+    /// </summary>
+    private static int ScanKeyStart(string text, int propOff, string name)
+    {
+        var i = propOff - 1;
+        while (i >= 0 && (text[i] == ':' || char.IsWhiteSpace(text[i]))) i--;
+        if (i >= 1 && text[i] == '*' && text[i - 1] == '/')
+        {
+            var open = text.LastIndexOf("/*", i - 1, StringComparison.Ordinal);
+            i = open < 0 ? 0 : open - 1;
+            while (i >= 0 && char.IsWhiteSpace(text[i])) i--;
+        }
+
+        // text[i] 现在是键名的闭合引号；键起始引号在其左侧 name.Length + 1 处。
+        return i - (name.Length + 1);
+    }
+
+    /// <summary>
+    /// 从键名闭合引号之后扫过冒号、空白与注释，定位值的真正起点。
+    /// </summary>
+    private static int ScanValueStart(string text, int keyStart, int nameLength)
+    {
+        var p = keyStart + nameLength + 2; // 越过闭合引号
+        while (p < text.Length)
+        {
+            var c = text[p];
+            if (c == ':') { p++; continue; }
+            if (char.IsWhiteSpace(c)) { p++; continue; }
+            if (c == '/' && p + 1 < text.Length && text[p + 1] == '/')
+            {
+                var nl = text.IndexOf('\n', p + 2);
+                p = nl < 0 ? text.Length : nl + 1;
+                continue;
+            }
+
+            if (c == '/' && p + 1 < text.Length && text[p + 1] == '*')
+            {
+                var close = text.IndexOf("*/", p + 2, StringComparison.Ordinal);
+                p = close < 0 ? text.Length : close + 2;
+                continue;
+            }
+
+            break;
+        }
+
+        return p;
+    }
+
+    /// <summary>
+    /// 返回从 <paramref name="start" /> 起始的 JSON 标量 / 字符串值的结束偏移（不含）。
+    /// 受管的外观属性只接受简单值，遇到对象 / 数组一律交给用户手动处理。
+    /// </summary>
+    private static int ScanValueEnd(string text, int start)
+    {
+        var c = text[start];
+        if (c == '"')
+        {
+            for (var i = start + 1; i < text.Length; i++)
+            {
+                if (text[i] == '\\') { i++; continue; }
+                if (text[i] == '"') return i + 1;
+            }
+
+            return text.Length;
+        }
+
+        if (c == '{' || c == '[')
+        {
+            throw new NotSupportedException("settings.json 的目标属性不是简单值，无法自动修改，请手动调整。");
+        }
+
+        var j = start;
+        while (j < text.Length)
+        {
+            var ch = text[j];
+            if (ch == ',' || ch == '}' || ch == ']'
+                || char.IsWhiteSpace(ch)
+                || ch == '/' && j + 1 < text.Length && (text[j + 1] == '/' || text[j + 1] == '*'))
+            {
+                break;
+            }
+
+            j++;
+        }
+
+        return j;
+    }
+
+    private static int[] BuildLineStarts(string text)
+    {
+        var starts = new List<int> { 0 };
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '\n') starts.Add(i + 1);
+        }
+
+        return starts.ToArray();
+    }
+
+    private static int OffsetOf(int[] lineStarts, IJsonLineInfo info)
+        => lineStarts[info.LineNumber - 1] + (info.LinePosition - 1);
 
     /// <summary>构造缺失层级的紧凑子树，例如 "profiles": { "defaults": { "font": { "face": "X" } } }。</summary>
     private static string BuildNested(IReadOnlyList<string> path, int startIndex, string jsonValue)
@@ -343,120 +429,4 @@ public sealed partial class WindowsTerminalService
         return builder.ToString();
     }
 
-    private static IEnumerable<Match> FindProperties(string text, string key, int start, int end)
-    {
-        if (end <= start)
-        {
-            yield break;
-        }
-
-        var segment = text[start..Math.Min(end, text.Length)];
-        var pattern = "\"" + Regex.Escape(key) + "\"" + Gap + ":" + Gap + Scalar + @"(?<tail>\s*,)?";
-        foreach (Match match in Regex.Matches(segment, pattern, RegexOptions.CultureInvariant))
-        {
-            yield return match;
-        }
-    }
-
-    /// <summary>在父对象范围内找形如 "key": { 的子对象，返回其花括号范围。</summary>
-    private static bool TryFindChildObject(
-        string text,
-        string key,
-        int start,
-        int end,
-        out int childOpen,
-        out int childClose)
-    {
-        childOpen = -1;
-        childClose = -1;
-        if (end <= start)
-        {
-            return false;
-        }
-
-        var segment = text[start..Math.Min(end, text.Length)];
-        var pattern = "\"" + Regex.Escape(key) + "\"" + Gap + ":" + Gap + @"\{";
-        var match = Regex.Match(segment, pattern, RegexOptions.CultureInvariant);
-        if (!match.Success)
-        {
-            return false;
-        }
-
-        childOpen = start + match.Index + match.Length - 1;
-        childClose = FindMatchingBrace(text, childOpen);
-        return true;
-    }
-
-    /// <summary>从开括号扫到配对的闭括号，跳过字符串与 // /* */ 注释里的花括号。</summary>
-    private static int FindMatchingBrace(string text, int openBrace)
-    {
-        var depth = 0;
-        for (var i = openBrace; i < text.Length; i++)
-        {
-            var c = text[i];
-            if (c == '"')
-            {
-                i = SkipString(text, i);
-                continue;
-            }
-
-            if (c == '/' && i + 1 < text.Length && text[i + 1] == '/')
-            {
-                i = SkipLineComment(text, i);
-                continue;
-            }
-
-            if (c == '/' && i + 1 < text.Length && text[i + 1] == '*')
-            {
-                i = SkipBlockComment(text, i);
-                continue;
-            }
-
-            if (c == '{')
-            {
-                depth++;
-            }
-            else if (c == '}')
-            {
-                depth--;
-                if (depth == 0)
-                {
-                    return i;
-                }
-            }
-        }
-
-        return Math.Max(openBrace, text.Length - 1);
-    }
-
-    private static int SkipString(string text, int quoteIndex)
-    {
-        for (var i = quoteIndex + 1; i < text.Length; i++)
-        {
-            if (text[i] == '\\')
-            {
-                i++;
-                continue;
-            }
-
-            if (text[i] == '"')
-            {
-                return i;
-            }
-        }
-
-        return text.Length - 1;
-    }
-
-    private static int SkipLineComment(string text, int slashIndex)
-    {
-        var newline = text.IndexOfAny(['\r', '\n'], slashIndex + 2);
-        return newline < 0 ? text.Length - 1 : newline - 1;
-    }
-
-    private static int SkipBlockComment(string text, int slashIndex)
-    {
-        var close = text.IndexOf("*/", slashIndex + 2, StringComparison.Ordinal);
-        return close < 0 ? text.Length - 1 : close + 1;
-    }
 }

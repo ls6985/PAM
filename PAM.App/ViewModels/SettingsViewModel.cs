@@ -276,7 +276,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            ProfilePathDisplay = Loc.T("尚未解析到 $PROFILE 路径");
+            ProfilePathDisplay = Loc.T(LocKey.PROFILEPathNotResolvedYet);
             _hasTerminalFallback = false;
             TerminalHint = ex.Message;
         }
@@ -319,7 +319,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         PendingHotkeyDisplay = string.Empty;
         HasPendingHotkey = false;
         IsCapturing = true;
-        CapturePrompt = Loc.T("请按下组合键…");
+        CapturePrompt = Loc.T(LocKey.PressAKeyCombination);
         _check = HotkeyConflictDetector.Idle();
         RaiseCheckChanged();
     }
@@ -347,7 +347,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         PendingHotkeyDisplay = chord.Display;
         HasPendingHotkey = true;
         IsCapturing = false;
-        CapturePrompt = Loc.T("至少包含一个修饰键（Ctrl / Alt / Shift / Win）。");
+        CapturePrompt = Loc.T(LocKey.IncludeAtLeastOneModifierCtrlAltShiftWin);
         CheckConflict();
     }
 
@@ -362,7 +362,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     {
         var chord = _pendingChord ?? HotkeyChord.Parse(_hotkeyDisplay);
         _check = chord is null
-            ? new HotkeyCheckResult(HotkeyCheckLevel.Error, Loc.T("热键不能为空。"), false, false)
+            ? new HotkeyCheckResult(HotkeyCheckLevel.Error, Loc.T(LocKey.HotkeyCannotBeEmpty), false, false)
             : HotkeyConflictDetector.Check(chord, AppServices.Settings.Hotkey, _isTrayRunning);
         RaiseCheckChanged();
     }
@@ -453,8 +453,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public void RestoreDefaults()
     {
         var result = MessageBox.Show(
-            Loc.T("确定要恢复全部默认设置吗？"),
-            Loc.T("恢复默认设置"),
+            Loc.T(LocKey.RestoreAllSettingsToTheirDefaults),
+            Loc.T(LocKey.RestoreDefaults),
             MessageBoxButton.YesNo,
             MessageBoxImage.Question,
             MessageBoxResult.No);

@@ -22,12 +22,12 @@ public sealed partial class BeautifyViewModel
 
     /// <summary>原始快照是什么时候留下的：说明恢复永远回到本软件首次修改前，而不是上一次修改前。</summary>
     public string WtBackupText => _wtBackupCreatedAt is { } created
-        ? Loc.F("原始配置备份创建于 {0}；恢复时永远回到这份配置。", created.ToString("yyyy-MM-dd HH:mm"))
-        : Loc.T("还没有原始配置备份；第一次通过本程序修改终端配置时会自动生成。");
+        ? Loc.F(LocKey.OriginalBackupCreatedAt0RestoringAlwaysReturnsToThisConfig,  created.ToString("yyyy-MM-dd HH:mm"))
+        : Loc.T(LocKey.NoOriginalBackupYetItIsCreatedAutomaticallyTheFirstTimeThisAppChangesTerminalSettings);
 
     public string WtBackupPathText => string.IsNullOrEmpty(_wtBackupPath)
         ? string.Empty
-        : Loc.F("备份文件：{0}", _wtBackupPath);
+        : Loc.F(LocKey.BackupFile0,  _wtBackupPath);
 
     public bool CanOpenToml => !IsBusy;
     public bool CanRestoreToml => !IsBusy && _hasTomlBackup;

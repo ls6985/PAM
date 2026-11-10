@@ -115,7 +115,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool IsEditorOpen { get => _isEditorOpen; set { if (_isEditorOpen == value) return; _isEditorOpen = value; OnPropertyChanged(); } }
     public bool IsNewEntry { get => _isNewEntry; set { if (_isNewEntry == value) return; _isNewEntry = value; OnPropertyChanged(); OnPropertyChanged(nameof(EditorTitle)); } }
     public AliasEntry? EditingEntry { get => _editingEntry; set { if (ReferenceEquals(_editingEntry, value)) return; _editingEntry = value; OnPropertyChanged(); OnPropertyChanged(nameof(EditorTitle)); } }
-    public string EditorTitle => IsNewEntry || EditingEntry is null ? Loc.T("新建别名") : Loc.T($"编辑别名 · {EditingEntry.Name}");
+    public string EditorTitle => IsNewEntry || EditingEntry is null ? Loc.T(LocKey.NewAlias) : Loc.F(LocKey.EditAlias0, EditingEntry.Name);
     public string EditorAlias { get => _editorAlias; set { if (_editorAlias == value) return; _editorAlias = value ?? ""; OnPropertyChanged(); UpdateValidation(); } }
     public string EditorPath { get => _editorPath; set { if (_editorPath == value) return; _editorPath = value ?? ""; OnPropertyChanged(); UpdateValidation(); } }
     public string EditorRemark { get => _editorRemark; set { if (_editorRemark == value) return; _editorRemark = value ?? ""; OnPropertyChanged(); } }
