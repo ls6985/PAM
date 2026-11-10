@@ -6,11 +6,8 @@
     Both executables must sit in the same directory because each one looks for the
     other next to itself at runtime. This script publishes the two projects into
     separate, brand new folders outside the repository and then merges them into
-    the output folder. Nothing is ever overwritten in place during a build, which
-    keeps MSBuild's Copy task away from existing output files.
-
-    Running PAM.App / PAM.Tray instances are stopped first: a resident tray holds
-    its exe and dll files open and would otherwise block the publish step.
+    the output folder. Running instances are stopped first so the deliverable
+    folder can be replaced.
 
 .PARAMETER Configuration
     Build configuration. Defaults to Release.
@@ -65,18 +62,9 @@ function Stop-PamProcesses {
 }
 
 function Remove-Directory([string] $path) {
-    # Build artifacts are disposable; delete them directly instead of routing
-    # through a recycle bin, which cannot handle deep obj trees reliably.
+    # Delete a whole folder tree in one step.
     if (Test-Path -LiteralPath $path) {
         [System.IO.Directory]::Delete($path, $true)
-    }
-}
-
-function Clear-BuildArtifacts {
-    foreach ($project in @('PAM.Core', 'PAM.App', 'PAM.Tray', 'PAM.Tests')) {
-        foreach ($folder in @('bin', 'obj')) {
-            Remove-Directory (Join-Path $root (Join-Path $project $folder))
-        }
     }
 }
 
@@ -94,9 +82,6 @@ function Copy-Tree([string] $source, [string] $destination) {
 
 try {
     Stop-PamProcesses
-
-    Write-Step 'Clearing bin and obj folders for a clean build'
-    Clear-BuildArtifacts
     New-Item -ItemType Directory -Path $work -Force | Out-Null
 
     $targets = @(

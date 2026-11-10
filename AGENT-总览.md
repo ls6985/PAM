@@ -37,7 +37,7 @@ dotnet test                                              # PAM.Core 单元测试
 powershell -ExecutionPolicy Bypass -File .\publish.ps1   # 打包：产出 publish/
 ```
 
-`publish.ps1` 是唯一的发布入口：先结束正在运行的后台实例并清理构建中间目录，再把两个工程分别发布到临时目录中的全新位置，最后合并成 `publish/` 里完整的一对可执行文件并校验文件齐全。`publish/` 是可直接运行的交付目录，其中的 `PAM.App.exe` 与 `PAM.Tray.exe` 必须同目录，登录启动项也指向这里的 `PAM.Tray.exe`。日常开发不需要手动逐条 `dotnet publish`。
+`publish.ps1` 是唯一的发布入口：先结束正在运行的后台实例，再把两个工程分别发布到临时目录中的全新位置，最后合并成 `publish/` 里完整的一对可执行文件并校验文件齐全。`publish/` 是可直接运行的交付目录，其中的 `PAM.App.exe` 与 `PAM.Tray.exe` 必须同目录，登录启动项也指向这里的 `PAM.Tray.exe`。日常开发不需要手动逐条 `dotnet publish`。
 
 单元测试只测 PAM.Core 的纯逻辑，行为清单与维护规则见 [PAM.Tests/AGENT-测试.md](PAM.Tests/AGENT-测试.md)。
 
