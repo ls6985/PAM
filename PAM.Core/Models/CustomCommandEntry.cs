@@ -58,7 +58,6 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
 
             _code = normalized;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(CodeSizeText));
         }
     }
 
@@ -128,17 +127,6 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
     public void RefreshLocalizedText()
     {
         OnPropertyChanged(nameof(StateText));
-        OnPropertyChanged(nameof(CodeSizeText));
-    }
-
-    /// <summary>列表里显示的非空代码行数，用于快速辨认这段命令的规模。</summary>
-    public string CodeSizeText
-    {
-        get
-        {
-            var count = _code.Split('\n').Count(static line => !string.IsNullOrWhiteSpace(line));
-            return LocalizationService.Instance.F("{0} 行代码", count);
-        }
     }
 
     public static string NormalizeCode(string? code)

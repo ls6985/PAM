@@ -297,20 +297,12 @@
                                 <ColumnDefinition Width="110" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel
+                            <TextBlock
                                 Grid.Column="0"
                                 Margin="0,0,16,0"
-                                VerticalAlignment="Center">
-                                <TextBlock
-                                    Text="{Binding Name}"
-                                    ToolTip="{Binding Name}"
-                                    Style="{StaticResource AliasNameTextStyle}" />
-                                <TextBlock
-                                    Margin="0,2,0,0"
-                                    FontSize="11"
-                                    Text="{Binding CodeSizeText}"
-                                    Style="{StaticResource TertiaryTextStyle}" />
-                            </StackPanel>
+                                Text="{Binding Name}"
+                                ToolTip="{Binding Name}"
+                                Style="{StaticResource AliasNameTextStyle}" />
 
                             <StackPanel
                                 Grid.Column="1"

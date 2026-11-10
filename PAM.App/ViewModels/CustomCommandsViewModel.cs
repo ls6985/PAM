@@ -265,7 +265,7 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
             var commandCount = data.CustomCommands.Count;
             var result = await Task.Run(() =>
             {
-                var render = ProfileRenderer.Render(path, data);
+                var render = ProfileRenderer.RenderToProfiles(_host.GetManagedProfilePaths(), data);
                 data.ManagedHash = render.ManagedHash;
                 AppServices.SaveData(data);
                 return render;

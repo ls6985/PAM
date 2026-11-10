@@ -66,6 +66,7 @@ public sealed class SettingsServiceTests : IDisposable
             SwitchImeToEnglish = false,
             AliasLaunchEnhanced = false,
             ShowAliasRemarkOnLaunch = false,
+            FriendlyCommandNotFound = false,
         });
 
         Assert.True(File.Exists(_settingsPath));
@@ -75,7 +76,7 @@ public sealed class SettingsServiceTests : IDisposable
 
         var names = document.RootElement.EnumerateObject().Select(static property => property.Name).ToArray();
         Assert.Equal(
-            new[] { "hotkey", "terminalType", "autoLaunchTerminal", "theme", "language", "keepTrayOnClose", "startTrayWithWindows", "switchImeToEnglish", "aliasLaunchEnhanced", "showAliasRemarkOnLaunch" }
+            new[] { "hotkey", "terminalType", "autoLaunchTerminal", "theme", "language", "keepTrayOnClose", "startTrayWithWindows", "switchImeToEnglish", "aliasLaunchEnhanced", "showAliasRemarkOnLaunch", "friendlyCommandNotFound" }
                 .OrderBy(static name => name, StringComparer.Ordinal).ToArray(),
             names.OrderBy(static name => name, StringComparer.Ordinal).ToArray());
 
@@ -92,6 +93,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.False(document.RootElement.GetProperty("switchImeToEnglish").GetBoolean());
         Assert.False(document.RootElement.GetProperty("aliasLaunchEnhanced").GetBoolean());
         Assert.False(document.RootElement.GetProperty("showAliasRemarkOnLaunch").GetBoolean());
+        Assert.False(document.RootElement.GetProperty("friendlyCommandNotFound").GetBoolean());
     }
 
     [Fact]
@@ -119,6 +121,7 @@ public sealed class SettingsServiceTests : IDisposable
             SwitchImeToEnglish = false,
             AliasLaunchEnhanced = false,
             ShowAliasRemarkOnLaunch = false,
+            FriendlyCommandNotFound = false,
         };
 
         _service.Save(saved);
@@ -134,6 +137,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(saved.SwitchImeToEnglish, loaded.SwitchImeToEnglish);
         Assert.Equal(saved.AliasLaunchEnhanced, loaded.AliasLaunchEnhanced);
         Assert.Equal(saved.ShowAliasRemarkOnLaunch, loaded.ShowAliasRemarkOnLaunch);
+        Assert.Equal(saved.FriendlyCommandNotFound, loaded.FriendlyCommandNotFound);
 
         _service.Save(new AppSettings { TerminalType = AppSettings.TerminalTypePwsh });
         Assert.True(_service.Load().UsesPowerShell7);
@@ -155,6 +159,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.True(loaded.SwitchImeToEnglish);
         Assert.True(loaded.AliasLaunchEnhanced);
         Assert.True(loaded.ShowAliasRemarkOnLaunch);
+        Assert.True(loaded.FriendlyCommandNotFound);
     }
 
     [Fact]

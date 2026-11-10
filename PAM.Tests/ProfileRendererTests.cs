@@ -190,6 +190,37 @@ public sealed class ProfileRendererTests : IDisposable
     }
 
     [Fact]
+    public void Render_AlwaysWritesCommandHintBlock()
+    {
+        WriteProfile("# 我的配置\n");
+
+        var result = ProfileRenderer.Render(_profilePath, new PamData());
+        var text = ReadProfile();
+
+        Assert.Equal(1, Count(text, CommandHintService.StartMarker));
+        Assert.Equal(1, Count(text, CommandHintService.EndMarker));
+        Assert.Contains("CommandNotFoundAction", text);
+        Assert.Equal(result.ManagedHash, ProfileRenderer.Inspect(_profilePath).Hash);
+    }
+
+    [Fact]
+    public void Render_StripsLegacyCommandHintBlockFromUserArea()
+    {
+        WriteProfile(string.Join("\n",
+            "# 我的配置",
+            CommandHintService.StartMarker,
+            "old handler",
+            CommandHintService.EndMarker,
+            ""));
+
+        ProfileRenderer.Render(_profilePath, SampleData());
+        var text = ReadProfile();
+
+        Assert.Equal(1, Count(text, CommandHintService.StartMarker));
+        Assert.DoesNotContain("old handler", text);
+    }
+
+    [Fact]
     public void Render_WithEmptyAliases_OmitsLauncherBlock()
     {
         WriteProfile("# 我的配置\n");
@@ -245,6 +276,81 @@ public sealed class ProfileRendererTests : IDisposable
 
         Assert.False(state.HasMarker);
         Assert.Equal(string.Empty, state.Hash);
+    }
+
+    [Fact]
+    public void ManagedSectionHasCurrentMarkers_TrueAfterRender()
+    {
+        WriteProfile("# 我的配置\n");
+
+        ProfileRenderer.Render(_profilePath, SampleData());
+
+        Assert.True(ProfileRenderer.ManagedSectionHasCurrentMarkers(_profilePath));
+    }
+
+    [Fact]
+    public void ManagedSectionHasCurrentMarkers_FalseForLegacyProfileWithoutHintBlock()
+    {
+        // 旧版代码写入的托管区含 Launcher 与 PAM-Custom，但没有“未知命令提示”块。
+        // 这正是最初功能失效的场景：数据哈希没变，启动自检不会触发重建。
+        WriteProfile(string.Join("\n",
+            "# 我的配置",
+            ProfileRenderer.StartMarker,
+            "# 以下由 PowerShell 管理器自动生成；修改会在下次保存时被覆盖。",
+            string.Empty,
+            AliasLaunchService.StartMarker,
+            AliasLaunchService.EndMarker,
+            string.Empty,
+            PamCustomRegion.Header,
+            PamCustomRegion.Footer,
+            ProfileRenderer.StartMarker.Replace(">>>", "<<<"),
+            ""));
+
+        Assert.False(ProfileRenderer.ManagedSectionHasCurrentMarkers(_profilePath));
+    }
+
+    [Fact]
+    public void NeedsRebuild_TrueWhenCurrentMarkersMissing()
+    {
+        WriteProfile(string.Join("\n",
+            "# 我的配置",
+            ProfileRenderer.StartMarker,
+            "# 以下由 PowerShell 管理器自动生成；修改会在下次保存时被覆盖。",
+            string.Empty,
+            PamCustomRegion.Header,
+            PamCustomRegion.Footer,
+            ProfileRenderer.StartMarker.Replace(">>>", "<<<"),
+            ""));
+
+        // 即使哈希与数据一致，缺少当前版本固定写入的标记块也应重建。
+        var data = SampleData();
+        ProfileRenderer.Render(_profilePath, data);
+        var hash = ProfileRenderer.Inspect(_profilePath).Hash;
+
+        Assert.True(ProfileRenderer.NeedsRebuild(_profilePath, hash));
+    }
+
+    [Fact]
+    public void NeedsRebuild_FalseForUpToDateProfile()
+    {
+        ProfileRenderer.Render(_profilePath, SampleData());
+        var hash = ProfileRenderer.Inspect(_profilePath).Hash;
+
+        Assert.False(ProfileRenderer.NeedsRebuild(_profilePath, hash));
+    }
+
+    [Fact]
+    public void RenderToProfiles_WritesIdenticalManagedSectionToAllPaths()
+    {
+        var second = Path.Combine(_root, "second_profile.ps1");
+        var data = SampleData();
+
+        var result = ProfileRenderer.RenderToProfiles([_profilePath, second], data);
+
+        Assert.True(File.Exists(second));
+        Assert.Equal(ProfileRenderer.Inspect(_profilePath).Hash, ProfileRenderer.Inspect(second).Hash);
+        Assert.Equal(result.ManagedHash, ProfileRenderer.Inspect(second).Hash);
+        Assert.Contains(CommandHintService.StartMarker, File.ReadAllText(second));
     }
 
     [Fact]

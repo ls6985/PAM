@@ -9,7 +9,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 顶部 `TabView`（样式 `Styles.xaml` 的 `NavTabItemStyle`），状态栏各页共用：
 
 - **别名启动**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑（可改名）/ 删除（二次确认）、路径浏览、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限一键修复。编辑条底部默认收起的「高级选项：启动参数」用于填写每次启动固定附带的参数，不填时生成的包装函数与原来一致；每次打开编辑条都会恢复为收起状态。数据来自 `AppServices.Data.Aliases`，保存时克隆快照、改写别名字段后由 `ProfileRenderer` 重建托管区；同名冲突在状态栏提示。
-- **自定义命令**（`Views/CustomCommandsView`）：函数 / 片段，状态胶囊点击切换启用；内联编辑条 `Ctrl+Enter` 确认；内置命令 `pls` / `ongit` / `sudo` 只读展示（「内置」徽章，不可编辑 / 删除 / 切换），随每次保存自动维护，无独立开关。列表按名称 / 状态 / 备注 / 操作四列展示，名称下方以次级小字标注代码行数，备注列占满剩余宽度。数据来自 `AppServices.Data.CustomCommands`，内置条目由 `CustomCommandService.GetBuiltinEntries()` 提供。数据格式见 [PAM.Core/AGENT-Core.md](../PAM.Core/AGENT-Core.md)。
+- **自定义命令**（`Views/CustomCommandsView`）：函数 / 片段，状态胶囊点击切换启用；内联编辑条 `Ctrl+Enter` 确认；内置命令 `pls` / `ongit` / `sudo` 只读展示（「内置」徽章，不可编辑 / 删除 / 切换），随每次保存自动维护，无独立开关。列表按名称 / 状态 / 备注 / 操作四列展示，名称列只显示名称，备注列占满剩余宽度。数据来自 `AppServices.Data.CustomCommands`，内置条目由 `CustomCommandService.GetBuiltinEntries()` 提供。数据格式见 [PAM.Core/AGENT-Core.md](../PAM.Core/AGENT-Core.md)。
 - **别名启动** 与自定义命令页的命名校验都会拒绝 `pls` / `ongit` / `sudo`（`CustomCommandService.IsBuiltinName`），避免同名包装函数被区块末尾的内置函数覆盖。
 - **美化**（`Views/BeautifyView` + `ViewModels/Beautify/` 按功能拆分的 partial）：见下节。
 - **设置**（`Views/SettingsView` + `ViewModels/SettingsViewModel`）：见下节。
@@ -46,7 +46,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 | 终端输入 | `switchImeToEnglish`（默认开）：托盘对新终端窗口切英文输入法，详见 [PAM.Tray/AGENT-Tray.md](../PAM.Tray/AGENT-Tray.md)；日志 `%AppData%\PAM\ime-switch.log` |
 | 无托盘行为 | `KeepTrayOnClose`（默认开）：关窗口后托盘与热键保留，关闭则发退出信号；设置页可查看 / 启动 / 结束托盘 |
 | 开机自启 | `StartTrayWithWindows`（默认开）：登录 Windows 后直接启动托盘，由 `AppServices.Apply` / `Reload` 与 `OnStartup` 幂等同步 HKCU Run 项；设置页切换后回读注册表给出成功 / 失败反馈。目标 exe 不存在时不创建启动项，任务管理器留下的禁用标记会被清除。程序目录移动后打开一次主界面即可刷新路径 |
-| 别名启动 | `aliasLaunchEnhanced`（默认开）：借 explorer 脱离终端进程树启动；`showAliasRemarkOnLaunch`：启动前打印一行备注。开关运行时读取、即时生效，但 **`$PROFILE` 要新开终端窗口才生效** |
+| 别名启动 | `aliasLaunchEnhanced`（默认开）：借 explorer 脱离终端进程树启动；`showAliasRemarkOnLaunch`：启动前打印一行备注；`friendlyCommandNotFound`（默认开）：终端输入未找到的命令时，用一行友好提示替代 PowerShell 的默认红色报错。三个开关都在 `$PROFILE` 的托管区由公共逻辑运行时读取、即时生效，但 **`$PROFILE` 要新开终端窗口才生效** |
 | 恢复默认 | 二次确认后整份恢复默认值 |
 
 `settings.json` 字段（camelCase，定义在 `PAM.Core/Settings/AppSettings.cs`）：
@@ -62,13 +62,14 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
   "startTrayWithWindows": true,
   "switchImeToEnglish": true,
   "aliasLaunchEnhanced": true,
-  "showAliasRemarkOnLaunch": true
+  "showAliasRemarkOnLaunch": true,
+  "friendlyCommandNotFound": true
 }
 ```
 
 - `hotkey` 非法值读取时自动重置；枚举取值见 `AppSettings`。
 - 托盘对文件时间戳有轮询兜底，手工编辑 `settings.json` 也会生效。
-- PowerShell 7 与 5.1 的 `$PROFILE` 是两个不同文件（`Documents\PowerShell\` 与 `Documents\WindowsPowerShell\`），切换默认终端即切换生成目标。`MainViewModel.InitializeAsync()` 比对 `managedHash`，托管区缺失或被外部修改时按 `pam-data.json` 重建一次；`Inspect()` 只读取边界标记之后的内容。
+- PowerShell 7 与 5.1 的 `$PROFILE` 是两个不同文件（`Documents\PowerShell\` 与 `Documents\WindowsPowerShell\`）。PAM 每次保存与启动时都会把同一份托管区写入**两个版本**的 `$PROFILE`（已安装的版本各一份），因此友好提示等托管块在任意终端都生效；`terminalType` 设置只决定 PAM 启动哪个终端，不再决定托管块写入哪个文件。`MainViewModel.InitializeAsync()` 比对 `managedHash` 并检查托管区是否含当前版本固定写入的全部标记块（缺任一块即视为需要重建——解决“数据哈希没变、但代码新增了托管块”导致新块永远写不进去的问题），任一受管配置文件缺失/被改/缺块时按 `pam-data.json` 重建全部；`Inspect()` 只读取边界标记之后的内容。
 
 ## 其它
 

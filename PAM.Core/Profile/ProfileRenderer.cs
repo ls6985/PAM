@@ -81,6 +81,9 @@ public static class ProfileRenderer
             managedLines.Add(string.Empty);
         }
 
+        managedLines.AddRange(CommandHintService.BuildLines());
+        managedLines.Add(string.Empty);
+
         managedLines.AddRange(CustomCommandService.BuildLines(data.CustomCommands));
 
         var outputLines = new List<string>(userLines);
@@ -117,6 +120,66 @@ public static class ProfileRenderer
 
         var managedLines = lines.Skip(markerIndex).ToList();
         return new ManagedSectionState(true, ComputeHash(managedLines));
+    }
+
+    /// <summary>
+    /// 托管区是否含有当前版本代码固定写入的全部标记块。缺任一块（例如旧版代码写入、
+    /// 或外部工具改动过托管区）即视为需要重建，避免“数据哈希没变、但代码新增了托管块”
+    /// 导致的新块永远写不进去。
+    /// </summary>
+    public static bool ManagedSectionHasCurrentMarkers(string profilePath)
+    {
+        if (string.IsNullOrWhiteSpace(profilePath) || !File.Exists(profilePath))
+        {
+            return false;
+        }
+
+        var lines = ProfileDocument.Read(profilePath).Lines;
+        var markerIndex = lines.FindIndex(IsStartMarker);
+        if (markerIndex < 0)
+        {
+            return false;
+        }
+
+        var managed = lines.Skip(markerIndex);
+        return managed.Any(IsCommandHintStart) && managed.Any(PamCustomRegion.IsHeader);
+    }
+
+    /// <summary>
+    /// 单个托管配置文件是否需要重建：文件缺失、边界标记缺失、缺少当前版本的固定标记块，
+    /// 或托管区哈希与预期值不符（外部改动、旧版代码写入、切换到另一终端的 $PROFILE）。
+    /// </summary>
+    public static bool NeedsRebuild(string profilePath, string expectedHash)
+    {
+        if (string.IsNullOrWhiteSpace(profilePath) || !File.Exists(profilePath))
+        {
+            return true;
+        }
+
+        var state = Inspect(profilePath);
+        if (!state.HasMarker)
+        {
+            return true;
+        }
+
+        if (!ManagedSectionHasCurrentMarkers(profilePath))
+        {
+            return true;
+        }
+
+        return !string.Equals(state.Hash, expectedHash, StringComparison.Ordinal);
+    }
+
+    /// <summary>按同一份数据快照依次重建多个 $PROFILE 的托管区，返回最后一次渲染的结果。</summary>
+    public static ProfileRenderResult RenderToProfiles(IEnumerable<string> profilePaths, PamData data)
+    {
+        ProfileRenderResult? last = null;
+        foreach (var path in profilePaths)
+        {
+            last = Render(path, data);
+        }
+
+        return last ?? throw new ArgumentException("至少需要一个配置文件路径。", nameof(profilePaths));
     }
 
     /// <summary>托管区文本的稳定哈希，与编码和换行风格无关。</summary>
@@ -171,6 +234,12 @@ public static class ProfileRenderer
     private static bool IsLauncherEnd(string line)
         => line.TrimStart().Equals(AliasLaunchService.EndMarker, StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsCommandHintStart(string line)
+        => line.TrimStart().Equals(CommandHintService.StartMarker, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsCommandHintEnd(string line)
+        => line.TrimStart().Equals(CommandHintService.EndMarker, StringComparison.OrdinalIgnoreCase);
+
     private static List<string> ExtractStarshipBlock(IEnumerable<string> source)
     {
         var lines = source.ToList();
@@ -221,6 +290,12 @@ public static class ProfileRenderer
             if (IsLauncherStart(result[i]))
             {
                 i = SkipToEnd(result, i, IsLauncherEnd);
+                continue;
+            }
+
+            if (IsCommandHintStart(result[i]))
+            {
+                i = SkipToEnd(result, i, IsCommandHintEnd);
                 continue;
             }
 

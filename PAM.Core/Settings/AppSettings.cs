@@ -57,6 +57,9 @@ public sealed class AppSettings
     /// <summary>别名启动软件时，是否先在终端打印一行别名备注。</summary>
     public bool ShowAliasRemarkOnLaunch { get; set; } = true;
 
+    /// <summary>终端中输入未找到的命令时，是否用一行友好提示替代 PowerShell 的默认报错。</summary>
+    public bool FriendlyCommandNotFound { get; set; } = true;
+
     /// <summary>是否优先使用 PowerShell 7。</summary>
     [JsonIgnore]
     public bool UsesPowerShell7 =>

@@ -99,7 +99,6 @@ public sealed class LocalizationService
         ["{0} 是内置命令，请换一个名称。"] = "\"{0}\" is reserved for a built-in command. Choose another.",
         ["该名称是内置命令，请换一个。"] = "This name is a built-in command. Choose another.",
         ["内置"] = "Built-in",
-        ["{0} 行代码"] = "{0} lines of code",
         ["内置命令，随保存自动维护，不可编辑或删除"] =
             "Built-in command, maintained automatically on save; cannot be edited or deleted.",
         ["命令代码不能为空。"] = "Command code cannot be empty.",
@@ -218,6 +217,9 @@ public sealed class LocalizationService
         ["启动时显示别名备注"] = "Show alias remark on launch",
         ["启动前在终端打印一行该别名的备注；没有备注时不打印。"] =
             "Print the alias remark in the terminal before launching; nothing is printed when the remark is empty.",
+        ["未找到命令时显示友好提示"] = "Friendly hint for unknown commands",
+        ["终端里输入不存在的命令时，用一行简短提示代替 PowerShell 的红色报错，并引导到 pls 或管理器。关闭后恢复默认报错；$PROFILE 只在终端启动时加载，保存后要新开终端窗口才生效。"] =
+            "When a command is not found, replace PowerShell's red error with one short hint pointing to pls or the manager. Turn off to restore the default error. $PROFILE is loaded only when a terminal starts, so open a new terminal window after saving.",
         ["后台运行"] = "Background",
         ["开机自动启动后台托盘"] = "Start the tray automatically at sign-in",
         ["登录 Windows 后自动启动托盘并注册全局热键，无需先打开管理器。移动程序目录后打开一次管理器即可更新启动项路径。"] =

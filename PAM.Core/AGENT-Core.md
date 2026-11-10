@@ -26,7 +26,7 @@
 }
 ```
 
-- `version` 供结构演进时做兼容；`managedHash` 是托管区文本的 SHA-256，启动时与 `$PROFILE` 实测值比对，不一致即重建。
+- `version` 供结构演进时做兼容；`managedHash` 是托管区文本的 SHA-256，启动时与 `$PROFILE` 实测值比对，不一致即重建。两份 `$PROFILE`（PowerShell 7 与 5.1）内容一致、哈希相同，故只存一份。
 - 别名的 `arguments` 是每次启动固定附带的参数字符串：按空白分词，双引号可包裹含空格的段；留空时生成的包装函数只传 `$args`。
 - 内置命令不写入数据文件，由 `CustomCommandService.BuiltinCommands` 定义表固定生成。
 - `settings.json` 仍只存设置，两者不合并：备份、迁移与版本演进互不绑定。
@@ -52,6 +52,10 @@ if (-not (Get-Command -Name "bili" -CommandType Alias,Function -ErrorAction Sile
 }
 # <<< PAM Alias Launcher <<<
 
+# >>> PAM Command Hint >>>
+$ExecutionContext.InvokeCommand.CommandNotFoundAction = { ... }
+# <<< PAM Command Hint <<<
+
 #region PAM-Custom
 # ...
 #endregion
@@ -60,7 +64,8 @@ if (-not (Get-Command -Name "bili" -CommandType Alias,Function -ErrorAction Sile
 - 用户区已有同名 alias 或 function 时包装函数让位；`Render()` 同时返回冲突名称，界面保存后提示。
 - 配置固定参数时 `-Rest` 以数组字面量开头，终端调用时临时传入的 `$args` 接在其后；未配置时仍是 `-Rest $args`。参数按字面量生成，不做变量展开，公共函数无需区分两类参数。
 - 公共函数借 `explorer.exe` 代启动（带参数经临时 `.lnk`，异常时退回普通 `Start-Process`），新进程完全脱离终端进程树：关终端不影响、日志不回显、UAC 正常。
-- 开关 `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch` 由公共函数运行时读 `settings.json`，改设置即时生效、无需重写 `$PROFILE`；但 **`$PROFILE` 只在终端启动时加载一次，保存后要新开终端窗口**。
+- 开关 `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch` / `friendlyCommandNotFound` 由托管区公共逻辑运行时读 `settings.json`，改设置即时生效、无需重写 `$PROFILE`；但 **`$PROFILE` 只在终端启动时加载一次，保存后要新开终端窗口**。
+- 未知命令提示只在 `friendlyCommandNotFound` 为开时接管：红色 `CommandNotFoundException` 被一段 `CommandNotFoundAction` 替换为单行友好提示（含命令名），并借 `CommandScriptBlock` 返回空块，避免 `Get-Command` 等内部查找被污染。
 - 别名清空时整体移除 Launcher 子块；托管区始终含 PAM-Custom 子块（内置命令）。渲染幂等。
 
 ### 自定义命令片段
@@ -108,6 +113,7 @@ Invoke-Expression (&starship init powershell)
 | `Profile/ProfileService.cs` | 定位 `$PROFILE`、`OpenProfileFile`、执行策略、按终端启动 shell；另提供路径规范化与 PowerShell 字符串转义的公共静态方法 |
 | `Profile/PamCustomRegion.cs` | 识别受控区块与行掩码 |
 | `Profile/AliasLaunchService.cs` | `BuildLines()` 产出别名启动器片段（含同名避让、固定启动参数拆分与公共函数），不读写文件 |
+| `Profile/CommandHintService.cs` | `BuildLines()` 产出未知命令提示片段：注册 `CommandNotFoundAction`，运行时读 `settings.json` 的 `friendlyCommandNotFound` 与当前语言，按 `CommandScriptBlock` 接管未找到命令的输出；不读写文件 |
 | `Profile/CustomCommandService.cs` | `BuildLines()` 产出 PAM-Custom 片段；内置命令定义表（`pls` / `ongit` / `sudo`）、`GetBuiltinEntries()` 只读展示、`IsBuiltinName()` / `TryValidateName()` 名称校验；不读写文件 |
 | `Profile/ShellResolver.cs` | `pwsh` / `powershell` / `auto` → 实际 shell，判断是否装了 PowerShell 7 |
 | `Starship/StarshipService.cs` | Starship 探测 / Scoop 一键安装 / `starship.toml` 路径与备份恢复 / init 区块 / 内置主题预设（`Presets\*.toml` EmbeddedResource） |

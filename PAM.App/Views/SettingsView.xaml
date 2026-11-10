@@ -373,6 +373,8 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="14" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="14" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
@@ -398,6 +400,18 @@
                                 Grid.Column="1"
                                 HorizontalAlignment="Right"
                                 IsChecked="{Binding ShowAliasRemarkOnLaunch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <StackPanel Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="未找到命令时显示友好提示" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock
+                                    Text="终端里输入不存在的命令时，用一行简短提示代替 PowerShell 的红色报错，并引导到 pls 或管理器。关闭后恢复默认报错；$PROFILE 只在终端启动时加载，保存后要新开终端窗口才生效。"
+                                    Style="{StaticResource SettingHintStyle}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch
+                                Grid.Row="4"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsChecked="{Binding FriendlyCommandNotFound, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
                     </StackPanel>
                 </Border>

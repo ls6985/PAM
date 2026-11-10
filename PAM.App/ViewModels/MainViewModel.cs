@@ -181,15 +181,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
             var data = AppServices.Data;
             var profileExists = await Task.Run(() => File.Exists(path));
 
-            // 托管区缺失或哈希不符（外部改动、切换到另一个终端的 $PROFILE）时按数据重建一次。
-            var state = await Task.Run(() => ProfileRenderer.Inspect(path));
-            var regenerated = !state.HasMarker ||
-                              !string.Equals(state.Hash, data.ManagedHash, StringComparison.Ordinal);
-            if (regenerated)
+            // 任一托管配置文件缺失边界标记、缺少当前版本固定写入的区块，或哈希不符
+            // （外部改动、旧版代码写入、切换到另一终端的 $PROFILE）时，按数据重建全部受管配置文件。
+            var managedPaths = await Task.Run(() => GetManagedProfilePaths());
+            var needsRebuild = managedPaths.Any(p => ProfileRenderer.NeedsRebuild(p, data.ManagedHash ?? string.Empty));
+            if (needsRebuild)
             {
+                // 让“当前终端”对应的配置文件最后渲染，使冲突名称列表以它为准。
+                var ordered = managedPaths
+                    .OrderBy(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase) ? 1 : 0)
+                    .ToList();
                 var fresh = await Task.Run(() =>
                 {
-                    var render = ProfileRenderer.Render(path, data);
+                    var render = ProfileRenderer.RenderToProfiles(ordered, data);
                     data.ManagedHash = render.ManagedHash;
                     AppServices.SaveData(data);
                     return render;
@@ -206,8 +210,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             HasUnsavedChanges = false;
             SetStatus(
-                regenerated ? StatusType.Warning : (profileExists ? StatusType.Saved : StatusType.Warning),
-                regenerated
+                needsRebuild ? StatusType.Warning : (profileExists ? StatusType.Saved : StatusType.Warning),
+                needsRebuild
                     ? "已按 pam-data.json 重建 $PROFILE 托管区。"
                     : profileExists
                         ? $"已保存 · 共 {Aliases.Count} 个别名"
@@ -226,6 +230,27 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             IsLoading = false;
         }
+    }
+
+    /// <summary>
+    /// 返回 PAM 应管理的全部 $PROFILE 路径：已安装的 Windows PowerShell 5.1 与 PowerShell 7 各一份。
+    /// 托管区内容两版一致（同一份数据快照），因此“当前 PowerShell”设置只决定 PAM 启动哪个终端，
+    /// 而友好提示等托管块会同时注入两个版本，避免用户开错终端时功能失效。
+    /// </summary>
+    internal List<string> GetManagedProfilePaths()
+    {
+        var paths = new List<string>();
+        if (ShellResolver.IsInstalled(ShellResolver.PowerShellFileName))
+        {
+            paths.Add(_profileService.GetProfilePath(AppSettings.TerminalTypePowerShell));
+        }
+
+        if (ShellResolver.IsInstalled(ShellResolver.PwshFileName))
+        {
+            paths.Add(_profileService.GetProfilePath(AppSettings.TerminalTypePwsh));
+        }
+
+        return paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     public async Task<bool> SaveAsync()
@@ -263,7 +288,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             var render = await Task.Run(() =>
             {
-                var result = ProfileRenderer.Render(_profilePathRaw, data);
+                var paths = GetManagedProfilePaths();
+                var result = ProfileRenderer.RenderToProfiles(paths, data);
                 data.ManagedHash = result.ManagedHash;
                 AppServices.SaveData(data);
                 return result;
