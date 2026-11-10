@@ -24,7 +24,7 @@
 - App 关闭后托盘是否继续驻留，由 `KeepTrayOnClose` 决定（默认保留，热键不受影响）。
 - **开机自启由 PAM.App 注册**：`AutoStartService` 把同目录的 `PAM.Tray.exe` 写进 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 的 `PAM.Tray` 值，并清除任务管理器留下的禁用标记；`OnStartup` 与 `AppServices.Apply` / `Reload` 按 `startTrayWithWindows` 幂等同步，程序目录移动后打开一次主界面即可修正路径。PAM.Tray 自身不写注册表，也不负责自己的启动。
 - 托盘在 `switchImeToEnglish` 开启时，会把新打开的终端窗口的中文输入法切成英文输入模式（不换输入法与键盘布局），实现见 [PAM.Tray/AGENT-Tray.md](PAM.Tray/AGENT-Tray.md)。
-- 别名与自定义命令的数据存于 `%AppData%\PAM\pam-data.json`（App 唯一写入方）；`$PROFILE` 以 `# >>> PAM Managed >>>` 分区，用户区原样保留，托管区由 `ProfileRenderer` 按数据单向全量生成。别名启动借 `explorer.exe` 代启动，开关写在 `settings.json`、由公共函数运行时读取，实现见 [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md)。
+- 别名与自定义命令的数据存于 `%AppData%\PAM\pam-data.json`（App 唯一写入方）；`$PROFILE` 以 `# >>> PAM Managed >>>` 分区，用户区原样保留，托管区由 `ProfileRenderer` 按数据单向全量生成。别名可配置固定启动参数，生成包装函数时排在终端临时参数之前；别名启动借 `explorer.exe` 代启动，开关写在 `settings.json`、由公共函数运行时读取，实现见 [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md)。
 - 美化页的外观卡片与自定义提示符分别接管 Windows Terminal `settings.json` 的外观属性与 `starship.toml` 的托管块，界面行为见 [PAM.App/AGENT-App.md](PAM.App/AGENT-App.md)、写入规则见 [PAM.Core/AGENT-Core.md](PAM.Core/AGENT-Core.md)。
 
 ## 环境与运行
@@ -40,6 +40,10 @@ powershell -ExecutionPolicy Bypass -File .\publish.ps1   # 打包：产出 publi
 `publish.ps1` 是唯一的发布入口：先结束正在运行的后台实例，再把两个工程分别发布到临时目录中的全新位置，最后合并成 `publish/` 里完整的一对可执行文件并校验文件齐全。`publish/` 是可直接运行的交付目录，其中的 `PAM.App.exe` 与 `PAM.Tray.exe` 必须同目录，登录启动项也指向这里的 `PAM.Tray.exe`。日常开发不需要手动逐条 `dotnet publish`。
 
 单元测试只测 PAM.Core 的纯逻辑，行为清单与维护规则见 [PAM.Tests/AGENT-测试.md](PAM.Tests/AGENT-测试.md)。
+
+## 改动后的输出
+
+改完源码后执行 `powershell -ExecutionPolicy Bypass -File .\publish.ps1`，让 `publish/` 里的两个 exe 与当前源码一致；单元测试用 `dotnet test`。提交前先输出一次。汇报写改动内容、测试结果、exe 是否已重新输出，不写构建命令的临时参数或环境排障过程。
 
 ## 数据在哪
 

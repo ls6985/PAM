@@ -173,6 +173,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <Grid Grid.Row="0">
@@ -281,6 +282,67 @@
                                         Text="{Binding EditorPathHintText}"
                                         TextWrapping="Wrap"
                                         Visibility="{Binding EditorPathHintText, Converter={StaticResource TextNotEmptyToVisibilityConverter}}" />
+                                </StackPanel>
+
+                                <!-- 高级选项：固定启动参数，默认收起。 -->
+                                <StackPanel Grid.Row="3" Margin="0,10,0,0">
+                                    <ToggleButton
+                                        x:Name="AdvancedToggle"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Left">
+                                        <ToggleButton.Style>
+                                            <Style TargetType="ToggleButton">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Setter Property="BorderThickness" Value="0" />
+                                                <Setter Property="Padding" Value="0" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ToggleButton">
+                                                            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter VerticalAlignment="Center" />
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ToggleButton.Style>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock
+                                                FontSize="12"
+                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                Text="▸"
+                                                Visibility="{Binding IsChecked, ElementName=AdvancedToggle, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                                            <TextBlock
+                                                FontSize="12"
+                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                Text="▾"
+                                                Visibility="{Binding IsChecked, ElementName=AdvancedToggle, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock
+                                                Margin="6,0,0,0"
+                                                Text="高级选项：启动参数（可选）"
+                                                Style="{StaticResource TertiaryTextStyle}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+
+                                    <StackPanel
+                                        Margin="0,8,0,0"
+                                        Visibility="{Binding IsChecked, ElementName=AdvancedToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="启动参数" Style="{StaticResource FieldLabelStyle}" />
+                                        <ui:TextBox
+                                            x:Name="ArgumentsField"
+                                            MaxWidth="560"
+                                            HorizontalAlignment="Left"
+                                            FontFamily="{StaticResource MonoFontFamily}"
+                                            PlaceholderText="例如：--incognito"
+                                            Text="{Binding EditorArguments, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock
+                                            MaxWidth="560"
+                                            Margin="0,6,0,0"
+                                            HorizontalAlignment="Left"
+                                            Text="每次启动该程序都会带上这些参数；在终端里临时传入的参数排在后面。含空格的参数请用英文双引号包起来。"
+                                            Style="{StaticResource TertiaryTextStyle}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Grid>
                         </Border>

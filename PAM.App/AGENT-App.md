@@ -8,8 +8,8 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 
 顶部 `TabView`（样式 `Styles.xaml` 的 `NavTabItemStyle`），状态栏各页共用：
 
-- **别名启动**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑（可改名）/ 删除（二次确认）、路径浏览、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限一键修复。数据来自 `AppServices.Data.Aliases`，保存时克隆快照、改写别名字段后由 `ProfileRenderer` 重建托管区；同名冲突在状态栏提示。
-- **自定义命令**（`Views/CustomCommandsView`）：函数 / 片段，状态胶囊点击切换启用；内联编辑条 `Ctrl+Enter` 确认；内置命令 `pls` / `ongit` / `sudo` 只读展示（「内置」徽章，不可编辑 / 删除 / 切换），随每次保存自动维护，无独立开关。数据来自 `AppServices.Data.CustomCommands`，内置条目由 `CustomCommandService.GetBuiltinEntries()` 提供。数据格式见 [PAM.Core/AGENT-Core.md](../PAM.Core/AGENT-Core.md)。
+- **别名启动**（`MainWindow.xaml` 的 `AliasTab`）：搜索、新建 / 编辑（可改名）/ 删除（二次确认）、路径浏览、长路径中间省略、复制 `$PROFILE` 路径、执行策略受限一键修复。编辑条底部默认收起的「高级选项：启动参数」用于填写每次启动固定附带的参数，不填时生成的包装函数与原来一致；每次打开编辑条都会恢复为收起状态。数据来自 `AppServices.Data.Aliases`，保存时克隆快照、改写别名字段后由 `ProfileRenderer` 重建托管区；同名冲突在状态栏提示。
+- **自定义命令**（`Views/CustomCommandsView`）：函数 / 片段，状态胶囊点击切换启用；内联编辑条 `Ctrl+Enter` 确认；内置命令 `pls` / `ongit` / `sudo` 只读展示（「内置」徽章，不可编辑 / 删除 / 切换），随每次保存自动维护，无独立开关。列表按名称 / 状态 / 备注 / 操作四列展示，名称下方以次级小字标注代码行数，备注列占满剩余宽度。数据来自 `AppServices.Data.CustomCommands`，内置条目由 `CustomCommandService.GetBuiltinEntries()` 提供。数据格式见 [PAM.Core/AGENT-Core.md](../PAM.Core/AGENT-Core.md)。
 - **别名启动** 与自定义命令页的命名校验都会拒绝 `pls` / `ongit` / `sudo`（`CustomCommandService.IsBuiltinName`），避免同名包装函数被区块末尾的内置函数覆盖。
 - **美化**（`Views/BeautifyView` + `ViewModels/Beautify/` 按功能拆分的 partial）：见下节。
 - **设置**（`Views/SettingsView` + `ViewModels/SettingsViewModel`）：见下节。

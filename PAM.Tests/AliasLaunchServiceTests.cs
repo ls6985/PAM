@@ -8,8 +8,8 @@ namespace PAM.Tests;
 /// </summary>
 public sealed class AliasLaunchServiceTests
 {
-    private static AliasData Entry(string name, string path, string remark = "")
-        => new() { Name = name, Path = path, Remark = remark };
+    private static AliasData Entry(string name, string path, string remark = "", string arguments = "")
+        => new() { Name = name, Path = path, Remark = remark, Arguments = arguments };
 
     [Fact]
     public void BuildLines_GeneratesHelperAndGuardedFunction()
@@ -48,6 +48,38 @@ public sealed class AliasLaunchServiceTests
         Assert.Contains(lines, static line => line.Contains(@"-Path ""C:\`$money\a``b.exe""", StringComparison.Ordinal));
         Assert.Contains(lines, static line => line.Contains(@"-Remark ""第一行 第二行""", StringComparison.Ordinal));
         Assert.DoesNotContain(lines, static line => line.Contains("第一行\n第二行", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildLines_PrependsFixedArgumentsToRest()
+    {
+        var lines = AliasLaunchService.BuildLines([
+            Entry("chrome", @"C:\App\chrome.exe", "浏览器", @"--incognito --user-data-dir=""D:\My Data"" ""C:\My File.txt"""),
+        ]);
+
+        Assert.Contains(lines, static line =>
+            line.Contains(
+                @"-Rest (@(""--incognito"", ""--user-data-dir=D:\My Data"", ""C:\My File.txt"") + $args)",
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildLines_EscapesFixedArguments()
+    {
+        var lines = AliasLaunchService.BuildLines([
+            Entry("cash", @"C:\App\cash.exe", "", @"--path=""C:\$money\a`b"""),
+        ]);
+
+        Assert.Contains(lines, static line =>
+            line.Contains(@"-Rest (@(""--path=C:\`$money\a``b"") + $args)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildLines_WithBlankFixedArguments_KeepsBareArgs()
+    {
+        var lines = AliasLaunchService.BuildLines([Entry("bili", @"C:\App\bili.exe", "", "   ")]);
+
+        Assert.Contains(lines, static line => line.Contains("-Rest $args }", StringComparison.Ordinal));
     }
 
     [Fact]

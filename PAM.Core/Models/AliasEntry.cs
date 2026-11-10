@@ -12,13 +12,15 @@ public sealed class AliasEntry : INotifyPropertyChanged
     private string _name;
     private string _path;
     private string _remark;
+    private string _arguments;
     private bool _deletePending;
 
-    public AliasEntry(string name, string path, string remark = "")
+    public AliasEntry(string name, string path, string remark = "", string arguments = "")
     {
         _name = name;
         _path = path;
         _remark = remark;
+        _arguments = arguments;
     }
 
     public string Name
@@ -68,6 +70,22 @@ public sealed class AliasEntry : INotifyPropertyChanged
         }
     }
 
+    /// <summary>每次启动该程序时固定附带的参数字符串。</summary>
+    public string Arguments
+    {
+        get => _arguments;
+        set
+        {
+            if (_arguments == value)
+            {
+                return;
+            }
+
+            _arguments = value;
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>
     /// 删除按钮是否处于“确认删除？”状态（仅 UI 状态，不写入配置文件）。
     /// </summary>
@@ -93,7 +111,7 @@ public sealed class AliasEntry : INotifyPropertyChanged
 
     public bool PathMissing => !PathExists;
 
-    public AliasEntry Clone() => new(_name, _path, _remark);
+    public AliasEntry Clone() => new(_name, _path, _remark, _arguments);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

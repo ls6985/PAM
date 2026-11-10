@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace PAM.Core;
 
 /// <summary>
@@ -14,6 +16,9 @@ namespace PAM.Core;
 ///
 /// <para>无参数时直接传递 exe 路径；带参数时生成临时 .lnk（WScript.Shell COM）承载参数。
 /// .lnk 按路径哈希固定文件名、每次覆盖复用且不删除，以避免 explorer 异步读取时文件已移除。</para>
+///
+/// <para>别名可配置固定启动参数：生成包装函数时以数组字面量置于 -Rest 之前，
+/// 终端调用时临时传入的 $args 接在其后，公共函数无需区分两类参数。</para>
 ///
 /// <para>开关值在运行时由公共函数读取 settings.json，修改设置无需重写 $PROFILE。
 /// 标记块位于 PAM-Custom 之外，不受 CustomCommandService 整块重写影响。</para>
@@ -107,18 +112,75 @@ public static class AliasLaunchService
             var name = alias.Name.Trim();
             var path = NormalizePath(alias.Path);
             var remark = ProfileService.NormalizeRemark(alias.Remark);
+            // 固定参数压成单行后再拆分，避免换行破坏生成出的函数定义。
+            var arguments = SplitArguments(ProfileService.NormalizeRemark(alias.Arguments));
 
             lines.Add(
                 $"if (-not (Get-Command -Name {ProfileService.QuoteForPowerShell(name)} " +
                 "-CommandType Alias,Function -ErrorAction SilentlyContinue)) {");
             lines.Add(
                 $"    function {name} {{ Invoke-PamAlias -Path {ProfileService.QuoteForPowerShell(path)} " +
-                $"-Remark {ProfileService.QuoteForPowerShell(remark)} -Rest $args }}");
+                $"-Remark {ProfileService.QuoteForPowerShell(remark)} -Rest {BuildRestExpression(arguments)} }}");
             lines.Add("}");
         }
 
         lines.Add(EndMarker);
         return lines;
+    }
+
+    /// <summary>
+    /// 生成包装函数的 -Rest 表达式。未配置固定参数时保持 $args，
+    /// 否则以数组字面量开头，使固定参数排在终端临时参数之前。
+    /// </summary>
+    private static string BuildRestExpression(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count == 0)
+        {
+            return "$args";
+        }
+
+        var literals = string.Join(", ", arguments.Select(ProfileService.QuoteForPowerShell));
+        return $"(@({literals}) + $args)";
+    }
+
+    /// <summary>
+    /// 按命令行习惯拆分固定参数：以空白分隔，双引号内的空白属于同一参数，引号本身不保留。
+    /// 参数按字面量生成，不做 PowerShell 变量展开。
+    /// </summary>
+    private static List<string> SplitArguments(string arguments)
+    {
+        var result = new List<string>();
+        var current = new StringBuilder();
+        var quoted = false;
+
+        foreach (var ch in arguments)
+        {
+            if (ch == '"')
+            {
+                quoted = !quoted;
+                continue;
+            }
+
+            if (!quoted && char.IsWhiteSpace(ch))
+            {
+                if (current.Length > 0)
+                {
+                    result.Add(current.ToString());
+                    current.Clear();
+                }
+
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        if (current.Length > 0)
+        {
+            result.Add(current.ToString());
+        }
+
+        return result;
     }
 
     private static string NormalizePath(string? path)

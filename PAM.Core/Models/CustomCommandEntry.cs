@@ -58,7 +58,7 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
 
             _code = normalized;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(PreviewText));
+            OnPropertyChanged(nameof(CodeSizeText));
         }
     }
 
@@ -128,24 +128,16 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
     public void RefreshLocalizedText()
     {
         OnPropertyChanged(nameof(StateText));
-        OnPropertyChanged(nameof(PreviewText));
+        OnPropertyChanged(nameof(CodeSizeText));
     }
 
-    /// <summary>列表里显示的第一行有效代码，用于快速辨认这段命令。</summary>
-    public string PreviewText
+    /// <summary>列表里显示的非空代码行数，用于快速辨认这段命令的规模。</summary>
+    public string CodeSizeText
     {
         get
         {
-            foreach (var line in _code.Split('\n'))
-            {
-                var trimmed = line.Trim();
-                if (trimmed.Length > 0)
-                {
-                    return trimmed;
-                }
-            }
-
-            return LocalizationService.Instance.T("（空代码）");
+            var count = _code.Split('\n').Count(static line => !string.IsNullOrWhiteSpace(line));
+            return LocalizationService.Instance.F("{0} 行代码", count);
         }
     }
 

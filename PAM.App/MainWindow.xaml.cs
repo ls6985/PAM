@@ -150,6 +150,8 @@ public partial class MainWindow : FluentWindow
 
     private void FocusEditorField()
     {
+        // 每次打开编辑条时把高级选项恢复为收起状态。
+        AdvancedToggle.IsChecked = false;
         if (ViewModel.IsNewEntry) { AliasField.Focus(); return; }
         PathField.Focus();
         PathField.SelectAll();
@@ -403,6 +405,8 @@ public partial class MainWindow : FluentWindow
                     if (ReferenceEquals(focusedButton, CancelButton)) { ViewModel.CloseEditor(); ShowRestingStatus(); e.Handled = true; return; }
                     if (ReferenceEquals(focusedButton, BrowseButton)) { BrowseButton_Click(BrowseButton, new RoutedEventArgs()); e.Handled = true; return; }
                 }
+                // 高级选项开关用 Enter / Space 自行切换，不触发编辑确认。
+                if (ReferenceEquals(Keyboard.FocusedElement, AdvancedToggle)) { return; }
                 ConfirmButton_Click(ConfirmButton, new RoutedEventArgs());
                 e.Handled = true;
                 return;

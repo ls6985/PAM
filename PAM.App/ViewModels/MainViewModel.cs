@@ -34,6 +34,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _editorAlias = string.Empty;
     private string _editorPath = string.Empty;
     private string _editorRemark = string.Empty;
+    private string _editorArguments = string.Empty;
     // 校验失败时对应的输入字段（"Alias" / "Path"），窗口据此决定焦点落点。
     private string _editorErrorField = string.Empty;
     private string _editorErrorTextRaw = string.Empty;
@@ -118,6 +119,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string EditorAlias { get => _editorAlias; set { if (_editorAlias == value) return; _editorAlias = value ?? ""; OnPropertyChanged(); UpdateValidation(); } }
     public string EditorPath { get => _editorPath; set { if (_editorPath == value) return; _editorPath = value ?? ""; OnPropertyChanged(); UpdateValidation(); } }
     public string EditorRemark { get => _editorRemark; set { if (_editorRemark == value) return; _editorRemark = value ?? ""; OnPropertyChanged(); } }
+    public string EditorArguments { get => _editorArguments; set { if (_editorArguments == value) return; _editorArguments = value ?? ""; OnPropertyChanged(); } }
 
     /// <summary>校验失败对应的输入字段："Alias" / "Path"，无错误时为空。</summary>
     public string EditorErrorField => _editorErrorField;
@@ -199,7 +201,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Aliases.Clear();
             foreach (var alias in data.Aliases)
             {
-                Aliases.Add(new AliasEntry(alias.Name, alias.Path, alias.Remark));
+                Aliases.Add(new AliasEntry(alias.Name, alias.Path, alias.Remark, alias.Arguments));
             }
 
             HasUnsavedChanges = false;
@@ -256,6 +258,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 Name = entry.Name.Trim(),
                 Path = entry.Path,
                 Remark = entry.Remark,
+                Arguments = entry.Arguments,
             }).ToList();
 
             var render = await Task.Run(() =>
@@ -295,6 +298,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         EditorAlias = string.Empty;
         EditorPath = string.Empty;
         EditorRemark = string.Empty;
+        EditorArguments = string.Empty;
         IsEditorOpen = true;
         UpdateValidation();
         OnPropertyChanged(nameof(IsEditorOpen));
@@ -308,6 +312,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         EditorAlias = entry.Name;
         EditorPath = entry.Path;
         EditorRemark = entry.Remark;
+        EditorArguments = entry.Arguments;
         IsEditorOpen = true;
         UpdateValidation();
         OnPropertyChanged(nameof(IsEditorOpen));
@@ -322,6 +327,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         IsConfirmEnabled = false;
         EditorErrorText = string.Empty;
         EditorPathHintText = string.Empty;
+        EditorArguments = string.Empty;
     }
 
     public bool UpdateValidation()
@@ -363,14 +369,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
         var name = EditorAlias.Trim();
         var path = ProfileService.NormalizePath(EditorPath);
         var remark = EditorRemark.Trim();
+        var arguments = EditorArguments.Trim();
 
-        if (IsNewEntry) Aliases.Add(new AliasEntry(name, path, remark));
+        if (IsNewEntry) Aliases.Add(new AliasEntry(name, path, remark, arguments));
         else if (EditingEntry is not null)
         {
             // 编辑时别名也可改名；IsAliasDuplicate 已排除当前项，所以同名不会被误判为冲突。
             EditingEntry.Name = name;
             EditingEntry.Path = path;
             EditingEntry.Remark = remark;
+            EditingEntry.Arguments = arguments;
         }
 
         CloseEditor();

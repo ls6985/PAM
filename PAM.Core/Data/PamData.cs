@@ -37,6 +37,7 @@ public sealed class PamData
             alias.Name = alias.Name.Trim();
             alias.Path = alias.Path ?? string.Empty;
             alias.Remark = alias.Remark ?? string.Empty;
+            alias.Arguments = alias.Arguments ?? string.Empty;
         }
 
         foreach (var command in CustomCommands)
@@ -58,6 +59,7 @@ public sealed class PamData
                 Name = alias.Name,
                 Path = alias.Path,
                 Remark = alias.Remark,
+                Arguments = alias.Arguments,
             }).ToList(),
             CustomCommands = CustomCommands.Select(static command => new CustomCommandData
             {
@@ -80,6 +82,9 @@ public sealed class AliasData
     public string Path { get; set; } = string.Empty;
 
     public string Remark { get; set; } = string.Empty;
+
+    /// <summary>每次启动该程序时固定附带的参数字符串，空白分隔，双引号用于包裹含空格的段。</summary>
+    public string Arguments { get; set; } = string.Empty;
 }
 
 /// <summary>一条自定义命令，代码按行存储以保持 JSON 可读。</summary>

@@ -13,7 +13,7 @@
   "version": 1,
   "managedHash": "…",
   "aliases": [
-    { "name": "blbl", "path": "C:\\Program Files\\App\\app.exe", "remark": "打开哔哩哔哩" }
+    { "name": "blbl", "path": "C:\\Program Files\\App\\app.exe", "remark": "打开哔哩哔哩", "arguments": "--new-window" }
   ],
   "customCommands": [
     {
@@ -27,6 +27,7 @@
 ```
 
 - `version` 供结构演进时做兼容；`managedHash` 是托管区文本的 SHA-256，启动时与 `$PROFILE` 实测值比对，不一致即重建。
+- 别名的 `arguments` 是每次启动固定附带的参数字符串：按空白分词，双引号可包裹含空格的段；留空时生成的包装函数只传 `$args`。
 - 内置命令不写入数据文件，由 `CustomCommandService.BuiltinCommands` 定义表固定生成。
 - `settings.json` 仍只存设置，两者不合并：备份、迁移与版本演进互不绑定。
 
@@ -47,7 +48,7 @@ Invoke-Expression (&starship init powershell)
 # >>> PAM Alias Launcher >>>
 function Invoke-PamAlias { ... }
 if (-not (Get-Command -Name "bili" -CommandType Alias,Function -ErrorAction SilentlyContinue)) {
-    function bili { Invoke-PamAlias -Path "C:\App\bili.exe" -Remark "哔哩哔哩" -Rest $args }
+    function bili { Invoke-PamAlias -Path "C:\App\bili.exe" -Remark "哔哩哔哩" -Rest (@("--new-window") + $args) }
 }
 # <<< PAM Alias Launcher <<<
 
@@ -57,6 +58,7 @@ if (-not (Get-Command -Name "bili" -CommandType Alias,Function -ErrorAction Sile
 ```
 
 - 用户区已有同名 alias 或 function 时包装函数让位；`Render()` 同时返回冲突名称，界面保存后提示。
+- 配置固定参数时 `-Rest` 以数组字面量开头，终端调用时临时传入的 `$args` 接在其后；未配置时仍是 `-Rest $args`。参数按字面量生成，不做变量展开，公共函数无需区分两类参数。
 - 公共函数借 `explorer.exe` 代启动（带参数经临时 `.lnk`，异常时退回普通 `Start-Process`），新进程完全脱离终端进程树：关终端不影响、日志不回显、UAC 正常。
 - 开关 `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch` 由公共函数运行时读 `settings.json`，改设置即时生效、无需重写 `$PROFILE`；但 **`$PROFILE` 只在终端启动时加载一次，保存后要新开终端窗口**。
 - 别名清空时整体移除 Launcher 子块；托管区始终含 PAM-Custom 子块（内置命令）。渲染幂等。
@@ -105,7 +107,7 @@ Invoke-Expression (&starship init powershell)
 | `Profile/ProfileRenderer.cs` | `$PROFILE` 唯一写入方：上下分区、旧生成块归拢、托管区全量重写、哈希与同名冲突检测 |
 | `Profile/ProfileService.cs` | 定位 `$PROFILE`、`OpenProfileFile`、执行策略、按终端启动 shell；另提供路径规范化与 PowerShell 字符串转义的公共静态方法 |
 | `Profile/PamCustomRegion.cs` | 识别受控区块与行掩码 |
-| `Profile/AliasLaunchService.cs` | `BuildLines()` 产出别名启动器片段（含同名避让与公共函数），不读写文件 |
+| `Profile/AliasLaunchService.cs` | `BuildLines()` 产出别名启动器片段（含同名避让、固定启动参数拆分与公共函数），不读写文件 |
 | `Profile/CustomCommandService.cs` | `BuildLines()` 产出 PAM-Custom 片段；内置命令定义表（`pls` / `ongit` / `sudo`）、`GetBuiltinEntries()` 只读展示、`IsBuiltinName()` / `TryValidateName()` 名称校验；不读写文件 |
 | `Profile/ShellResolver.cs` | `pwsh` / `powershell` / `auto` → 实际 shell，判断是否装了 PowerShell 7 |
 | `Starship/StarshipService.cs` | Starship 探测 / Scoop 一键安装 / `starship.toml` 路径与备份恢复 / init 区块 / 内置主题预设（`Presets\*.toml` EmbeddedResource） |

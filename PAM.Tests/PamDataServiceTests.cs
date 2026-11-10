@@ -68,6 +68,7 @@ public sealed class PamDataServiceTests : IDisposable
                     Name = "blbl",
                     Path = @"C:\Program Files\bilibili\哔哩哔哩.exe",
                     Remark = "打开哔哩哔哩",
+                    Arguments = "--new-window",
                 },
                 new AliasData { Name = "bb", Path = @"D:\Program Files\Quark\quark.exe" },
             ],
@@ -90,8 +91,10 @@ public sealed class PamDataServiceTests : IDisposable
         Assert.Equal("blbl", loaded.Aliases[0].Name);
         Assert.Equal(@"C:\Program Files\bilibili\哔哩哔哩.exe", loaded.Aliases[0].Path);
         Assert.Equal("打开哔哩哔哩", loaded.Aliases[0].Remark);
+        Assert.Equal("--new-window", loaded.Aliases[0].Arguments);
         Assert.Equal("bb", loaded.Aliases[1].Name);
         Assert.Equal(string.Empty, loaded.Aliases[1].Remark);
+        Assert.Equal(string.Empty, loaded.Aliases[1].Arguments);
 
         var command = Assert.Single(loaded.CustomCommands);
         Assert.Equal("hello", command.Name);

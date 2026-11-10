@@ -247,7 +247,6 @@
                     <ColumnDefinition Width="190" />
                     <ColumnDefinition Width="96" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="200" />
                     <ColumnDefinition Width="110" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="名称" Style="{StaticResource ColumnHeaderTextStyle}" />
@@ -257,14 +256,10 @@
                     Style="{StaticResource ColumnHeaderTextStyle}" />
                 <TextBlock
                     Grid.Column="2"
-                    Text="代码预览"
-                    Style="{StaticResource ColumnHeaderTextStyle}" />
-                <TextBlock
-                    Grid.Column="3"
                     Text="备注"
                     Style="{StaticResource ColumnHeaderTextStyle}" />
                 <TextBlock
-                    Grid.Column="4"
+                    Grid.Column="3"
                     HorizontalAlignment="Right"
                     Text="操作"
                     Style="{StaticResource ColumnHeaderTextStyle}" />
@@ -299,16 +294,23 @@
                                 <ColumnDefinition Width="190" />
                                 <ColumnDefinition Width="96" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="200" />
                                 <ColumnDefinition Width="110" />
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock
+                            <StackPanel
                                 Grid.Column="0"
                                 Margin="0,0,16,0"
-                                Text="{Binding Name}"
-                                ToolTip="{Binding Name}"
-                                Style="{StaticResource AliasNameTextStyle}" />
+                                VerticalAlignment="Center">
+                                <TextBlock
+                                    Text="{Binding Name}"
+                                    ToolTip="{Binding Name}"
+                                    Style="{StaticResource AliasNameTextStyle}" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    FontSize="11"
+                                    Text="{Binding CodeSizeText}"
+                                    Style="{StaticResource TertiaryTextStyle}" />
+                            </StackPanel>
 
                             <StackPanel
                                 Grid.Column="1"
@@ -364,23 +366,12 @@
                             <TextBlock
                                 Grid.Column="2"
                                 Margin="0,0,16,0"
-                                FontFamily="{StaticResource MonoFontFamily}"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                Text="{Binding PreviewText}"
-                                TextTrimming="CharacterEllipsis"
-                                ToolTip="{Binding PreviewText}"
-                                VerticalAlignment="Center" />
-
-                            <TextBlock
-                                Grid.Column="3"
-                                Margin="0,0,16,0"
                                 Text="{Binding Remark}"
                                 ToolTip="{Binding Remark}"
                                 Style="{StaticResource RemarkTextStyle}" />
 
                             <Grid
-                                Grid.Column="4"
+                                Grid.Column="3"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Style="{StaticResource RowActionPanelStyle}">
