@@ -21,9 +21,7 @@ public static class CommandHintService
         @"    $pamHintEnabled = $true",
         @"    $pamHintEnglish = $false",
         @"    try {",
-        @"        $pamConfigPath = Join-Path $env:APPDATA 'PAM\settings.json'",
-        @"        if (Test-Path -LiteralPath $pamConfigPath) {",
-        @"            $pamConfig = Get-Content -LiteralPath $pamConfigPath -Raw | ConvertFrom-Json",
+            ..ProfileScriptSnippets.ReadSettingsJsonLines("pamConfigPath", "pamConfig"),
         @"            if ($null -ne $pamConfig.friendlyCommandNotFound) {",
         @"                $pamHintEnabled = [bool] $pamConfig.friendlyCommandNotFound",
         @"            }",
@@ -50,7 +48,7 @@ public static class CommandHintService
         var lines = new List<string>
         {
             StartMarker,
-            "# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。",
+            ProfileScriptSnippets.ManagedSectionNotice,
         };
 
         lines.AddRange(HandlerLines);

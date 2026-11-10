@@ -322,11 +322,9 @@ public sealed class ProfileRendererTests : IDisposable
             ProfileRenderer.StartMarker.Replace(">>>", "<<<"),
             ""));
 
-        // 即使哈希与数据一致，缺少当前版本固定写入的标记块也应重建。
-        var data = SampleData();
-        ProfileRenderer.Render(_profilePath, data);
+        // 文件含边界标记，但缺少当前版本固定写入的 CommandHint 标记块；
+        // 即使哈希与磁盘内容一致，也应判定需要重建。
         var hash = ProfileRenderer.Inspect(_profilePath).Hash;
-
         Assert.True(ProfileRenderer.NeedsRebuild(_profilePath, hash));
     }
 

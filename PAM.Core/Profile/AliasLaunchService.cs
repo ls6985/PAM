@@ -39,9 +39,7 @@ public static class AliasLaunchService
         @"    $enhanced = $true",
         @"    $showRemark = $true",
         @"    try {",
-        @"        $configPath = Join-Path $env:APPDATA 'PAM\settings.json'",
-        @"        if (Test-Path -LiteralPath $configPath) {",
-        @"            $cfg = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json",
+            ..ProfileScriptSnippets.ReadSettingsJsonLines("configPath", "cfg"),
         @"            if ($null -ne $cfg.aliasLaunchEnhanced) { $enhanced = [bool] $cfg.aliasLaunchEnhanced }",
         @"            if ($null -ne $cfg.showAliasRemarkOnLaunch) { $showRemark = [bool] $cfg.showAliasRemarkOnLaunch }",
         @"        }",
@@ -101,7 +99,7 @@ public static class AliasLaunchService
         var lines = new List<string>
         {
             StartMarker,
-            "# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。",
+            ProfileScriptSnippets.ManagedSectionNotice,
         };
 
         lines.AddRange(HelperFunctionLines);

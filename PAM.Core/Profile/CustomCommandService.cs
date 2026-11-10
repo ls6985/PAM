@@ -12,6 +12,18 @@ public sealed class CustomCommandService
     private const string EntryStatePrefix = "# @pam-custom-state";
     private const string EntryEndMarker = "# @pam-custom-end";
 
+    // 去除 Invoke-PamAlias 对路径/备注做的 PowerShell 转义：反引号后跟任意字符时只保留该字符。
+    // pls 解析别名路径/备注、sudo 解析别名路径时共用，避免三处重复同一段正则。
+    // 用单行字符串数组，与 HelperFunctionLines / HandlerLines 保持一致，保证托管区始终为 LF 换行。
+    private static readonly string[] UnescapeHelperLines =
+    [
+        "function __PamUnescape {",
+        "    param([string] $Value)",
+        "    if ($null -eq $Value -or $Value.Length -eq 0) { return '' }",
+        "    return [regex]::Replace($Value, '`(.)', '$1')",
+        "}",
+    ];
+
     /// <summary>PowerShell 函数名里不允许出现的字符（空白单独判断）。</summary>
     private static readonly char[] ForbiddenNameChars =
     [
@@ -50,9 +62,9 @@ public sealed class CustomCommandService
             $rows = foreach ($cmd in (Get-Command -CommandType Function)) {
                 $body = "$($cmd.ScriptBlock)"
                 if (-not ($body -match 'Invoke-PamAlias\s+-Path\s+"(?<path>[^"]*)"')) { continue }
-                $path = [regex]::Replace($Matches['path'], '`(.)', '$1')
+                $path = __PamUnescape($Matches['path'])
                 $remark = ''
-                if ($body -match '-Remark\s+"(?<remark>[^"]*)"') { $remark = [regex]::Replace($Matches['remark'], '`(.)', '$1') }
+                if ($body -match '-Remark\s+"(?<remark>[^"]*)"') { $remark = __PamUnescape($Matches['remark']) }
                 [pscustomobject]@{
                     别名 = $cmd.Name
                     路径 = $path
@@ -125,7 +137,7 @@ public sealed class CustomCommandService
                     $pattern = 'Invoke-PamAlias' + '\s+-Path\s+"(?<path>[^"]*)"'
                     $match = [regex]::Match("$($command.ScriptBlock)", $pattern)
                     if ($match.Success) {
-                        $targetPath = [regex]::Replace($match.Groups['path'].Value, '`(.)', '$1')
+                        $targetPath = __PamUnescape($match.Groups['path'].Value)
                     }
                 }
                 elseif ($kind -eq 'Alias') {
@@ -185,8 +197,11 @@ public sealed class CustomCommandService
         var lines = new List<string>
         {
             PamCustomRegion.Header,
-            "# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。",
+            ProfileScriptSnippets.ManagedSectionNotice,
+            string.Empty,
         };
+
+        lines.AddRange(UnescapeHelperLines);
 
         var allEntries = snapshot
             .Concat(BuiltinCommands.Select(static command =>

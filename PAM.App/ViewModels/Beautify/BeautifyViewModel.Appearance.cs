@@ -344,7 +344,7 @@ public sealed partial class BeautifyViewModel
 
         if (!_hasWtSettings)
         {
-            SetFeedback(StatusType.Warning, "未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。");
+            SetFeedback(StatusType.Warning, Loc.T("未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。"));
             return;
         }
 

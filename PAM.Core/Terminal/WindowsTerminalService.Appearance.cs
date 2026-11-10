@@ -69,7 +69,7 @@ public sealed partial class WindowsTerminalService
         {
             return new TerminalAppearanceResult(
                 false,
-                "未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。");
+                LocalizationService.Instance.T("未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。"));
         }
 
         EnsureOriginalBackup(settingsPath);

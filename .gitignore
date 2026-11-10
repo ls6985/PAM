@@ -12,3 +12,4 @@ dist/
 .workbuddy/
 .vscode/
 .zcode/
+AGENT-*.md

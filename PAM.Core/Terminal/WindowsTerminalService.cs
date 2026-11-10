@@ -135,7 +135,7 @@ public sealed partial class WindowsTerminalService
         settingsPath ??= DiscoverSettingsPath();
         if (settingsPath is null || !File.Exists(settingsPath))
         {
-            return new WindowsTerminalFontResult(false, "未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。");
+            return new WindowsTerminalFontResult(false, LocalizationService.Instance.T("未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。"));
         }
 
         // 只在首次写入时留原始快照；后续修改不再覆盖，恢复永远是「安装本软件前」的配置。

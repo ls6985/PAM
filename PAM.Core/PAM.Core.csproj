@@ -15,6 +15,11 @@
     <EmbeddedResource Include="Presets\*.toml" />
   </ItemGroup>
 
+  <!-- JSONC 解析（Windows Terminal settings.json 的精准拼接）。 -->
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
   <!-- 单元测试需要覆盖 internal 纯逻辑（ProfileDocument / SpliceFontFace 等）。 -->
   <ItemGroup>
     <InternalsVisibleTo Include="PAM.Tests" />

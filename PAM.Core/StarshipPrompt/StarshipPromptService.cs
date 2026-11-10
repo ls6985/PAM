@@ -27,7 +27,7 @@ public sealed partial class StarshipPromptService
 {
     public const string StartMarker = "# >>> PAM Prompt >>>";
     public const string EndMarker = "# <<< PAM Prompt <<<";
-    public const string NoticeLine = "# 该区块由 PowerShell 管理器自动维护，请勿手动修改标记行。";
+    public const string NoticeLine = ProfileScriptSnippets.ManagedSectionNotice;
 
     private const string BackupSuffix = ".pam-prompt.bak";
     private const int MaxFormatLength = 4096;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -23,6 +24,9 @@ public sealed class ProfileService
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
+    // $PROFILE 路径按机器稳定：缓存解析结果，避免每次保存/启动都新开 powershell 进程去查路径。
+    private static readonly Dictionary<string, string> ProfilePathCache = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// 调用 <c>powershell -NoProfile -Command "$PROFILE"</c> 获取当前用户的配置文件路径。
     /// 保留此无参重载以兼容 Windows PowerShell 5.1 的既有调用。
@@ -43,6 +47,11 @@ public sealed class ProfileService
 
     private string GetProfilePathFromShell(string shellFileName)
     {
+        if (ProfilePathCache.TryGetValue(shellFileName, out var cachedPath))
+        {
+            return cachedPath;
+        }
+
         var result = RunShell(shellFileName, Utf8Prelude + "$PROFILE", TimeSpan.FromSeconds(20));
 
         var path = result.StandardOutput
@@ -61,6 +70,7 @@ public sealed class ProfileService
             throw new InvalidOperationException($"{shellFileName} 返回了无效的 $PROFILE 路径：{path}");
         }
 
+        ProfilePathCache[shellFileName] = path;
         return path;
     }
 
