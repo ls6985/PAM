@@ -507,8 +507,8 @@
                 Grid.Row="1"
                 Margin="0,14,0,0"
                 Padding="12,8"
-                Background="{DynamicResource LayerFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                Background="{DynamicResource PamStatusBarBackgroundBrush}"
+                BorderBrush="{DynamicResource PamStatusBarBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8">
                 <Grid>

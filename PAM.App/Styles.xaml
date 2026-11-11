@@ -117,8 +117,8 @@
 
     <!--
         顶部导航页签：圆角矩形。常态低对比底 + 细描边，避免在浅色 Mica 背景下与背景融为一体；
-        选中时底色 / 描边由 NavTabSelectedBackgroundBrush / NavTabSelectedBorderBrush 提供，
-        两个画刷由 ThemeService 按当前主题以系统强调色计算（浅色为低透明度浅底，配主文字色）。
+        选中时底色 / 描边取 NavTabSelectedBackgroundBrush / NavTabSelectedBorderBrush，
+        两个画刷由 Themes/PamTheme.Light.xaml 与 PamTheme.Dark.xaml 分别给出。
     -->
     <Style
         x:Key="NavTabItemStyle"
@@ -193,10 +193,6 @@
             </Setter.Value>
         </Setter>
     </Style>
-
-    <!-- 选中页签的底色与描边：默认值只覆盖首次渲染前的空档，ThemeService 应用主题时按系统强调色重算。 -->
-    <SolidColorBrush x:Key="NavTabSelectedBackgroundBrush" Color="#5A0078D4" />
-    <SolidColorBrush x:Key="NavTabSelectedBorderBrush" Color="#8C0078D4" />
 
     <!--
         顶部 TabView 模板：WPF-UI 默认模板没有页签栏与内容之间的分隔线，这里自行排版 ——

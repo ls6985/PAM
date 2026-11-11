@@ -1,3 +1,5 @@
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using PAM.Core;
@@ -8,15 +10,21 @@ namespace PAM.App;
 
 /// <summary>
 /// 主题应用：亮 / 暗为固定主题；"跟随系统"时挂上 WPF-UI 的系统主题监视器。
+/// 每次应用主题后同步替换 PAM 的画刷字典（Themes/PamTheme.*.xaml）。
 /// </summary>
 public static class ThemeService
 {
+    private static readonly Uri LightBrushesUri = new("Themes/PamTheme.Light.xaml", UriKind.Relative);
+    private static readonly Uri DarkBrushesUri = new("Themes/PamTheme.Dark.xaml", UriKind.Relative);
+
     private static bool _watching;
     private static bool _brushesSubscribed;
 
     public static void Apply(string? theme, Window window)
     {
         if (window is null) return;
+
+        EnsureBrushesFollowTheme();
 
         var followSystem = !string.Equals(theme, AppSettings.ThemeLight, StringComparison.OrdinalIgnoreCase) &&
                            !string.Equals(theme, AppSettings.ThemeDark, StringComparison.OrdinalIgnoreCase);
@@ -30,7 +38,7 @@ public static class ThemeService
             }
 
             ApplicationThemeManager.Apply(ResolveSystemTheme());
-            UpdateNavTabBrushes();
+            ApplyBrushes();
             return;
         }
 
@@ -45,7 +53,7 @@ public static class ThemeService
             string.Equals(theme, AppSettings.ThemeDark, StringComparison.OrdinalIgnoreCase)
                 ? ApplicationTheme.Dark
                 : ApplicationTheme.Light);
-        UpdateNavTabBrushes();
+        ApplyBrushes();
     }
 
     private static ApplicationTheme ResolveSystemTheme()
@@ -57,43 +65,34 @@ public static class ThemeService
             : ApplicationTheme.Light;
     }
 
-    /// <summary>
-    /// 按当前主题用系统强调色重算顶部导航页签的选中底色与描边（见 Styles.xaml 的 NavTabItemStyle）。
-    /// WPF-UI 不会自动切换应用内自定义画刷，主题应用后须手动写入应用资源。
-    /// </summary>
-    private static void UpdateNavTabBrushes()
+    private static void EnsureBrushesFollowTheme()
     {
-        if (!_brushesSubscribed)
-        {
-            // SystemThemeWatcher 跟随系统切换主题时绕过本类，Changed 事件是两条路径的共同出口。
-            ApplicationThemeManager.Changed += static (_, _) => UpdateNavTabBrushes();
-            _brushesSubscribed = true;
-        }
+        if (_brushesSubscribed) return;
 
-        var resources = Application.Current.Resources;
-        var isDark = ApplicationThemeManager.GetAppTheme() is ApplicationTheme.Dark or ApplicationTheme.HighContrast;
+        // SystemThemeWatcher 跟随系统切换主题时绕过本类，Changed 事件是两条路径的共同出口。
+        ApplicationThemeManager.Changed += static (_, _) => ApplyBrushes();
+        _brushesSubscribed = true;
+    }
 
-        Color accent;
-        if (resources["SystemAccentColorPrimary"] is Color color)
-        {
-            accent = color;
-        }
-        else if (resources["SystemAccentColorPrimary"] is SolidColorBrush brush)
-        {
-            accent = brush.Color;
-        }
-        else
-        {
-            return;
-        }
+    /// <summary>
+    /// 按当前明暗把 PAM 画刷字典换成浅色 / 深色一份。
+    /// WPF-UI 应用主题时会替换自己的主题字典，因此这里始终把 PAM 字典放到合并列表末尾，
+    /// 保证同名键（强调色、开关、按钮描边等）以 PAM 的值为准。
+    /// </summary>
+    private static void ApplyBrushes()
+    {
+        var dictionaries = Application.Current.Resources.MergedDictionaries;
+        var target = ApplicationThemeManager.GetAppTheme() == ApplicationTheme.Dark ? DarkBrushesUri : LightBrushesUri;
+        var targetName = Path.GetFileName(target.OriginalString);
 
-        // 浅色主题用低透明度铺出浅强调底，配合主文字色保证对比；深色主题提高透明度保持原有的选中感。
-        var backgroundAlpha = (byte)(isDark ? 0x5A : 0x26);
-        var borderAlpha = (byte)(isDark ? 0x8C : 0x73);
+        var existing = dictionaries.FirstOrDefault(static dictionary =>
+            dictionary.Source?.OriginalString.Contains("PamTheme.", StringComparison.OrdinalIgnoreCase) == true);
 
-        resources["NavTabSelectedBackgroundBrush"] =
-            new SolidColorBrush(Color.FromArgb(backgroundAlpha, accent.R, accent.G, accent.B));
-        resources["NavTabSelectedBorderBrush"] =
-            new SolidColorBrush(Color.FromArgb(borderAlpha, accent.R, accent.G, accent.B));
+        var isCurrent = existing?.Source?.OriginalString.Contains(targetName, StringComparison.OrdinalIgnoreCase) == true;
+        var isLast = existing is not null && dictionaries.Count > 0 && ReferenceEquals(existing, dictionaries[^1]);
+        if (isCurrent && isLast) return;
+
+        if (existing is not null) dictionaries.Remove(existing);
+        dictionaries.Add(new ResourceDictionary { Source = target });
     }
 }

@@ -302,8 +302,8 @@
                         <Border
                             Margin="0,12,0,0"
                             Padding="12,10"
-                            Background="{DynamicResource LayerFillColorDefaultBrush}"
-                            BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                            Background="{DynamicResource PamStatusBarBackgroundBrush}"
+                            BorderBrush="{DynamicResource PamStatusBarBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="6">
                             <StackPanel Orientation="Horizontal">

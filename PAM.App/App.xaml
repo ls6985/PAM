@@ -11,6 +11,11 @@
                 <ui:ThemesDictionary Theme="Light"/>
                 <ui:ControlsDictionary/>
                 <ResourceDictionary Source="Styles.xaml"/>
+                <!--
+                    PAM 主题画刷：与 WPF-UI 主题字典同名覆盖，默认载入浅色一份。
+                    ThemeService 在每次主题应用后按当前明暗换成对应的字典（见 Themes/PamTheme.*.xaml）。
+                -->
+                <ResourceDictionary Source="Themes/PamTheme.Light.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <converters:TextNotEmptyToVisibilityConverter x:Key="TextNotEmptyToVisibilityConverter"/>
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
