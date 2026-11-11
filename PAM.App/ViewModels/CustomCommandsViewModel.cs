@@ -30,6 +30,8 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
     private string _editorCode = string.Empty;
     private string _editorRemark = string.Empty;
     private bool _editorEnabled = true;
+    private bool _editorAllowsArguments;
+    private string _editorArguments = string.Empty;
     private bool _isNameFieldEnabled = true;
     private string _editorErrorText = string.Empty;
     private string _editorErrorTextRaw = string.Empty;
@@ -156,6 +158,31 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
         set { if (_editorEnabled == value) return; _editorEnabled = value; OnPropertyChanged(); }
     }
 
+    /// <summary>高级设置：是否把固定参数与终端临时参数追加到命令体末尾。</summary>
+    public bool EditorAllowsArguments
+    {
+        get => _editorAllowsArguments;
+        set
+        {
+            if (_editorAllowsArguments == value) return;
+            _editorAllowsArguments = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>高级设置：每次调用都附带的固定参数。</summary>
+    public string EditorArguments
+    {
+        get => _editorArguments;
+        set
+        {
+            var text = value ?? string.Empty;
+            if (_editorArguments == text) return;
+            _editorArguments = text;
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>编辑已有命令时名称是唯一键，禁止改名（与别名规则一致）。</summary>
     public bool IsNameFieldEnabled
     {
@@ -195,11 +222,19 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
             Commands.Clear();
             foreach (var command in data.CustomCommands)
             {
+                // 早期版本要求这里写完整的 function 定义；统一迁移成只保留命令体。
+                var code = CustomCommandCode.StripOuterFunction(
+                    command.Name,
+                    string.Join("\n", command.CodeLines));
+
                 Commands.Add(new CustomCommandEntry(
                     command.Name,
-                    string.Join("\n", command.CodeLines),
+                    code,
                     command.IsEnabled,
-                    command.Remark));
+                    command.Remark,
+                    false,
+                    command.AllowsArguments,
+                    command.Arguments));
             }
 
             foreach (var builtin in CustomCommandService.GetBuiltinEntries())
@@ -259,6 +294,8 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
                     CodeLines = entry.Code.Split('\n'),
                     IsEnabled = entry.IsEnabled,
                     Remark = entry.Remark,
+                    AllowsArguments = entry.AllowsArguments,
+                    Arguments = entry.Arguments,
                 })
                 .ToList();
 
@@ -315,6 +352,8 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
         EditorCode = string.Empty;
         EditorRemark = string.Empty;
         EditorEnabled = true;
+        EditorAllowsArguments = false;
+        EditorArguments = string.Empty;
         IsEditorOpen = true;
         UpdateValidation();
     }
@@ -333,6 +372,8 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
         EditorCode = ToEditorText(entry.Code);
         EditorRemark = entry.Remark;
         EditorEnabled = entry.IsEnabled;
+        EditorAllowsArguments = entry.AllowsArguments;
+        EditorArguments = entry.Arguments;
         IsEditorOpen = true;
         UpdateValidation();
     }
@@ -395,18 +436,23 @@ public sealed class CustomCommandsViewModel : INotifyPropertyChanged
         }
 
         var name = EditorName.Trim();
-        var code = CustomCommandEntry.NormalizeCodeBlock(EditorCode);
+        // 兼容旧数据：代码写成完整的同名 function 定义时去壳，只保留命令体。
+        var code = CustomCommandCode.StripOuterFunction(name, CustomCommandEntry.NormalizeCodeBlock(EditorCode));
         var remark = EditorRemark.Trim();
+        var arguments = EditorArguments.Trim();
 
         if (IsNewEntry)
         {
-            Commands.Add(new CustomCommandEntry(name, code, EditorEnabled, remark));
+            Commands.Add(new CustomCommandEntry(
+                name, code, EditorEnabled, remark, false, EditorAllowsArguments, arguments));
         }
         else if (EditingEntry is not null)
         {
             EditingEntry.Code = code;
             EditingEntry.Remark = remark;
             EditingEntry.IsEnabled = EditorEnabled;
+            EditingEntry.AllowsArguments = EditorAllowsArguments;
+            EditingEntry.Arguments = arguments;
         }
 
         CloseEditor();

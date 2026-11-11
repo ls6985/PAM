@@ -81,6 +81,8 @@ public partial class CustomCommandsView : UserControl
 
             case nameof(CustomCommandsViewModel.IsEditorOpen):
                 AddButton.IsEnabled = !_viewModel.IsEditorOpen && !_viewModel.IsLoading;
+                // 已配置参数的命令直接展开高级选项，避免设置被折叠隐藏。
+                AdvancedToggle.IsChecked = _viewModel.EditorAllowsArguments;
                 if (_viewModel.IsEditorOpen)
                 {
                     Dispatcher.BeginInvoke(new Action(FocusEditorField), DispatcherPriority.Input);
@@ -119,6 +121,17 @@ public partial class CustomCommandsView : UserControl
     }
 
     // --- 列表与编辑器交互 ---
+
+    /// <summary>打开示例窗口：展示常用命令写法并支持复制。</summary>
+    private void GuideButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new CommandGuideWindow
+        {
+            Owner = Window.GetWindow(this),
+        };
+
+        window.ShowDialog();
+    }
 
     private void AddButton_Click(object sender, RoutedEventArgs e)
     {

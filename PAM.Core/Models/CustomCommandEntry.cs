@@ -11,7 +11,9 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
     private string _name;
     private string _code;
     private string _remark;
+    private string _arguments;
     private bool _isEnabled;
+    private bool _allowsArguments;
     private bool _deletePending;
 
     public CustomCommandEntry(
@@ -19,13 +21,17 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
         string code,
         bool isEnabled = true,
         string remark = "",
-        bool isBuiltin = false)
+        bool isBuiltin = false,
+        bool allowsArguments = false,
+        string arguments = "")
     {
         _name = name;
         _code = NormalizeCode(code);
         _isEnabled = isEnabled;
         _remark = remark;
         IsBuiltin = isBuiltin;
+        _allowsArguments = allowsArguments;
+        _arguments = arguments ?? string.Empty;
     }
 
     /// <summary>命令名（写入区块头部行的第一个字段），同时用作唯一键。</summary>
@@ -73,6 +79,41 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
             }
 
             _remark = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>每次调用时固定附带的参数，仅在 <see cref="AllowsArguments"/> 为 true 时生效。</summary>
+    public string Arguments
+    {
+        get => _arguments;
+        set
+        {
+            var text = value ?? string.Empty;
+            if (_arguments == text)
+            {
+                return;
+            }
+
+            _arguments = text;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 是否把固定参数与终端临时参数追加到命令体末尾。关闭时函数体内仍可使用 <c>$args</c>。
+    /// </summary>
+    public bool AllowsArguments
+    {
+        get => _allowsArguments;
+        set
+        {
+            if (_allowsArguments == value)
+            {
+                return;
+            }
+
+            _allowsArguments = value;
             OnPropertyChanged();
         }
     }
@@ -152,7 +193,7 @@ public sealed class CustomCommandEntry : INotifyPropertyChanged
         return string.Join("\n", lines);
     }
 
-    public CustomCommandEntry Clone() => new(_name, _code, _isEnabled, _remark, IsBuiltin);
+    public CustomCommandEntry Clone() => new(_name, _code, _isEnabled, _remark, IsBuiltin, _allowsArguments, _arguments);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

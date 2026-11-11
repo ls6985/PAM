@@ -316,31 +316,6 @@ public partial class MainWindow : FluentWindow
         AliasList.IsEnabled = true;
     }
 
-    /// <summary>
-    /// 把 $PROFILE 路径复制到剪贴板，并在状态栏提示“路径已复制”。
-    /// </summary>
-    private void CopyPathButton_Click(object sender, RoutedEventArgs e)
-    {
-        var profilePath = ViewModel.ProfilePathRaw;
-
-        if (!ViewModel.HasProfilePath)
-        {
-            ViewModel.SetStatus(StatusType.Warning, "尚未读取到 $PROFILE 路径，无法复制。");
-            return;
-        }
-
-        try
-        {
-            // copy: true 让内容在窗口关闭后仍留在剪贴板。
-            Clipboard.SetDataObject(profilePath, copy: true);
-            ViewModel.SetStatus(StatusType.Saved, "路径已复制");
-        }
-        catch (Exception ex)
-        {
-            ViewModel.SetStatus(StatusType.Error, $"错误：复制路径失败：{ex.Message}");
-        }
-    }
-
     private async void FixPolicyButton_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.IsLoading) return;

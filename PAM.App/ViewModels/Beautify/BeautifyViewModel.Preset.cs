@@ -30,7 +30,7 @@ public sealed partial class BeautifyViewModel
         {
             if (_promptCustomized)
             {
-                return Loc.T("当前使用自定义提示符；重新应用主题会覆盖它。");
+                return Loc.T(LocKey.CustomPromptSimpleStatus);
             }
 
             if (_detectedPresetId is not null)

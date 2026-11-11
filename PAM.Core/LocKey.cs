@@ -1,4 +1,4 @@
-namespace PAM.Core;
+﻿namespace PAM.Core;
 
 /// <summary>显式本地化资源键；每个成员对应语言表中的一条 {zh, en} 词条。</summary>
 public enum LocKey
@@ -115,7 +115,7 @@ public enum LocKey
     ExecutionPolicyRestricted,
     /// <summary>尝试修复</summary>
     TryToFix,
-    /// <summary>把常用函数或脚本片段收进 $PROFILE 的受控区块，保存时只改写该区块，其余配置原样保留。</summary>
+    /// <summary>把常用命令收进 $PROFILE 的受控区块：命令名就是终端里的调用入口，保存时只改写该区块，其余配置原样保留。</summary>
     KeepFrequentlyUsedFunctionsAndSnippetsInAManagedPROFILEBlockOnlyThatBlockIsRewritten,
     /// <summary>保存时只重写该区块，区块外的 $PROFILE 内容不会被修改。</summary>
     OnlyThisBlockIsRewrittenTheRestOfPROFILEIsPreserved,
@@ -737,8 +737,6 @@ public enum LocKey
     Created,
     /// <summary>未创建</summary>
     NotCreated,
-    /// <summary>主题备份存在</summary>
-    StarshipTomlBakExists,
     /// <summary>打开 starship.toml</summary>
     OpenStarshipToml,
     /// <summary>恢复上次主题设置</summary>
@@ -881,14 +879,40 @@ public enum LocKey
     ChangesDiscarded,
     /// <summary>请先添加至少一个片段。</summary>
     AddSegmentFirst,
-    /// <summary>当前使用自定义提示符；重新应用主题会覆盖它。</summary>
+    /// <summary>当前主题：自定义提示符</summary>
     CustomPromptSimpleStatus,
     /// <summary>通用设置</summary>
     CommonSettings,
     /// <summary>主题预设和自定义提示符都会用这两个设置。</summary>
     CommonOptionsScope,
-    /// <summary>两种方案共用</summary>
-    CommonOptionsSharedScope,
+    /// <summary>示例 / 指南</summary>
+    CommandExampleGuide,
+    /// <summary>查看命令代码的写法示例，可直接复制。</summary>
+    CommandExampleGuideTooltip,
+    /// <summary>只写要执行的命令即可：保存时会包成以命令名命名的函数，只有在终端里输入该名称时才会执行。</summary>
+    CommandBodyHint,
+    /// <summary>高级选项：命令参数（可选）</summary>
+    AdvancedCommandArgumentsOptional,
+    /// <summary>允许在命令名后传入参数</summary>
+    AllowArgumentsAfterCommandName,
+    /// <summary>固定参数</summary>
+    FixedArguments,
+    /// <summary>例如：-t 8.8.8.8</summary>
+    FixedArgumentsPlaceholder,
+    /// <summary>每次调用都会带上这些参数，终端里临时输入的参数排在后面；两者都追加在命令体最后一行的末尾。含空格的参数请用英文双引号包起来。</summary>
+    CommandArgumentsHint,
+    /// <summary>把下面的命令复制后，点「新建命令」，粘贴到命令代码里，设置好命令名称，保存并生效即可。</summary>
+    CommandGuideIntro,
+    /// <summary>命令名称就是将来在终端里输入的名字；代码只写要执行的命令，不需要写 function。</summary>
+    CommandGuideNameHint,
+    /// <summary>复制</summary>
+    Copy,
+    /// <summary>关闭</summary>
+    Close,
+    /// <summary>已复制：{0}</summary>
+    Copied0,
+    /// <summary>复制失败：{0}</summary>
+    CopyFailed0,
 }
 
 /// <summary>LocKey 对应的 {zh, en} 语言表，以及中文→英文的兜底查表（供动态字符串与 XAML 桥接）。</summary>
@@ -953,7 +977,7 @@ internal static class LocTable
             [LocKey.PROFILEPathIsNotAvailableYetCannotCopy] = ("尚未读取到 $PROFILE 路径，无法复制。", "$PROFILE path is not available yet; cannot copy."),
             [LocKey.ExecutionPolicyRestricted] = ("执行策略受限", "Execution policy restricted"),
             [LocKey.TryToFix] = ("尝试修复", "Try to fix"),
-            [LocKey.KeepFrequentlyUsedFunctionsAndSnippetsInAManagedPROFILEBlockOnlyThatBlockIsRewritten] = ("把常用函数或脚本片段收进 $PROFILE 的受控区块，保存时只改写该区块，其余配置原样保留。", "Keep frequently used functions and snippets in a managed $PROFILE block. Only that block is rewritten."),
+            [LocKey.KeepFrequentlyUsedFunctionsAndSnippetsInAManagedPROFILEBlockOnlyThatBlockIsRewritten] = ("把常用命令收进 $PROFILE 的受控区块：命令名就是终端里的调用入口，保存时只改写该区块，其余配置原样保留。", "Keep frequently used commands in a managed $PROFILE block: the command name is what you type in a terminal. Only that block is rewritten."),
             [LocKey.OnlyThisBlockIsRewrittenTheRestOfPROFILEIsPreserved] = ("保存时只重写该区块，区块外的 $PROFILE 内容不会被修改。", "Only this block is rewritten; the rest of $PROFILE is preserved."),
             [LocKey.SearchNameCodeOrNote] = ("搜索名称、代码或备注", "Search name, code or note"),
             [LocKey.CtrlEnterToConfirmEscToCancel] = ("Ctrl+Enter 确定 · Esc 取消", "Ctrl+Enter to confirm · Esc to cancel"),
@@ -1243,10 +1267,10 @@ internal static class LocTable
             [LocKey.TheAppearanceSettingPathIsEmpty] = ("外观设置的属性路径为空。", "The appearance setting path is empty."),
             [LocKey.WindowsTerminalCurrentFont0] = ("Windows Terminal 当前字体：{0}", "Windows Terminal current font: {0}"),
             [LocKey.WindowsTerminalCurrentFontNotSetUsingTheWTDefault] = ("Windows Terminal 当前字体：未设置（跟随 WT 默认）", "Windows Terminal current font: not set (using the WT default)"),
-            [LocKey.InstallBundledFont] = ("安装内置字体", "Install bundled font"),
+            [LocKey.InstallBundledFont] = ("安装内置NF字体", "Install bundled NF font"),
             [LocKey.InstallsTheBundledCascadiaCodeNFForTheCurrentUserNoAdminRightsNeeded] = ("把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。", "Installs the bundled Cascadia Code NF for the current user (no admin rights needed)."),
             [LocKey.WantOtherNerdFontsWithScoopInstalledRunScoopBucketAddNerdFontsThenInstallEGJetBrainsMonoNFOrFiraCodeNFReopenThisTabAndTheyWillAppearInTheList] = ("想用别的图标字体？装好 Scoop 后执行 scoop bucket add nerd-fonts，再安装喜欢的字体，点「刷新状态」就能在下拉里看到。", "Want a different icon font? After installing Scoop, run scoop bucket add nerd-fonts, install a font, then click Refresh to see it in the list."),
-            [LocKey.InstallingTheBundledFont] = ("正在安装内置字体…", "Installing the bundled font…"),
+            [LocKey.InstallingTheBundledFont] = ("正在安装内置 NF 字体…", "Installing the bundled NF font…"),
             [LocKey.WindowsTerminalSettingsJsonWasNotFoundStartWindowsTerminalOnceFirst] = ("未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。", "Windows Terminal settings.json was not found. Start Windows Terminal once first."),
             [LocKey.FontFileNotFound0] = ("未找到字体文件：{0}", "Font file not found: {0}"),
             [LocKey.OnlyTtfFontFilesAreSupported] = ("只支持 .ttf 字体文件。", "Only .ttf font files are supported."),
@@ -1254,7 +1278,7 @@ internal static class LocTable
             [LocKey.Installed0ForTheCurrentUser] = ("已为当前用户安装 {0}。", "Installed {0} for the current user."),
             [LocKey.TheFontNameCannotBeEmpty] = ("字体名称不能为空。", "The font name cannot be empty."),
             [LocKey.ThemePreset] = ("主题预设", "Theme preset"),
-            [LocKey.PresetsMarkedAsNeedingANerdFontRequireTheFontToBeInstalledFirstOtherwiseThePromptShowsPlaceholderBoxes] = ("标了「需图标字体」的主题要先装好字体，否则符号会显示成方块。", "Themes marked icon font required need the font installed first, or symbols appear as boxes."),
+            [LocKey.PresetsMarkedAsNeedingANerdFontRequireTheFontToBeInstalledFirstOtherwiseThePromptShowsPlaceholderBoxes] = ("标了「需 Nerd Font」的主题要先装好字体，否则符号会显示成方块。", "Themes marked as needing a Nerd Font require the font to be installed first, or symbols appear as boxes."),
             [LocKey.ApplyTheme] = ("应用主题", "Apply theme"),
             [LocKey.ApplyingTheThemePreset] = ("正在应用主题预设…", "Applying the theme preset…"),
             [LocKey.ThemeApplied0TheOriginalStarshipTomlHasBeenBackedUp] = ("主题已应用：{0}；原 starship.toml 已自动备份。", "Theme applied: {0}. The original starship.toml has been backed up."),
@@ -1264,7 +1288,6 @@ internal static class LocTable
             [LocKey.ConfigMaintenance] = ("配置维护", "Config maintenance"),
             [LocKey.Created] = ("已创建", "Created"),
             [LocKey.NotCreated] = ("未创建", "Not created"),
-            [LocKey.StarshipTomlBakExists] = ("主题备份存在", "Theme backup exists"),
             [LocKey.OpenStarshipToml] = ("打开 starship.toml", "Open starship.toml"),
             [LocKey.RestoreStarshipTomlBackup] = ("恢复上次主题设置", "Restore last theme settings"),
             [LocKey.RestoreWindowsTerminalBackup] = ("恢复终端备份", "Restore terminal backup"),
@@ -1336,10 +1359,23 @@ internal static class LocTable
             [LocKey.DefaultThemeRestored] = ("已恢复默认主题，点「保存设置」才会写入。", "Default theme restored. Click Save settings to apply."),
             [LocKey.ChangesDiscarded] = ("已放弃未保存的改动，回到上次保存的状态。", "Unsaved changes discarded; back to the last saved state."),
             [LocKey.AddSegmentFirst] = ("请先添加至少一个片段。", "Add at least one segment first."),
-            [LocKey.CustomPromptSimpleStatus] = ("当前使用自定义提示符；重新应用主题会覆盖它。", "Using a custom prompt; applying a theme will replace it."),
+            [LocKey.CustomPromptSimpleStatus] = ("当前主题：自定义提示符", "Current theme: custom prompt"),
             [LocKey.CommonSettings] = ("通用设置", "Common settings"),
             [LocKey.CommonOptionsScope] = ("主题预设和自定义提示符都会用这两个设置。", "These two settings apply to both the theme preset and the custom prompt."),
-            [LocKey.CommonOptionsSharedScope] = ("两种方案共用", "Shared by both schemes"),
+            [LocKey.CommandExampleGuide] = ("示例 / 指南", "Examples / guide"),
+            [LocKey.CommandExampleGuideTooltip] = ("查看命令代码的写法示例，可直接复制。", "Show code examples for commands; each can be copied."),
+            [LocKey.CommandBodyHint] = ("只写要执行的命令即可：保存时会包成以命令名命名的函数，只有在终端里输入该名称时才会执行。", "Write only the command to run: it is wrapped in a function named after the command and runs only when you type that name in a terminal."),
+            [LocKey.AdvancedCommandArgumentsOptional] = ("高级选项：命令参数（可选）", "Advanced: command arguments (optional)"),
+            [LocKey.AllowArgumentsAfterCommandName] = ("允许在命令名后传入参数", "Allow arguments after the command name"),
+            [LocKey.FixedArguments] = ("固定参数", "Fixed arguments"),
+            [LocKey.FixedArgumentsPlaceholder] = ("例如：-t 8.8.8.8", "For example: -t 8.8.8.8"),
+            [LocKey.CommandArgumentsHint] = ("每次调用都会带上这些参数，终端里临时输入的参数排在后面；两者都追加在命令体最后一行的末尾。含空格的参数请用英文双引号包起来。", "These arguments are passed on every call, followed by any typed in the terminal. Both are appended to the last line of the command body. Wrap arguments that contain spaces in double quotes."),
+            [LocKey.CommandGuideIntro] = ("把下面的命令复制后，点「新建命令」，粘贴到命令代码里，设置好命令名称，保存并生效即可。", "Copy one of the commands below, click New Command, paste it into the command code, set the command name, then save."),
+            [LocKey.CommandGuideNameHint] = ("命令名称就是将来在终端里输入的名字；代码只写要执行的命令，不需要写 function。", "The command name is what you will type in a terminal; the code holds only the command to run, no function needed."),
+            [LocKey.Copy] = ("复制", "Copy"),
+            [LocKey.Close] = ("关闭", "Close"),
+            [LocKey.Copied0] = ("已复制：{0}", "Copied: {0}"),
+            [LocKey.CopyFailed0] = ("复制失败：{0}", "Copy failed: {0}"),
         };
 
     public static readonly IReadOnlyDictionary<string, string> ZhToEn = BuildZhToEn();

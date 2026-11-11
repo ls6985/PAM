@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using PAM.Core;
 
 namespace PAM.App.ViewModels;
@@ -17,8 +17,6 @@ public sealed partial class BeautifyViewModel
     public bool HasWtBackup => _hasWtBackup;
     public string TomlPath => _tomlPath;
     public string WtSettingsPath => _wtSettingsPath;
-    public string TomlStatusText => Loc.T(_tomlStatusSource);
-    public string InitLineText => Loc.F("starship init 行：{0}", Loc.T(_initLineSource));
 
     /// <summary>原始快照是什么时候留下的：说明恢复永远回到本软件首次修改前，而不是上一次修改前。</summary>
     public string WtBackupText => _wtBackupCreatedAt is { } created

@@ -4,6 +4,8 @@ namespace PAM.Core;
 
 /// <summary>
 /// 生成 $PROFILE 托管区中的 PAM-Custom 片段，并维护内置命令定义表与名称校验。
+/// 用户命令按行写成以命令名命名的函数（见 <see cref="CustomCommandCode"/>），
+/// 内置命令自带完整定义，两者都只在终端输入名称时执行。
 /// 片段文本由 <see cref="ProfileRenderer"/> 统一写入，本类不读写文件。
 /// </summary>
 public sealed class CustomCommandService
@@ -191,7 +193,10 @@ public sealed class CustomCommandService
                 command.Name.Trim(),
                 string.Join("\n", command.CodeLines ?? []),
                 command.IsEnabled,
-                command.Remark))
+                command.Remark,
+                false,
+                command.AllowsArguments,
+                command.Arguments))
             .ToList();
 
         var lines = new List<string>
@@ -276,7 +281,14 @@ public sealed class CustomCommandService
             yield return $"{EntryStatePrefix} disabled";
         }
 
-        var codeLines = CustomCommandEntry.NormalizeCode(entry.Code).Split('\n').ToList();
+        var codeLines = entry.IsBuiltin
+            ? CustomCommandEntry.NormalizeCode(entry.Code).Split('\n').ToList()
+            : CustomCommandCode.BuildFunctionLines(
+                name,
+                entry.Code,
+                entry.AllowsArguments,
+                entry.Arguments);
+
         TrimBlankEdges(codeLines);
 
         foreach (var line in codeLines)

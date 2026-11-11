@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -44,9 +44,7 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
     private bool _hasWtBackup;
     private bool _isBundledFontInstalled = true;
     private string _tomlPath = string.Empty;
-    private string _tomlStatusSource = "未创建";
     private bool _hasTomlBackup;
-    private string _initLineSource = "未知";
     private string? _selectedFont;
     private string _selectedPresetId = string.Empty;
     private string? _detectedPresetId;
@@ -85,7 +83,6 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
         _hasWtBackup = wtState.BackupExists;
         _isBundledFontInstalled = FontInstaller.IsBundledFontInstalled();
         _tomlPath = _starshipService.GetConfigPath();
-        _tomlStatusSource = File.Exists(_tomlPath) ? "已创建" : "未创建";
         RebuildFontOptions(candidates, wtState.CurrentFont, _isBundledFontInstalled);
         RebuildPresetOptions();
         RefreshAppearanceFromDisk();

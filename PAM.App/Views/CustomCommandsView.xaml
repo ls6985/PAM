@@ -1,4 +1,4 @@
-<UserControl
+﻿<UserControl
     x:Class="PAM.App.Views.CustomCommandsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -32,18 +32,13 @@
                 <TextBlock Text="自定义命令" Style="{StaticResource SectionTitleStyle}" />
                 <TextBlock
                     Margin="0,4,0,0"
-                    Text="把常用函数或脚本片段收进 $PROFILE 的受控区块，保存时只改写该区块，其余配置原样保留。"
+                    Text="把常用命令收进 $PROFILE 的受控区块：命令名就是终端里的调用入口，保存时只改写该区块，其余配置原样保留。"
                     Style="{StaticResource SecondaryTextStyle}" />
             </StackPanel>
 
             <Border
                 Grid.Column="1"
-                Padding="12,8"
-                VerticalAlignment="Center"
-                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
+                Style="{StaticResource PageTagBorderStyle}"
                 ToolTip="保存时只重写该区块，区块外的 $PROFILE 内容不会被修改。">
                 <StackPanel Orientation="Horizontal">
                     <ui:SymbolIcon
@@ -53,11 +48,8 @@
                         Symbol="Code24"
                         VerticalAlignment="Center" />
                     <TextBlock
-                        FontFamily="{StaticResource MonoFontFamily}"
-                        FontSize="12"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        Text="#region PAM-Custom"
-                        VerticalAlignment="Center" />
+                        Style="{StaticResource PageTagTextStyle}"
+                        Text="PAM-Custom" />
                 </StackPanel>
             </Border>
         </Grid>
@@ -78,6 +70,14 @@
                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ui:Button
+                    x:Name="GuideButton"
+                    Margin="0,0,8,0"
+                    Appearance="Secondary"
+                    Click="GuideButton_Click"
+                    Content="示例 / 指南"
+                    Icon="{ui:SymbolIcon BookQuestionMark24}"
+                    ToolTip="查看命令代码的写法示例，可直接复制。" />
                 <ui:Button
                     x:Name="AddButton"
                     Click="AddButton_Click"
@@ -107,6 +107,7 @@
             Visibility="{Binding IsEditorOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -220,12 +221,81 @@
                     </Border>
                     <TextBlock
                         Margin="0,6,0,0"
-                        Text="代码会被原样写入受控区块；禁用的命令保存为注释行，重新启用后完整还原。"
+                        Text="只写要执行的命令即可：保存时会包成以命令名命名的函数，只有在终端里输入该名称时才会执行。"
                         Style="{StaticResource TertiaryTextStyle}" />
                 </StackPanel>
 
+                <!-- 高级选项：命令参数，默认收起。 -->
+                <StackPanel Grid.Row="3" Margin="0,10,0,0">
+                    <ToggleButton
+                        x:Name="AdvancedToggle"
+                        Cursor="Hand"
+                        HorizontalAlignment="Left">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="BorderThickness" Value="0" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter VerticalAlignment="Center" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ToggleButton.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                Text="▸"
+                                Visibility="{Binding IsChecked, ElementName=AdvancedToggle, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                Text="▾"
+                                Visibility="{Binding IsChecked, ElementName=AdvancedToggle, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <TextBlock
+                                Margin="6,0,0,0"
+                                Text="高级选项：命令参数（可选）"
+                                Style="{StaticResource TertiaryTextStyle}" />
+                        </StackPanel>
+                    </ToggleButton>
+
+                    <StackPanel
+                        Margin="0,8,0,0"
+                        Visibility="{Binding IsChecked, ElementName=AdvancedToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <CheckBox
+                            x:Name="AllowsArgumentsCheck"
+                            Content="允许在命令名后传入参数"
+                            IsChecked="{Binding EditorAllowsArguments}" />
+                        <TextBlock
+                            Margin="0,10,0,0"
+                            Text="固定参数"
+                            Style="{StaticResource FieldLabelStyle}" />
+                        <ui:TextBox
+                            x:Name="ArgumentsField"
+                            MaxWidth="560"
+                            HorizontalAlignment="Left"
+                            FontFamily="{StaticResource MonoFontFamily}"
+                            IsEnabled="{Binding EditorAllowsArguments}"
+                            PlaceholderText="例如：-t 8.8.8.8"
+                            Text="{Binding EditorArguments, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock
+                            MaxWidth="560"
+                            Margin="0,6,0,0"
+                            HorizontalAlignment="Left"
+                            Text="每次调用都会带上这些参数，终端里临时输入的参数排在后面；两者都追加在命令体最后一行的末尾。含空格的参数请用英文双引号包起来。"
+                            Style="{StaticResource TertiaryTextStyle}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+
                 <TextBlock
-                    Grid.Row="3"
+                    Grid.Row="4"
                     Margin="0,8,0,0"
                     FontSize="12"
                     Foreground="{DynamicResource SystemFillColorCriticalBrush}"

@@ -1,4 +1,4 @@
-<ui:FluentWindow
+﻿<ui:FluentWindow
     x:Class="PAM.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -21,6 +21,8 @@
     Loaded="Window_Loaded"
     Closed="Window_Closed"
     PreviewKeyDown="Window_PreviewKeyDown"
+    TextOptions.TextFormattingMode="Display"
+    UseLayoutRounding="True"
     mc:Ignorable="d">
 
     <Grid>
@@ -85,41 +87,18 @@
 
                             <Border
                                 Grid.Column="1"
-                                MaxWidth="440"
-                                Padding="12,8"
-                                VerticalAlignment="Center"
-                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8">
+                                Style="{StaticResource PageTagBorderStyle}"
+                                ToolTip="保存时只重写该区块，区块外的 $PROFILE 内容不会被修改。">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon
                                         Margin="0,0,8,0"
                                         FontSize="16"
                                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                        Symbol="DocumentText24"
+                                        Symbol="Code24"
                                         VerticalAlignment="Center" />
-                                    <controls:MiddleEllipsisTextBlock
-                                        x:Name="ProfilePathText"
-                                        Width="300"
-                                        FontSize="12"
-                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding ProfilePath}"
-                                        ToolTip="{Binding ProfilePath}"
-                                        VerticalAlignment="Center" />
-                                    <ui:Button
-                                        x:Name="CopyPathButton"
-                                        Height="28"
-                                        MinWidth="0"
-                                        Margin="8,0,0,0"
-                                        Padding="8,0"
-                                        Appearance="Secondary"
-                                        Click="CopyPathButton_Click"
-                                        ToolTip="复制 $PROFILE 路径">
-                                        <ui:SymbolIcon
-                                            FontSize="15"
-                                            Symbol="Copy24" />
-                                    </ui:Button>
+                                    <TextBlock
+                                        Style="{StaticResource PageTagTextStyle}"
+                                        Text="PAM-Alias" />
                                 </StackPanel>
                             </Border>
                         </Grid>

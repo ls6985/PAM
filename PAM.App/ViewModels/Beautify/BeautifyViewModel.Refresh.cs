@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,9 +55,7 @@ public sealed partial class BeautifyViewModel
             _hasWtBackup = wtState.BackupExists;
             _isBundledFontInstalled = bundledInstalled;
             _tomlPath = state.ConfigPath;
-            _tomlStatusSource = state.ConfigExists ? "已创建" : "未创建";
             _hasTomlBackup = state.BackupExists;
-            _initLineSource = state.ProfileHasInitLine ? "已写入" : "未写入";
             _detectedPresetId = detectedPreset;
 
             RebuildFontOptions(candidates, wtState.CurrentFont, bundledInstalled);
@@ -158,8 +156,6 @@ public sealed partial class BeautifyViewModel
         OnPropertyChanged(nameof(WtSettingsPath));
         OnPropertyChanged(nameof(IsBundledFontInstalled));
         OnPropertyChanged(nameof(TomlPath));
-        OnPropertyChanged(nameof(TomlStatusText));
-        OnPropertyChanged(nameof(InitLineText));
         OnPropertyChanged(nameof(HasTomlBackup));
         OnPropertyChanged(nameof(HasWtBackup));
         OnPropertyChanged(nameof(PresetStatusText));

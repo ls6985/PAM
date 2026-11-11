@@ -45,6 +45,7 @@ public sealed class PamData
             command.Name = command.Name.Trim();
             command.CodeLines ??= [];
             command.Remark = command.Remark ?? string.Empty;
+            command.Arguments = command.Arguments ?? string.Empty;
         }
     }
 
@@ -67,6 +68,8 @@ public sealed class PamData
                 CodeLines = [.. command.CodeLines],
                 IsEnabled = command.IsEnabled,
                 Remark = command.Remark,
+                AllowsArguments = command.AllowsArguments,
+                Arguments = command.Arguments,
             }).ToList(),
         };
 
@@ -92,9 +95,16 @@ public sealed class CustomCommandData
 {
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>命令体（不含 <c>function</c> 外壳），渲染时包成以 <see cref="Name"/> 命名的函数。</summary>
     public string[] CodeLines { get; set; } = [];
 
     public bool IsEnabled { get; set; } = true;
 
     public string Remark { get; set; } = string.Empty;
+
+    /// <summary>是否允许在命令名后传入参数，参数追加到命令体末尾。</summary>
+    public bool AllowsArguments { get; set; }
+
+    /// <summary>每次调用都附带的固定参数。</summary>
+    public string Arguments { get; set; } = string.Empty;
 }

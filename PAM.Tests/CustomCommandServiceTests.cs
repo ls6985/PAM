@@ -100,16 +100,14 @@ public sealed class CustomCommandServiceTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void BuildLines_RoundTripsMultiLineCodeWithIndentationAndBlankLines(bool isEnabled)
+    public void BuildLines_WrapsBodyInSameNameFunction(bool isEnabled)
     {
         var code = new[]
         {
-            "function gpr {",
-            "    git pull --rebase",
+            "git pull --rebase",
             "",
-            "    if ($?) {",
+            "if ($?) {",
             "\tWrite-Host \"完成\"",
-            "    }",
             "}",
         };
 
@@ -126,12 +124,84 @@ public sealed class CustomCommandServiceTests
         Assert.Contains("# @pam-custom gpr 拉取并变基", lines);
         Assert.Equal(!isEnabled, lines.Contains("# @pam-custom-state disabled"));
 
+        // 命令体必须包在同名函数里，否则裸命令会在每次启动终端时立即执行。
+        Assert.Contains(isEnabled ? "function gpr {" : "# function gpr {", lines);
+        Assert.Contains(isEnabled ? "}" : "# }", lines);
+
         foreach (var line in code)
         {
             Assert.Contains(isEnabled ? line : (line.Length == 0 ? "#" : "# " + line), lines);
         }
 
         Assert.Contains("# @pam-custom-end", lines);
+    }
+
+    [Fact]
+    public void BuildLines_EmitsBodyWrappedInSameNameFunction()
+    {
+        var lines = CustomCommandService.BuildLines([
+            new CustomCommandData { Name = "p", CodeLines = ["ping -t 8.8.8.8"] },
+        ]);
+
+        var index = lines.IndexOf("function p {");
+        Assert.True(index > 0, "命令体必须包在同名函数里，否则会在启动终端时立即执行。");
+        Assert.Equal("ping -t 8.8.8.8", lines[index + 1]);
+        Assert.Equal("}", lines[index + 2]);
+        Assert.Equal("# @pam-custom-end", lines[index + 3]);
+    }
+
+    [Fact]
+    public void BuildLines_AppendsFixedArgumentsAndArgsToLastLine()
+    {
+        var lines = CustomCommandService.BuildLines([
+            new CustomCommandData
+            {
+                Name = "p",
+                CodeLines = ["ping -t 8.8.8.8"],
+                AllowsArguments = true,
+                Arguments = "-n 4",
+            },
+        ]);
+
+        Assert.Contains("function p {", lines);
+        Assert.Contains("ping -t 8.8.8.8 -n 4 @args", lines);
+    }
+
+    [Fact]
+    public void BuildLines_DoesNotAppendArgumentsWhenDisabled()
+    {
+        var lines = CustomCommandService.BuildLines([
+            new CustomCommandData
+            {
+                Name = "p",
+                CodeLines = ["ping -t 8.8.8.8", "Write-Host done"],
+                Arguments = "-n 4",
+            },
+        ]);
+
+        Assert.Contains("ping -t 8.8.8.8", lines);
+        Assert.Contains("Write-Host done", lines);
+        Assert.DoesNotContain(lines, static line => line.Contains("@args", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("function gpr {\r\n    git pull --rebase\r\n}", "git pull --rebase")]
+    [InlineData("function global:gpr { git pull }", "git pull")]
+    [InlineData("  function gpr { git pull }  ", "git pull")]
+    [InlineData("git status", "git status")]
+    [InlineData("function other { git pull }", "function other { git pull }")]
+    [InlineData("function gpr { git pull", "function gpr { git pull")]
+    public void StripOuterFunction_RemovesOnlyMatchingWrapper(string code, string expected)
+        => Assert.Equal(expected, CustomCommandCode.StripOuterFunction("gpr", code));
+
+    [Fact]
+    public void StripOuterFunction_KeepsHereStringTerminatorAtLineStart()
+    {
+        var code = "function note {\n$text = @\"\nhello\n\"@\nWrite-Host $text\n}";
+        var body = CustomCommandCode.StripOuterFunction("note", code);
+
+        Assert.Contains("\n\"@\n", body);
+        Assert.DoesNotContain("function note", body);
     }
 
     [Theory]

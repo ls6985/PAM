@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
@@ -77,7 +77,7 @@ public sealed partial class BeautifyViewModel
     public async Task InstallBundledFontAsync()
     {
         await RunBusyAsync(
-            "正在安装内置字体…",
+            "正在安装内置 NF 字体…",
             () =>
             {
                 var ttfPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", BundledFontFileName);
