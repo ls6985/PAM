@@ -155,8 +155,7 @@
                     </StackPanel>
                     <ui:Button
                         Grid.Column="1"
-                        Margin="0,2,0,0"
-                        VerticalAlignment="Top"
+                        VerticalAlignment="Bottom"
                         Appearance="Secondary"
                         Click="RefreshButton_Click"
                         Content="刷新状态"
@@ -244,8 +243,16 @@
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
                         <TextBlock Text="主题" Style="{StaticResource CardTitleStyle}" />
+                        <!-- 当前生效的提示符方案：放在单选上方，两种方案下都能看到。 -->
+                        <TextBlock
+                            Margin="0,14,0,0"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                            Text="{Binding PresetStatusText}"
+                            TextWrapping="Wrap" />
                         <!-- 提示符方案：二选一，切换后由下方统一按钮提交。 -->
-                        <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
                             <RadioButton
                                 Content="主题预设"
                                 FontSize="13"
@@ -272,9 +279,6 @@
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="主题预设" Style="{StaticResource SettingLabelStyle}" />
                                 <TextBlock
-                                    Text="{Binding PresetStatusText}"
-                                    Style="{StaticResource SettingHintStyle}" />
-                                <TextBlock
                                     Margin="0,6,0,0"
                                     Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                     Style="{StaticResource SettingHintStyle}"
@@ -291,10 +295,16 @@
                         </Grid>
                             <Border
                                 Margin="0,14,0,0"
-                                Style="{StaticResource SubCardStyle}"
+                                Padding="0,12,0,0"
+                                BorderThickness="0,1,0,0"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                 Visibility="{Binding UseCustomPrompt, Converter={StaticResource BoolToVisibility}}">
                                 <StackPanel>
-                                    <TextBlock Text="自定义提示符" Style="{StaticResource SubCardTitleStyle}" />
+                                    <TextBlock
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                        Text="自定义提示符" />
                                     <TextBlock
                                         Margin="0,6,0,0"
                                         Text="点「添加片段」从左到右拼出提示符：每段用下拉选内容（用户名、目录、符号等）和颜色。下面的预览会实时更新；应用后只改提示符这一行，其它设置不动。"
@@ -418,13 +428,18 @@
                                         ToolTip="{Binding PromptConfigPath}" />
                                 </StackPanel>
                             </Border>
-                        <!-- 通用选项：两种提示符方案共用，位于高级选项上方。 -->
-                        <StackPanel Margin="0,16,0,0">
-                            <TextBlock
-                                FontSize="13"
-                                FontWeight="SemiBold"
-                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                Text="通用设置" />
+                        <!-- 通用选项：与高级选项同款折叠入口，默认收起。 -->
+                        <Border Margin="0,16,0,0" Padding="0,12,0,0" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                            <ToggleButton x:Name="CommonOptionsToggle" Style="{StaticResource AdvancedToggleStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="▸" Visibility="{Binding IsChecked, ElementName=CommonOptionsToggle, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="▾" Visibility="{Binding IsChecked, ElementName=CommonOptionsToggle, Converter={StaticResource BoolToVisibility}}" />
+                                    <TextBlock Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="通用设置" />
+                                    <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Style="{StaticResource SettingHintStyle}" Text="两种方案共用" />
+                                </StackPanel>
+                            </ToggleButton>
+                        </Border>
+                        <StackPanel Visibility="{Binding IsChecked, ElementName=CommonOptionsToggle, Converter={StaticResource BoolToVisibility}}">
                             <Grid Margin="0,10,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -457,7 +472,7 @@
                                     IsChecked="{Binding PromptUseForwardSlash, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
                             <TextBlock
-                                Margin="0,6,0,0"
+                                Margin="0,8,0,0"
                                 Style="{StaticResource SettingHintStyle}"
                                 Text="主题预设和自定义提示符都会用这两个设置。" />
                         </StackPanel>
@@ -721,7 +736,7 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
                                 <TextBlock Text="starship.toml" Style="{StaticResource SettingLabelStyle}" />
                                 <Border
                                     Padding="10,7"
@@ -731,7 +746,7 @@
                                         FontFamily="{StaticResource MonoFontFamily}"
                                         FontSize="12"
                                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding TomlPathDisplay}"
+                                        Text="{Binding TomlPath}"
                                         TextTrimming="CharacterEllipsis"
                                         ToolTip="{Binding TomlPath}" />
                                 </Border>
@@ -762,7 +777,7 @@
                                     Style="{StaticResource SettingHintStyle}"
                                     Text="{Binding WtBackupPathText}"
                                     TextTrimming="CharacterEllipsis"
-                                    ToolTip="{Binding WtBackupPathFullText}" />
+                                    ToolTip="{Binding WtBackupPathText}" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">

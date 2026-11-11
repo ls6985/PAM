@@ -887,6 +887,8 @@ public enum LocKey
     CommonSettings,
     /// <summary>主题预设和自定义提示符都会用这两个设置。</summary>
     CommonOptionsScope,
+    /// <summary>两种方案共用</summary>
+    CommonOptionsSharedScope,
 }
 
 /// <summary>LocKey 对应的 {zh, en} 语言表，以及中文→英文的兜底查表（供动态字符串与 XAML 桥接）。</summary>
@@ -1337,6 +1339,7 @@ internal static class LocTable
             [LocKey.CustomPromptSimpleStatus] = ("当前使用自定义提示符；重新应用主题会覆盖它。", "Using a custom prompt; applying a theme will replace it."),
             [LocKey.CommonSettings] = ("通用设置", "Common settings"),
             [LocKey.CommonOptionsScope] = ("主题预设和自定义提示符都会用这两个设置。", "These two settings apply to both the theme preset and the custom prompt."),
+            [LocKey.CommonOptionsSharedScope] = ("两种方案共用", "Shared by both schemes"),
         };
 
     public static readonly IReadOnlyDictionary<string, string> ZhToEn = BuildZhToEn();

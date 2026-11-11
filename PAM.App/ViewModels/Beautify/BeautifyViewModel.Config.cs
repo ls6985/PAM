@@ -1,11 +1,10 @@
 using System.ComponentModel;
-using System.IO;
 using PAM.Core;
 
 namespace PAM.App.ViewModels;
 
 /// <summary>
-/// 配置维护功能：打开主题配置、恢复主题设置，以及恢复终端的原始配置备份。
+/// 配置维护功能：打开主题配置、恢复上次主题设置，以及恢复终端的原始配置备份。
 /// 修改配置维护逻辑只看本文件。
 /// </summary>
 public sealed partial class BeautifyViewModel
@@ -17,9 +16,6 @@ public sealed partial class BeautifyViewModel
     public bool HasTomlBackup => _hasTomlBackup;
     public bool HasWtBackup => _hasWtBackup;
     public string TomlPath => _tomlPath;
-
-    /// <summary>配置维护卡里显示的短路径；完整路径由 ToolTip 提供。</summary>
-    public string TomlPathDisplay => CompactPath(_tomlPath);
     public string WtSettingsPath => _wtSettingsPath;
     public string TomlStatusText => Loc.T(_tomlStatusSource);
     public string InitLineText => Loc.F("starship init 行：{0}", Loc.T(_initLineSource));
@@ -31,20 +27,7 @@ public sealed partial class BeautifyViewModel
 
     public string WtBackupPathText => string.IsNullOrEmpty(_wtBackupPath)
         ? string.Empty
-        : Loc.F(LocKey.BackupFile0, Path.GetFileName(_wtBackupPath));
-
-    public string WtBackupPathFullText => string.IsNullOrEmpty(_wtBackupPath)
-        ? string.Empty
-        : Loc.F(LocKey.BackupFile0, _wtBackupPath);
-
-    /// <summary>把用户目录前缀缩写成 ~，缩短卡片里的绝对路径显示。</summary>
-    private static string CompactPath(string path)
-    {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return !string.IsNullOrEmpty(home) && path.StartsWith(home, StringComparison.OrdinalIgnoreCase)
-            ? "~" + path[home.Length..]
-            : path;
-    }
+        : Loc.F(LocKey.BackupFile0,  _wtBackupPath);
 
     public bool CanOpenToml => !IsBusy;
     public bool CanRestoreToml => !IsBusy && _hasTomlBackup;
