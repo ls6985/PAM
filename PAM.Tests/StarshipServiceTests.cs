@@ -259,6 +259,112 @@ public sealed class StarshipServiceTests : IDisposable
         }
     }
 
+    // ---------------- 通用提示符选项 ----------------
+
+    [Fact]
+    public void ApplyPreset_WithCommonOptions_WritesBothKeys_AndStillDetectsPreset()
+    {
+        WriteProfile("# profile\r\n");
+        _starship.ApplyPreset("tokyo-night", _profilePath, (true, false));
+
+        var text = File.ReadAllText(_configPath);
+        Assert.Contains("add_newline = true # PAM-COMMON-OPTIONS", text);
+        Assert.Contains("use_os_path_sep = true # PAM-COMMON-OPTIONS", text);
+        Assert.Single(Occurrences(text, "add_newline ="));
+        Assert.Single(Occurrences(text, "use_os_path_sep ="));
+
+        // 通用选项行不参与预设原文比对，重启后仍能识别当前主题。
+        Assert.Equal("tokyo-night", _starship.DetectAppliedPreset());
+
+        var (addNewline, useForwardSlash) = _starship.ReadCommonOptions();
+        Assert.True(addNewline);
+        Assert.False(useForwardSlash);
+    }
+
+    [Fact]
+    public void ApplyPreset_WithoutDirectorySection_CreatesOne_AndStillDetectsPreset()
+    {
+        WriteProfile("# profile\r\n");
+        _starship.ApplyPreset("no-nerd-font", _profilePath, (false, true));
+
+        var text = File.ReadAllText(_configPath);
+        Assert.Contains("[directory] # PAM-COMMON-OPTIONS", text);
+        Assert.Contains("use_os_path_sep = false # PAM-COMMON-OPTIONS", text);
+        Assert.Equal("no-nerd-font", _starship.DetectAppliedPreset());
+    }
+
+    [Fact]
+    public void ApplyCommonOptions_IsIdempotent_AndPreservesPresetText()
+    {
+        var original = _starship.ExtractPreset("pastel-powerline")!;
+        var first = StarshipService.ApplyCommonOptions(original, true, false);
+        var second = StarshipService.ApplyCommonOptions(first, false, true);
+
+        // 预设里带注释形式的 "# add_newline = false"，只统计真正的赋值行。
+        var assignmentLines = second.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        Assert.Single(assignmentLines, static line => line.TrimStart().StartsWith("add_newline =", StringComparison.Ordinal));
+        Assert.Single(assignmentLines, static line => line.TrimStart().StartsWith("use_os_path_sep =", StringComparison.Ordinal));
+        Assert.Contains("add_newline = false", second);
+        Assert.Contains("use_os_path_sep = false", second);
+        Assert.Equal(StarshipService.StripCommonOptions(original), StarshipService.StripCommonOptions(second));
+    }
+
+    [Fact]
+    public void ApplyCommonOptions_PlacesKeysInTheRightTomlSections()
+    {
+        var original = _starship.ExtractPreset("tokyo-night")!;
+        var result = StarshipService.ApplyCommonOptions(original, false, true);
+        var lines = result.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+
+        Assert.StartsWith("add_newline = false # PAM-COMMON-OPTIONS", lines[0], StringComparison.Ordinal);
+
+        var header = Array.FindIndex(lines, static line => line.TrimStart().StartsWith("[directory]", StringComparison.Ordinal));
+        var option = Array.FindIndex(lines, static line => line.TrimStart().StartsWith("use_os_path_sep =", StringComparison.Ordinal));
+        Assert.True(header >= 0);
+        // 键紧跟在 [directory] 表头之后，不会落进顶层 format 的多行字符串或其它段落。
+        Assert.Equal(header + 1, option);
+        Assert.Single(lines, static line => line.TrimStart().Equals("[directory]", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CommonOptions_RoundTrip_WhenSwitchingFromPresetToCustomPrompt()
+    {
+        WriteProfile("# profile\r\n");
+        _starship.ApplyPreset("tokyo-night", _profilePath, (true, false));
+
+        var prompt = new StarshipPromptService(_configPath);
+        prompt.Apply("[$directory](fg:#BBC4B9)[$character](fg:#BFA8BF)", false, true);
+
+        var text = File.ReadAllText(_configPath);
+        Assert.DoesNotContain("PAM-COMMON-OPTIONS", text);
+        var assignmentLines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        Assert.Single(assignmentLines, static line => line.TrimStart().StartsWith("add_newline =", StringComparison.Ordinal));
+        Assert.Single(assignmentLines, static line => line.TrimStart().StartsWith("use_os_path_sep =", StringComparison.Ordinal));
+
+        var (addNewline, useForwardSlash) = _starship.ReadCommonOptions();
+        Assert.False(addNewline);
+        Assert.True(useForwardSlash);
+        Assert.Null(_starship.DetectAppliedPreset());
+    }
+
+    [Fact]
+    public void ReadCommonOptions_WithoutConfig_ReturnsDefaults()
+    {
+        var (addNewline, useForwardSlash) = _starship.ReadCommonOptions();
+        Assert.False(addNewline);
+        Assert.True(useForwardSlash);
+    }
+
+    [Fact]
+    public void DetectAppliedPreset_IgnoresCommonOptionLines()
+    {
+        var original = _starship.ExtractPreset("plain-text-symbols")!;
+        Directory.CreateDirectory(Path.GetDirectoryName(_configPath)!);
+        File.WriteAllText(_configPath, StarshipService.ApplyCommonOptions(original, false, true), Utf8NoBom);
+
+        Assert.Equal("plain-text-symbols", _starship.DetectAppliedPreset());
+    }
+
     private static List<int> Occurrences(string text, string needle)
     {
         var positions = new List<int>();

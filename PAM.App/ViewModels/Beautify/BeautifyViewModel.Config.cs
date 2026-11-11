@@ -1,10 +1,11 @@
 using System.ComponentModel;
+using System.IO;
 using PAM.Core;
 
 namespace PAM.App.ViewModels;
 
 /// <summary>
-/// 配置维护功能：打开 / 恢复 starship.toml，以及恢复 Windows Terminal 的原始配置备份。
+/// 配置维护功能：打开主题配置、恢复主题设置，以及恢复终端的原始配置备份。
 /// 修改配置维护逻辑只看本文件。
 /// </summary>
 public sealed partial class BeautifyViewModel
@@ -16,6 +17,9 @@ public sealed partial class BeautifyViewModel
     public bool HasTomlBackup => _hasTomlBackup;
     public bool HasWtBackup => _hasWtBackup;
     public string TomlPath => _tomlPath;
+
+    /// <summary>配置维护卡里显示的短路径；完整路径由 ToolTip 提供。</summary>
+    public string TomlPathDisplay => CompactPath(_tomlPath);
     public string WtSettingsPath => _wtSettingsPath;
     public string TomlStatusText => Loc.T(_tomlStatusSource);
     public string InitLineText => Loc.F("starship init 行：{0}", Loc.T(_initLineSource));
@@ -27,7 +31,20 @@ public sealed partial class BeautifyViewModel
 
     public string WtBackupPathText => string.IsNullOrEmpty(_wtBackupPath)
         ? string.Empty
-        : Loc.F(LocKey.BackupFile0,  _wtBackupPath);
+        : Loc.F(LocKey.BackupFile0, Path.GetFileName(_wtBackupPath));
+
+    public string WtBackupPathFullText => string.IsNullOrEmpty(_wtBackupPath)
+        ? string.Empty
+        : Loc.F(LocKey.BackupFile0, _wtBackupPath);
+
+    /// <summary>把用户目录前缀缩写成 ~，缩短卡片里的绝对路径显示。</summary>
+    private static string CompactPath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return !string.IsNullOrEmpty(home) && path.StartsWith(home, StringComparison.OrdinalIgnoreCase)
+            ? "~" + path[home.Length..]
+            : path;
+    }
 
     public bool CanOpenToml => !IsBusy;
     public bool CanRestoreToml => !IsBusy && _hasTomlBackup;
@@ -48,25 +65,27 @@ public sealed partial class BeautifyViewModel
     public async Task RestoreTomlAsync()
     {
         await RunBusyAsync(
-            "正在恢复 starship.toml 备份…",
+            "正在恢复主题设置…",
             () => _starshipService.RestoreConfig(),
             static restored => new[]
             {
                 restored
-                    ? (StatusType.Saved, "已从备份恢复 starship.toml。")
+                    ? (StatusType.Saved, "已恢复上一次的主题设置。")
                     : ((StatusType.Warning, "没有可恢复的备份。")),
             });
+
+        RefreshCommonOptions(forceReload: true);
     }
 
     public async Task RestoreWtBackupAsync()
     {
         await RunBusyAsync(
-            "正在恢复 Windows Terminal 备份…",
+            "正在恢复终端备份…",
             () => _terminalService.RestoreBackup(),
             static restored => new[]
             {
                 restored
-                    ? (StatusType.Saved, "已恢复到本软件首次修改前的 Windows Terminal 配置；原始备份保留，可再次恢复。")
+                    ? (StatusType.Saved, "已还原到第一次修改前的终端配置；备份保留，可再次还原。")
                     : ((StatusType.Warning, "没有可恢复的备份。")),
             });
 

@@ -63,6 +63,7 @@ public sealed partial class BeautifyViewModel
             RebuildFontOptions(candidates, wtState.CurrentFont, bundledInstalled);
             RebuildPresetOptions();
             RefreshPromptState();
+            RefreshCommonOptions();
             ApplyAppearanceFromState(wtState, wtAppearance);
 
             RaiseStatusChanged();
@@ -157,6 +158,7 @@ public sealed partial class BeautifyViewModel
         OnPropertyChanged(nameof(WtSettingsPath));
         OnPropertyChanged(nameof(IsBundledFontInstalled));
         OnPropertyChanged(nameof(TomlPath));
+        OnPropertyChanged(nameof(TomlPathDisplay));
         OnPropertyChanged(nameof(TomlStatusText));
         OnPropertyChanged(nameof(InitLineText));
         OnPropertyChanged(nameof(HasTomlBackup));
@@ -169,7 +171,11 @@ public sealed partial class BeautifyViewModel
         OnPropertyChanged(nameof(AppearanceStatusText));
         OnPropertyChanged(nameof(WtBackupText));
         OnPropertyChanged(nameof(WtBackupPathText));
+        OnPropertyChanged(nameof(WtBackupPathFullText));
         OnPropertyChanged(nameof(CanApplyPreset));
+        OnPropertyChanged(nameof(CanSaveSettings));
+        OnPropertyChanged(nameof(CanRestoreDefaults));
+        OnPropertyChanged(nameof(CanDiscardChanges));
         OnPropertyChanged(nameof(CanOpenToml));
         OnPropertyChanged(nameof(CanRestoreToml));
         OnPropertyChanged(nameof(CanRestoreWtBackup));

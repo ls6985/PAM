@@ -30,11 +30,8 @@ public partial class BeautifyView : UserControl
     private void InstallBundledFontButton_Click(object sender, RoutedEventArgs e)
         => _ = _viewModel?.InstallBundledFontAsync();
 
-    private void ApplyAppearanceButton_Click(object sender, RoutedEventArgs e)
-        => _ = _viewModel?.ApplyAppearanceAsync();
-
-    private void DiscardAppearanceButton_Click(object sender, RoutedEventArgs e)
-        => _viewModel?.DiscardAppearance();
+    private void DiscardChangesButton_Click(object sender, RoutedEventArgs e)
+        => _viewModel?.DiscardChanges();
 
     private void BrowseBackgroundImageButton_Click(object sender, RoutedEventArgs e)
         => _viewModel?.BrowseBackgroundImage();
@@ -42,17 +39,11 @@ public partial class BeautifyView : UserControl
     private void ClearBackgroundImageButton_Click(object sender, RoutedEventArgs e)
         => _viewModel?.ClearBackgroundImage();
 
-    private void ApplyPresetButton_Click(object sender, RoutedEventArgs e)
-        => _ = _viewModel?.ApplyPresetAsync();
+    private void SaveSettingsButton_Click(object sender, RoutedEventArgs e)
+        => _ = _viewModel?.SaveSettingsAsync();
 
-    private void ApplyPromptButton_Click(object sender, RoutedEventArgs e)
-        => _ = _viewModel?.ApplyPromptAsync();
-
-    private void RestorePromptButton_Click(object sender, RoutedEventArgs e)
-        => _ = _viewModel?.RestorePromptAsync();
-
-    private void ResetPromptButton_Click(object sender, RoutedEventArgs e)
-        => _viewModel?.ResetPrompt();
+    private void RestoreDefaultsButton_Click(object sender, RoutedEventArgs e)
+        => _viewModel?.RestoreDefaults();
 
     private void AddSegmentButton_Click(object sender, RoutedEventArgs e)
         => _viewModel?.AddSegment();

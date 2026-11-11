@@ -625,7 +625,7 @@ public enum LocKey
     DiscardChanges,
     /// <summary>保存外观设置</summary>
     SaveAppearance,
-    /// <summary>「恢复 Windows Terminal 备份」：本程序第一次修改终端配置（字体 / 外观）时会把当时的 settings.json 完整备份为 settings.json.bak，之后无论改多少次都不覆盖；点此永远恢复到安装本软件前的配置。备份保留，可反复恢复。</summary>
+    /// <summary>恢复终端备份</summary>
     RestoreWindowsTerminalBackupTheFirstTimeThisAppChangesTerminalSettingsFontAppearanceItSavesTheWholeSettingsJsonAsSettingsJsonBakLaterChangesNeverOverwriteItSoRestoringAlwaysReturnsToTheConfigFromBeforeThisAppWasInstalledTheBackupIsKeptAndCanBeRestoredRepeatedly,
     /// <summary>回到本软件第一次修改前的 settings.json；原始备份不会被覆盖或删除，可反复恢复。</summary>
     ReturnToTheSettingsJsonFromBeforeThisAppSFirstChangeTheOriginalBackupIsNeverOverwrittenOrDeletedSoItCanBeRestoredRepeatedly,
@@ -635,7 +635,7 @@ public enum LocKey
     NoOriginalBackupYetItIsCreatedAutomaticallyTheFirstTimeThisAppChangesTerminalSettings,
     /// <summary>备份文件：{0}</summary>
     BackupFile0,
-    /// <summary>已恢复到本软件首次修改前的 Windows Terminal 配置；原始备份保留，可再次恢复。</summary>
+    /// <summary>已还原到第一次修改前的终端配置；备份保留，可再次还原。</summary>
     RestoredTheWindowsTerminalConfigFromBeforeThisAppSFirstChangeTheOriginalBackupIsKeptAndCanBeRestoredAgain,
     /// <summary>有尚未保存的修改；保存后打开新终端窗口即可看到效果。</summary>
     UnsavedChangesSaveThemThenOpenANewTerminalWindowToSeeTheEffect,
@@ -737,21 +737,21 @@ public enum LocKey
     Created,
     /// <summary>未创建</summary>
     NotCreated,
-    /// <summary>starship.toml.bak 存在</summary>
+    /// <summary>主题备份存在</summary>
     StarshipTomlBakExists,
     /// <summary>打开 starship.toml</summary>
     OpenStarshipToml,
-    /// <summary>恢复 starship.toml 备份</summary>
+    /// <summary>恢复上次主题设置</summary>
     RestoreStarshipTomlBackup,
-    /// <summary>恢复 Windows Terminal 备份</summary>
+    /// <summary>恢复终端备份</summary>
     RestoreWindowsTerminalBackup,
     /// <summary>正在打开 starship.toml…</summary>
     OpeningStarshipToml,
-    /// <summary>正在恢复 starship.toml 备份…</summary>
+    /// <summary>恢复上次主题设置</summary>
     RestoringTheStarshipTomlBackup,
-    /// <summary>已从备份恢复 starship.toml。</summary>
+    /// <summary>已恢复上一次的主题设置。</summary>
     StarshipTomlHasBeenRestoredFromTheBackup,
-    /// <summary>正在恢复 Windows Terminal 备份…</summary>
+    /// <summary>恢复终端备份</summary>
     RestoringTheWindowsTerminalBackup,
     /// <summary>没有可恢复的备份。</summary>
     NoBackupToRestore,
@@ -823,10 +823,70 @@ public enum LocKey
     BlankLineBeforePrompt,
     /// <summary>路径分隔符用 /</summary>
     UseAsPathSeparator,
-    /// <summary>开启后每个提示符前会空一行（Starship add_newline）。</summary>
+    /// <summary>开启后，每条命令前会多一个空行。</summary>
     WhenEnabledAnEmptyLineIsInsertedBeforeEveryPromptStarshipAddNewline,
-    /// <summary>取消后路径用系统默认的反斜杠 \ 分隔（Starship use_os_path_sep）。</summary>
+    /// <summary>关闭后，路径分隔符跟随系统默认。</summary>
     WhenDisabledPathsUseTheSystemBackslashSeparatorStarshipUseOsPathSep,
+    /// <summary>高级选项</summary>
+    AdvancedOptions,
+    /// <summary>设置终端字体、外观和命令行提示符。第一次修改前会自动备份，随时可以还原；点「刷新状态」重新检测。</summary>
+    BeautifyPageIntro,
+    /// <summary>点「添加片段」从左到右拼出提示符：每段用下拉选内容（用户名、目录、符号等）和颜色。下面的预览会实时更新；应用后只改提示符这一行，其它设置不动。</summary>
+    PromptEditorIntro,
+    /// <summary>下拉里能选变量和符号；颜色选预设，或选「自定义…」后填 6 位色号。</summary>
+    PromptSegmentHint,
+    /// <summary>应用主题前会自动备份，点这里还原上次的配置。</summary>
+    TomlBackupHint,
+    /// <summary>保存设置</summary>
+    SaveSettings,
+    /// <summary>正在保存设置…</summary>
+    SavingSettings,
+    /// <summary>已保存设置：主题「{0}」已应用，{1} 项外观改动已写入；打开新终端窗口即可看到效果。</summary>
+    SettingsSavedThemeAndAppearance,
+    /// <summary>已保存设置：主题「{0}」已应用；打开新终端窗口即可看到效果。</summary>
+    SettingsSavedThemeOnly,
+    /// <summary>主题已应用，但外观保存失败：{0}</summary>
+    ThemeAppliedButAppearanceFailed,
+    /// <summary>只还原还没保存的终端外观改动，不影响主题选择。</summary>
+    DiscardAppearanceTooltip,
+    /// <summary>应用所选主题，并保存字体与外观改动。</summary>
+    SaveSettingsTooltip,
+    /// <summary>改完后点上面的「保存设置」。</summary>
+    ClickSaveSettingsAbove,
+    /// <summary>已保存设置，但没装图标字体，主题里的符号可能显示成方块。</summary>
+    SettingsSavedMissingFontWarning,
+    /// <summary>自定义…</summary>
+    CustomEllipsis,
+    /// <summary>刷新状态</summary>
+    RefreshStatus,
+    /// <summary>重新探测 Starship、Scoop、字体与终端配置状态。</summary>
+    RefreshStatusTooltip,
+    /// <summary>格式</summary>
+    PromptFormatLabel,
+    /// <summary>输入任意文字或 $变量</summary>
+    CustomSegmentTooltip,
+    /// <summary>输入 6 位十六进制色号（即 # 后面的部分）</summary>
+    HexColorTooltip,
+    /// <summary>删除该片段</summary>
+    RemoveSegmentTooltip,
+    /// <summary>添加片段</summary>
+    AddSegment,
+    /// <summary>两种方案二选一，切换后点下方的「保存设置」生效。</summary>
+    PromptSchemeHint,
+    /// <summary>把当前方案恢复成程序默认，点「保存设置」后才写入。</summary>
+    RestoreDefaultsTooltip,
+    /// <summary>已恢复默认主题，点「保存设置」才会写入。</summary>
+    DefaultThemeRestored,
+    /// <summary>已放弃未保存的改动，回到上次保存的状态。</summary>
+    ChangesDiscarded,
+    /// <summary>请先添加至少一个片段。</summary>
+    AddSegmentFirst,
+    /// <summary>当前使用自定义提示符；重新应用主题会覆盖它。</summary>
+    CustomPromptSimpleStatus,
+    /// <summary>通用设置</summary>
+    CommonSettings,
+    /// <summary>主题预设和自定义提示符都会用这两个设置。</summary>
+    CommonOptionsScope,
 }
 
 /// <summary>LocKey 对应的 {zh, en} 语言表，以及中文→英文的兜底查表（供动态字符串与 XAML 桥接）。</summary>
@@ -1101,9 +1161,9 @@ internal static class LocTable
             [LocKey.Installed0] = ("已安装 {0}", "Installed {0}"),
             [LocKey.ScoopNotDetected] = ("未检测到 Scoop", "Scoop not detected"),
             [LocKey.ScoopIsReady] = ("Scoop 已就绪", "Scoop is ready"),
-            [LocKey.StarshipIsACrossShellPromptEngineOnceInstalledViaScoopItWorksOutOfTheBoxNoPATHSetupNeeded] = ("Starship 是跨 shell 的提示符引擎；通过 Scoop 安装后自动可用，无需手动配置 PATH。", "Starship is a cross-shell prompt engine. Once installed via Scoop it works out of the box; no PATH setup needed."),
-            [LocKey.StarshipSDocsRecommendInstallingANerdFontFirstPickAFontAboveBeforeInstalling] = ("Starship 官方建议先装好 Nerd Font：请在上方选择字体后再安装。", "Starship's docs recommend installing a Nerd Font first: pick a font above before installing."),
-            [LocKey.AlreadyInstalledNoNeedToInstallAgainReopenYourTerminalAfterChangingFontsToTakeEffect] = ("已安装，无需重复安装；换字体后重新打开终端即可生效。", "Already installed — no need to install again. Reopen your terminal after changing fonts to take effect."),
+            [LocKey.StarshipIsACrossShellPromptEngineOnceInstalledViaScoopItWorksOutOfTheBoxNoPATHSetupNeeded] = ("Starship 用来美化命令行提示符；装好后就能用，不用手动配置。", "Starship styles the command-line prompt. Once installed, it works without manual setup."),
+            [LocKey.StarshipSDocsRecommendInstallingANerdFontFirstPickAFontAboveBeforeInstalling] = ("建议先装好图标字体，否则主题里的符号可能显示成方块。", "Install the icon font first, otherwise theme symbols may show as boxes."),
+            [LocKey.AlreadyInstalledNoNeedToInstallAgainReopenYourTerminalAfterChangingFontsToTakeEffect] = ("已经装好了；换字体后重新打开终端生效。", "Already installed. Reopen the terminal after changing the font."),
             [LocKey.DisabledUntilAFontIsSelectedUnavailableWhenStarshipIsAlreadyInstalled] = ("未选字体或已安装时不可用。", "Disabled until a font is selected; unavailable when Starship is already installed."),
             [LocKey.OneClickInstallInclScoop] = ("一键安装（含 Scoop）", "One-click install (incl. Scoop)"),
             [LocKey.ReDetect] = ("重新检测", "Re-detect"),
@@ -1117,43 +1177,43 @@ internal static class LocTable
             [LocKey.Done] = ("操作完成。", "Done."),
             [LocKey.OperationFailed0] = ("操作失败：{0}", "Operation failed: {0}"),
             [LocKey.ConfigureTerminalAppearanceTheStarshipPromptAndNerdFontsASnapshotOfTheOriginalTerminalConfigIsSavedBeforeTheFirstChangeAndCanBeRestoredAtAnyTime] = ("配置终端外观、Starship 提示符与 Nerd Font；首次修改终端配置前会自动保存一份原始配置，随时可恢复。", "Configure terminal appearance, the Starship prompt and Nerd Fonts. A snapshot of the original terminal config is saved before the first change and can be restored at any time."),
-            [LocKey.MapsToWindowsTerminalSDefaultsAppearanceAndWritesProfilesDefaultsInSettingsJsonOnlyChangedItemsAreSavedLeaveAFieldEmptyOrPickTerminalDefaultToHandItBackToTheTerminal] = ("对应 Windows Terminal「默认值 → 外观」的设置，写入 settings.json 的 profiles.defaults；只保存改动过的项，留空或选「终端默认」即交还终端默认。", "Maps to Windows Terminal's Defaults > Appearance and writes profiles.defaults in settings.json. Only changed items are saved; leave a field empty or pick \"Terminal default\" to hand it back to the terminal."),
+            [LocKey.MapsToWindowsTerminalSDefaultsAppearanceAndWritesProfilesDefaultsInSettingsJsonOnlyChangedItemsAreSavedLeaveAFieldEmptyOrPickTerminalDefaultToHandItBackToTheTerminal] = ("只保存改动过的项目；留空或选「终端默认」就恢复系统默认。", "Only changed items are saved. Leave a field empty or choose Terminal default to restore the system default."),
             [LocKey.Text] = ("文本", "Text"),
             [LocKey.Font] = ("字体", "Font"),
-            [LocKey.WritesProfilesDefaultsFontFaceCascadiaCodeNFShipsWithThisAppInstallItForTheCurrentUserWithOneClickIfMissing] = ("写入 profiles.defaults.font.face；内置 Cascadia Code NF 已随本程序打包，未安装时可一键按当前用户安装。", "Writes profiles.defaults.font.face. Cascadia Code NF ships with this app; install it for the current user with one click if missing."),
+            [LocKey.WritesProfilesDefaultsFontFaceCascadiaCodeNFShipsWithThisAppInstallItForTheCurrentUserWithOneClickIfMissing] = ("内置图标字体已随程序打包，安装时不需要管理员权限。", "The bundled icon font comes with the app and installs without administrator rights."),
             [LocKey.Effects] = ("显示效果", "Effects"),
             [LocKey.RetroTerminalEffect] = ("复古风格终端显示", "Retro terminal effect"),
-            [LocKey.CRTScanlinesAndGlowExperimentalRetroTerminalEffect] = ("CRT 扫描线与辉光效果（experimental.retroTerminalEffect）。", "CRT scanlines and glow (experimental.retroTerminalEffect)."),
+            [LocKey.CRTScanlinesAndGlowExperimentalRetroTerminalEffect] = ("模拟老式显示器的扫描线和光晕。", "Simulates the scan lines and glow of an old monitor."),
             [LocKey.EnableRetroEffect] = ("启用复古效果", "Enable retro effect"),
             [LocKey.Cursor] = ("光标", "Cursor"),
             [LocKey.CursorShape] = ("光标形状", "Cursor shape"),
-            [LocKey.MapsToCursorShapePickTerminalDefaultToRemoveTheSetting] = ("对应 cursorShape；选「终端默认」即删除该设置。", "Maps to cursorShape. Pick \"Terminal default\" to remove the setting."),
+            [LocKey.MapsToCursorShapePickTerminalDefaultToRemoveTheSetting] = ("选「终端默认」表示不特别设置。", "Choose Terminal default to leave this unset."),
             [LocKey.CursorColor] = ("光标颜色", "Cursor color"),
-            [LocKey.MapsToCursorColorEnterRGBOrRRGGBBLeaveEmptyToUseTheColorSchemeSCursorColor] = ("对应 cursorColor，填 #RGB 或 #RRGGBB；留空使用配色方案里的光标色。", "Maps to cursorColor. Enter #RGB or #RRGGBB; leave empty to use the color scheme's cursor color."),
+            [LocKey.MapsToCursorColorEnterRGBOrRRGGBBLeaveEmptyToUseTheColorSchemeSCursorColor] = ("填 #RGB 或 #RRGGBB；留空跟随系统配色。", "Enter #RGB or #RRGGBB; leave empty to follow the system colors."),
             [LocKey.ForExampleFFFFFFLeaveEmptyToLeaveItUnset] = ("例如 #FFFFFF；留空表示不设置", "For example #FFFFFF; leave empty to leave it unset"),
             [LocKey.BackgroundImage] = ("背景图", "Background image"),
             [LocKey.BackgroundImagePath] = ("背景图路径", "Background image path"),
-            [LocKey.MapsToBackgroundImageDesktopWallpaperAndMsAppdataURIsAlsoWorkClearTheFieldToRemoveTheImage] = ("对应 backgroundImage；也支持 desktopWallpaper 与 ms-appdata URI。清空即移除背景图。", "Maps to backgroundImage. desktopWallpaper and ms-appdata URIs also work. Clear the field to remove the image."),
+            [LocKey.MapsToBackgroundImageDesktopWallpaperAndMsAppdataURIsAlsoWorkClearTheFieldToRemoveTheImage] = ("选一张本地图片；清空就取消背景图。", "Pick a local image; clear the field to remove the background."),
             [LocKey.Clear] = ("清空", "Clear"),
             [LocKey.RemoveTheBackgroundImageSetting] = ("移除背景图设置", "Remove the background image setting"),
             [LocKey.BackgroundImageOpacity] = ("背景图透明度", "Background image opacity"),
-            [LocKey.MapsToBackgroundImageOpacity01ShownHereAsAPercentage] = ("对应 backgroundImageOpacity（0~1），这里按百分比显示。", "Maps to backgroundImageOpacity (0-1), shown here as a percentage."),
+            [LocKey.MapsToBackgroundImageOpacity01ShownHereAsAPercentage] = ("数值越大，背景图越清晰。", "Higher values make the background image more visible."),
             [LocKey.Window] = ("窗口", "Window"),
             [LocKey.WindowOpacity] = ("窗口透明度", "Window opacity"),
-            [LocKey.MapsToOpacity0100Where100IsFullyOpaqueSetItBelow100ToSeeTheEffect] = ("对应 opacity（0~100，100 为完全不透明）；需低于 100 才能看出效果。", "Maps to opacity (0-100, where 100 is fully opaque). Set it below 100 to see the effect."),
+            [LocKey.MapsToOpacity0100Where100IsFullyOpaqueSetItBelow100ToSeeTheEffect] = ("100 是完全不透明，调低才能看出效果。", "100 is fully opaque; lower it to see the effect."),
             [LocKey.AcrylicTransparency] = ("窗口透明亚克力材质", "Acrylic transparency"),
-            [LocKey.MapsToUseAcrylicEnablingItBlursTheTransparentBackgroundBestOnWindows11] = ("对应 useAcrylic；开启后透明背景带模糊（Windows 11 效果最佳）。", "Maps to useAcrylic. Enabling it blurs the transparent background (best on Windows 11)."),
+            [LocKey.MapsToUseAcrylicEnablingItBlursTheTransparentBackgroundBestOnWindows11] = ("让透明背景带一点模糊，Windows 11 上效果最好。", "Blurs the transparent background; works best on Windows 11."),
             [LocKey.UseAcrylic] = ("使用亚克力材质", "Use acrylic"),
             [LocKey.DiscardChanges] = ("放弃更改", "Discard changes"),
             [LocKey.SaveAppearance] = ("保存外观设置", "Save appearance"),
-            [LocKey.RestoreWindowsTerminalBackupTheFirstTimeThisAppChangesTerminalSettingsFontAppearanceItSavesTheWholeSettingsJsonAsSettingsJsonBakLaterChangesNeverOverwriteItSoRestoringAlwaysReturnsToTheConfigFromBeforeThisAppWasInstalledTheBackupIsKeptAndCanBeRestoredRepeatedly] = ("「恢复 Windows Terminal 备份」：本程序第一次修改终端配置（字体 / 外观）时会把当时的 settings.json 完整备份为 settings.json.bak，之后无论改多少次都不覆盖；点此永远恢复到安装本软件前的配置。备份保留，可反复恢复。", "\"Restore Windows Terminal backup\": the first time this app changes terminal settings (font / appearance), it saves the whole settings.json as settings.json.bak. Later changes never overwrite it, so restoring always returns to the config from before this app was installed. The backup is kept and can be restored repeatedly."),
-            [LocKey.ReturnToTheSettingsJsonFromBeforeThisAppSFirstChangeTheOriginalBackupIsNeverOverwrittenOrDeletedSoItCanBeRestoredRepeatedly] = ("回到本软件第一次修改前的 settings.json；原始备份不会被覆盖或删除，可反复恢复。", "Return to the settings.json from before this app's first change. The original backup is never overwritten or deleted, so it can be restored repeatedly."),
+            [LocKey.RestoreWindowsTerminalBackupTheFirstTimeThisAppChangesTerminalSettingsFontAppearanceItSavesTheWholeSettingsJsonAsSettingsJsonBakLaterChangesNeverOverwriteItSoRestoringAlwaysReturnsToTheConfigFromBeforeThisAppWasInstalledTheBackupIsKeptAndCanBeRestoredRepeatedly] = ("第一次改终端设置时会备份原始配置，点这里可还原；备份不会被覆盖。", "A snapshot is kept before the first terminal change; click here to restore it. The snapshot is never overwritten."),
+            [LocKey.ReturnToTheSettingsJsonFromBeforeThisAppSFirstChangeTheOriginalBackupIsNeverOverwrittenOrDeletedSoItCanBeRestoredRepeatedly] = ("还原到第一次修改前的样子；备份会保留。", "Restore the original settings; the snapshot is kept."),
             [LocKey.OriginalBackupCreatedAt0RestoringAlwaysReturnsToThisConfig] = ("原始配置备份创建于 {0}；恢复时永远回到这份配置。", "Original backup created at {0}. Restoring always returns to this config."),
             [LocKey.NoOriginalBackupYetItIsCreatedAutomaticallyTheFirstTimeThisAppChangesTerminalSettings] = ("还没有原始配置备份；第一次通过本程序修改终端配置时会自动生成。", "No original backup yet. It is created automatically the first time this app changes terminal settings."),
             [LocKey.BackupFile0] = ("备份文件：{0}", "Backup file: {0}"),
-            [LocKey.RestoredTheWindowsTerminalConfigFromBeforeThisAppSFirstChangeTheOriginalBackupIsKeptAndCanBeRestoredAgain] = ("已恢复到本软件首次修改前的 Windows Terminal 配置；原始备份保留，可再次恢复。", "Restored the Windows Terminal config from before this app's first change. The original backup is kept and can be restored again."),
-            [LocKey.UnsavedChangesSaveThemThenOpenANewTerminalWindowToSeeTheEffect] = ("有尚未保存的修改；保存后打开新终端窗口即可看到效果。", "Unsaved changes. Save them, then open a new terminal window to see the effect."),
-            [LocKey.ShowingTheValuesSavedInSettingsJsonClickSaveAppearanceAfterMakingChanges] = ("当前显示的是 settings.json 里已保存的值；改动后点「保存外观设置」。", "Showing the values saved in settings.json. Click \"Save appearance\" after making changes."),
+            [LocKey.RestoredTheWindowsTerminalConfigFromBeforeThisAppSFirstChangeTheOriginalBackupIsKeptAndCanBeRestoredAgain] = ("已还原到第一次修改前的终端配置；备份保留，可再次还原。", "Original terminal settings restored; the snapshot is kept and can be reused."),
+            [LocKey.UnsavedChangesSaveThemThenOpenANewTerminalWindowToSeeTheEffect] = ("有未保存的改动；点「保存设置」后打开新终端窗口生效。", "Unsaved changes. Click Save settings, then open a new terminal window to see the effect."),
+            [LocKey.ShowingTheValuesSavedInSettingsJsonClickSaveAppearanceAfterMakingChanges] = ("当前显示的是已保存的设置；改动后点「保存设置」。", "Showing the saved settings. Click Save settings after making changes."),
             [LocKey.SavingTerminalAppearanceSettings] = ("正在保存终端外观设置…", "Saving terminal appearance settings…"),
             [LocKey.NothingToSave] = ("没有需要保存的更改。", "Nothing to save."),
             [LocKey.CursorColorMustBeRGBOrRRGGBBLeaveEmptyToUseTheTerminalDefault] = ("光标颜色要写成 #RGB 或 #RRGGBB；留空表示使用终端默认颜色。", "Cursor color must be #RGB or #RRGGBB; leave empty to use the terminal default."),
@@ -1183,7 +1243,7 @@ internal static class LocTable
             [LocKey.WindowsTerminalCurrentFontNotSetUsingTheWTDefault] = ("Windows Terminal 当前字体：未设置（跟随 WT 默认）", "Windows Terminal current font: not set (using the WT default)"),
             [LocKey.InstallBundledFont] = ("安装内置字体", "Install bundled font"),
             [LocKey.InstallsTheBundledCascadiaCodeNFForTheCurrentUserNoAdminRightsNeeded] = ("把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。", "Installs the bundled Cascadia Code NF for the current user (no admin rights needed)."),
-            [LocKey.WantOtherNerdFontsWithScoopInstalledRunScoopBucketAddNerdFontsThenInstallEGJetBrainsMonoNFOrFiraCodeNFReopenThisTabAndTheyWillAppearInTheList] = ("想要其他 Nerd Font？安装 Scoop 后执行：scoop bucket add nerd-fonts，再安装如 JetBrains-Mono-NF、FiraCode-NF 等包，重启本页即可在下拉中看到。", "Want other Nerd Fonts? With Scoop installed, run: scoop bucket add nerd-fonts, then install e.g. JetBrains-Mono-NF or FiraCode-NF. Reopen this tab and they will appear in the list."),
+            [LocKey.WantOtherNerdFontsWithScoopInstalledRunScoopBucketAddNerdFontsThenInstallEGJetBrainsMonoNFOrFiraCodeNFReopenThisTabAndTheyWillAppearInTheList] = ("想用别的图标字体？装好 Scoop 后执行 scoop bucket add nerd-fonts，再安装喜欢的字体，点「刷新状态」就能在下拉里看到。", "Want a different icon font? After installing Scoop, run scoop bucket add nerd-fonts, install a font, then click Refresh to see it in the list."),
             [LocKey.InstallingTheBundledFont] = ("正在安装内置字体…", "Installing the bundled font…"),
             [LocKey.WindowsTerminalSettingsJsonWasNotFoundStartWindowsTerminalOnceFirst] = ("未找到 Windows Terminal 的 settings.json，请先启动一次 Windows Terminal。", "Windows Terminal settings.json was not found. Start Windows Terminal once first."),
             [LocKey.FontFileNotFound0] = ("未找到字体文件：{0}", "Font file not found: {0}"),
@@ -1192,7 +1252,7 @@ internal static class LocTable
             [LocKey.Installed0ForTheCurrentUser] = ("已为当前用户安装 {0}。", "Installed {0} for the current user."),
             [LocKey.TheFontNameCannotBeEmpty] = ("字体名称不能为空。", "The font name cannot be empty."),
             [LocKey.ThemePreset] = ("主题预设", "Theme preset"),
-            [LocKey.PresetsMarkedAsNeedingANerdFontRequireTheFontToBeInstalledFirstOtherwiseThePromptShowsPlaceholderBoxes] = ("标注“需 Nerd Font”的预设要先装好字体，否则提示符会出现乱码方块。", "Presets marked as needing a Nerd Font require the font to be installed first, otherwise the prompt shows placeholder boxes."),
+            [LocKey.PresetsMarkedAsNeedingANerdFontRequireTheFontToBeInstalledFirstOtherwiseThePromptShowsPlaceholderBoxes] = ("标了「需图标字体」的主题要先装好字体，否则符号会显示成方块。", "Themes marked icon font required need the font installed first, or symbols appear as boxes."),
             [LocKey.ApplyTheme] = ("应用主题", "Apply theme"),
             [LocKey.ApplyingTheThemePreset] = ("正在应用主题预设…", "Applying the theme preset…"),
             [LocKey.ThemeApplied0TheOriginalStarshipTomlHasBeenBackedUp] = ("主题已应用：{0}；原 starship.toml 已自动备份。", "Theme applied: {0}. The original starship.toml has been backed up."),
@@ -1202,14 +1262,14 @@ internal static class LocTable
             [LocKey.ConfigMaintenance] = ("配置维护", "Config maintenance"),
             [LocKey.Created] = ("已创建", "Created"),
             [LocKey.NotCreated] = ("未创建", "Not created"),
-            [LocKey.StarshipTomlBakExists] = ("starship.toml.bak 存在", "starship.toml.bak exists"),
+            [LocKey.StarshipTomlBakExists] = ("主题备份存在", "Theme backup exists"),
             [LocKey.OpenStarshipToml] = ("打开 starship.toml", "Open starship.toml"),
-            [LocKey.RestoreStarshipTomlBackup] = ("恢复 starship.toml 备份", "Restore starship.toml backup"),
-            [LocKey.RestoreWindowsTerminalBackup] = ("恢复 Windows Terminal 备份", "Restore Windows Terminal backup"),
+            [LocKey.RestoreStarshipTomlBackup] = ("恢复上次主题设置", "Restore last theme settings"),
+            [LocKey.RestoreWindowsTerminalBackup] = ("恢复终端备份", "Restore terminal backup"),
             [LocKey.OpeningStarshipToml] = ("正在打开 starship.toml…", "Opening starship.toml…"),
-            [LocKey.RestoringTheStarshipTomlBackup] = ("正在恢复 starship.toml 备份…", "Restoring the starship.toml backup…"),
-            [LocKey.StarshipTomlHasBeenRestoredFromTheBackup] = ("已从备份恢复 starship.toml。", "starship.toml has been restored from the backup."),
-            [LocKey.RestoringTheWindowsTerminalBackup] = ("正在恢复 Windows Terminal 备份…", "Restoring the Windows Terminal backup…"),
+            [LocKey.RestoringTheStarshipTomlBackup] = ("正在恢复主题设置…", "Restoring theme settings…"),
+            [LocKey.StarshipTomlHasBeenRestoredFromTheBackup] = ("已恢复上一次的主题设置。", "Previous theme settings restored."),
+            [LocKey.RestoringTheWindowsTerminalBackup] = ("正在恢复终端备份…", "Restoring the terminal backup…"),
             [LocKey.NoBackupToRestore] = ("没有可恢复的备份。", "No backup to restore."),
             [LocKey.FailedToRefreshTheStatus0] = ("状态刷新失败：{0}", "Failed to refresh the status: {0}"),
             [LocKey.TheRootOfSettingsJsonIsNotAnObjectCannotModifyAutomatically] = ("settings.json 的顶层不是对象，无法自动修改。", "The root of settings.json is not an object; cannot modify automatically."),
@@ -1223,7 +1283,7 @@ internal static class LocTable
             [LocKey.UnexpectedSettingsJsonStructureCannotModifyAutomatically] = ("settings.json 结构异常，无法自动修改。", "Unexpected settings.json structure; cannot modify automatically."),
             [LocKey.PostWriteValidationFailedTheOriginalFileWasKeptUnchanged] = ("写入后校验未通过，已保持原配置不变。", "Post-write validation failed; the original file was kept unchanged."),
             [LocKey.CustomPrompt] = ("自定义提示符", "Custom prompt"),
-            [LocKey.ThePreviewUsesSampleValuesStarshipGeneratesTheRealTextFromSystemStateThePathFollowsCd] = ("预览为示意值，实际文字由 Starship 按系统状态生成（切换目录时路径会跟着变）。", "The preview uses sample values; Starship generates the real text from system state (the path follows cd)."),
+            [LocKey.ThePreviewUsesSampleValuesStarshipGeneratesTheRealTextFromSystemStateThePathFollowsCd] = ("预览是示例文字，实际内容会随目录、时间等自动变化。", "The preview shows sample text; the real values change with the directory, time and so on."),
             [LocKey.InsertVariable] = ("插入变量", "Insert variable"),
             [LocKey.CurrentColor] = ("当前颜色", "Current color"),
             [LocKey.Space] = ("空格", "Space"),
@@ -1242,11 +1302,41 @@ internal static class LocTable
             [LocKey.RestoringThePreApplyPromptConfig] = ("正在恢复应用前的提示符配置…", "Restoring the pre-apply prompt config..."),
             [LocKey.RestoredTheOriginalStarshipTomlTheCustomPromptHasBeenRemoved] = ("已恢复应用前的 starship.toml，自定义提示符已移除。", "Restored the original starship.toml; the custom prompt has been removed."),
             [LocKey.NoPreApplyBackupToRestore] = ("没有可恢复的应用前备份。", "No pre-apply backup to restore."),
-            [LocKey.DefaultsRestoredInTheEditorClickApplyToStarshipToWriteThem] = ("已重置为默认内容，点击“应用到 Starship”才会写入。", "Defaults restored in the editor. Click \"Apply to Starship\" to write them."),
+            [LocKey.DefaultsRestoredInTheEditorClickApplyToStarshipToWriteThem] = ("已恢复默认提示符，点「保存设置」才会写入。", "Default prompt restored. Click Save settings to apply."),
             [LocKey.BlankLineBeforePrompt] = ("提示符前空一行", "Blank line before prompt"),
             [LocKey.UseAsPathSeparator] = ("路径分隔符用 /", "Use / as path separator"),
-            [LocKey.WhenEnabledAnEmptyLineIsInsertedBeforeEveryPromptStarshipAddNewline] = ("开启后每个提示符前会空一行（Starship add_newline）。", "When enabled, an empty line is inserted before every prompt (Starship add_newline)."),
-            [LocKey.WhenDisabledPathsUseTheSystemBackslashSeparatorStarshipUseOsPathSep] = ("取消后路径用系统默认的反斜杠 \\ 分隔（Starship use_os_path_sep）。", "When disabled, paths use the system backslash separator (Starship use_os_path_sep)."),
+            [LocKey.WhenEnabledAnEmptyLineIsInsertedBeforeEveryPromptStarshipAddNewline] = ("开启后，每条命令前会多一个空行。", "When enabled, a blank line is added before each command."),
+            [LocKey.WhenDisabledPathsUseTheSystemBackslashSeparatorStarshipUseOsPathSep] = ("关闭后，路径分隔符跟随系统默认。", "When turned off, paths use the system default separator."),
+            [LocKey.AdvancedOptions] = ("高级选项", "Advanced options"),
+            [LocKey.BeautifyPageIntro] = ("设置终端字体、外观和命令行提示符。第一次修改前会自动备份，随时可以还原；点「刷新状态」重新检测。", "Configure the terminal font, appearance and prompt. A backup is made before the first change and can be restored at any time; click Refresh to re-detect."),
+            [LocKey.PromptEditorIntro] = ("点「添加片段」从左到右拼出提示符：每段用下拉选内容（用户名、目录、符号等）和颜色。下面的预览会实时更新；应用后只改提示符这一行，其它设置不动。", "Click Add segment to build the prompt from left to right: choose the content (user, directory, symbols, etc.) and a color for each segment. The preview updates live; applying changes only the prompt line."),
+            [LocKey.PromptSegmentHint] = ("下拉里能选变量和符号；颜色选预设，或选「自定义…」后填 6 位色号。", "Pick variables and symbols from the list; choose a preset color or enter a 6-digit hex value via Custom."),
+            [LocKey.TomlBackupHint] = ("应用主题前会自动备份，点这里还原上次的配置。", "A backup is made before applying a theme; click here to restore the previous one."),
+            [LocKey.SaveSettings] = ("保存设置", "Save settings"),
+            [LocKey.SavingSettings] = ("正在保存设置…", "Saving settings…"),
+            [LocKey.SettingsSavedThemeAndAppearance] = ("已保存提示符设置与 {0} 项外观改动；打开新终端窗口即可看到效果。", "Prompt settings and {0} appearance change(s) saved. Open a new terminal window to see the effect."),
+            [LocKey.SettingsSavedThemeOnly] = ("已保存提示符设置；打开新终端窗口即可看到效果。", "Prompt settings saved. Open a new terminal window to see the effect."),
+            [LocKey.ThemeAppliedButAppearanceFailed] = ("提示符设置已保存，但外观保存失败：{0}", "Prompt settings saved, but appearance could not be saved: {0}"),
+            [LocKey.DiscardAppearanceTooltip] = ("回到上次保存的状态，不写入文件。", "Back to the last saved state; nothing is written."),
+            [LocKey.SaveSettingsTooltip] = ("按当前方案写入提示符，并保存字体与外观改动。", "Writes the prompt for the selected scheme and saves font and appearance changes."),
+            [LocKey.ClickSaveSettingsAbove] = ("改完后点下面的「保存设置」。", "Click Save settings below when you are done."),
+            [LocKey.SettingsSavedMissingFontWarning] = ("已保存设置，但没装图标字体，符号可能显示成方块。", "Settings saved, but the icon font is missing; symbols may show as boxes."),
+            [LocKey.CustomEllipsis] = ("自定义…", "Custom…"),
+            [LocKey.RefreshStatus] = ("刷新状态", "Refresh"),
+            [LocKey.RefreshStatusTooltip] = ("重新探测 Starship、Scoop、字体与终端配置状态。", "Re-detect Starship, Scoop, fonts and terminal settings."),
+            [LocKey.PromptFormatLabel] = ("格式", "Format"),
+            [LocKey.CustomSegmentTooltip] = ("输入任意文字或 $变量", "Enter any text"),
+            [LocKey.HexColorTooltip] = ("输入 6 位十六进制色号（即 # 后面的部分）", "Enter 6 hex digits (without #)"),
+            [LocKey.RemoveSegmentTooltip] = ("删除该片段", "Remove this segment"),
+            [LocKey.AddSegment] = ("添加片段", "Add segment"),
+            [LocKey.PromptSchemeHint] = ("两种方案二选一，切换后点下方的「保存设置」生效。", "Choose one of the two schemes; click Save settings below to apply."),
+            [LocKey.RestoreDefaultsTooltip] = ("把当前方案恢复成程序默认，点「保存设置」后才写入。", "Restores the current scheme to its defaults. Click Save settings to write."),
+            [LocKey.DefaultThemeRestored] = ("已恢复默认主题，点「保存设置」才会写入。", "Default theme restored. Click Save settings to apply."),
+            [LocKey.ChangesDiscarded] = ("已放弃未保存的改动，回到上次保存的状态。", "Unsaved changes discarded; back to the last saved state."),
+            [LocKey.AddSegmentFirst] = ("请先添加至少一个片段。", "Add at least one segment first."),
+            [LocKey.CustomPromptSimpleStatus] = ("当前使用自定义提示符；重新应用主题会覆盖它。", "Using a custom prompt; applying a theme will replace it."),
+            [LocKey.CommonSettings] = ("通用设置", "Common settings"),
+            [LocKey.CommonOptionsScope] = ("主题预设和自定义提示符都会用这两个设置。", "These two settings apply to both the theme preset and the custom prompt."),
         };
 
     public static readonly IReadOnlyDictionary<string, string> ZhToEn = BuildZhToEn();

@@ -54,14 +54,14 @@ public sealed partial class BeautifyViewModel
         }
     }
 
-    /// <summary>提示符前空一行（Starship add_newline）。默认关闭：回车后紧跟提示符，不自动空行。</summary>
+    /// <summary>提示符前空一行，两种提示符方案通用。默认关闭：回车后紧跟提示符，不自动空行。</summary>
     public bool PromptAddNewline
     {
         get => _promptAddNewline;
         set => SetField(ref _promptAddNewline, value);
     }
 
-    /// <summary>路径分隔符显示为 /（写入 use_os_path_sep = false）。默认开启。</summary>
+    /// <summary>路径分隔符显示为 /，两种提示符方案通用。默认开启。</summary>
     public bool PromptUseForwardSlash
     {
         get => _promptUseForwardSlash;
@@ -89,8 +89,6 @@ public sealed partial class BeautifyViewModel
         _promptConfigPath = state.ConfigPath;
         _promptCustomized = state.Customized;
         _hasPromptBackup = state.HasBackup;
-        _promptAddNewline = state.AddNewline;
-        _promptUseForwardSlash = state.UseForwardSlash;
         _promptStatusSource = !state.ConfigExists
             ? "starship.toml 尚未创建，应用后会自动生成"
             : state.Customized
@@ -250,15 +248,13 @@ public sealed partial class BeautifyViewModel
             });
 
         RefreshPromptState(forceReload: true);
+        RefreshCommonOptions(forceReload: true);
     }
 
-    /// <summary>只把编辑框重置为默认值（含两个开关），不写文件；需要再点"应用到 Starship"。</summary>
+    /// <summary>只把片段组合重置为默认值，不写文件；需要再点「保存设置」。</summary>
     public void ResetPrompt()
     {
         LoadFormat(StarshipPromptService.CreateDefaultFormat());
-        var (addNewline, useForwardSlash) = StarshipPromptService.CreateDefaultOptions();
-        PromptAddNewline = addNewline;
-        PromptUseForwardSlash = useForwardSlash;
-        SetFeedback(StatusType.Info, "已重置为默认内容，点击“应用到 Starship”才会写入。");
+        SetFeedback(StatusType.Info, "已恢复默认提示符，点「保存设置」才会写入。");
     }
 }

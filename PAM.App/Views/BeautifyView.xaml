@@ -86,7 +86,44 @@
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
-        <!-- 外观卡片里的分组标题：文本 / 显示效果 / 光标 / 背景图 / 窗口 -->
+        <!-- 高级选项开关：透明模板保留整行点击区域，IsChecked 默认 false 即收起。 -->
+        <Style x:Key="AdvancedToggleStyle" TargetType="{x:Type ToggleButton}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 主题卡内的从属子卡：与外层卡片用底色和边框区分层级。 -->
+        <Style x:Key="SubCardStyle" TargetType="{x:Type Border}">
+            <Setter Property="Padding" Value="16,14" />
+            <Setter Property="Margin" Value="0,10,0,0" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+
+        <Style x:Key="SubCardTitleStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+
+        <!-- 外观区域的分组标题：显示效果 / 光标 / 背景图 / 窗口 -->
         <Style x:Key="AppearanceGroupTitleStyle" TargetType="{x:Type TextBlock}">
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -113,7 +150,7 @@
                         <TextBlock Text="美化" Style="{StaticResource SectionTitleStyle}" />
                         <TextBlock
                             Margin="0,4,0,0"
-                            Text="配置终端外观、Starship 提示符与 Nerd Font；首次修改终端配置前会自动保存一份原始配置，随时可恢复。进入本页不再自动检测，点「刷新状态」可重新探测。"
+                            Text="设置终端字体、外观和命令行提示符。第一次修改前会自动备份，随时可以还原；点「刷新状态」重新检测。"
                             Style="{StaticResource SecondaryTextStyle}" />
                     </StackPanel>
                     <ui:Button
@@ -127,242 +164,6 @@
                         IsEnabled="{Binding CanRefresh}"
                         ToolTip="重新探测 Starship、Scoop、字体与终端配置状态。" />
                 </Grid>
-
-                <!-- 外观：对应 Windows Terminal「默认值 → 外观」的 7 组设置，统一保存 -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="外观" Style="{StaticResource CardTitleStyle}" />
-                        <TextBlock
-                            Margin="0,4,0,0"
-                            Text="对应 Windows Terminal「默认值 → 外观」的设置，写入 settings.json 的 profiles.defaults；只保存改动过的项，留空或选「终端默认」即交还终端默认。"
-                            Style="{StaticResource SettingHintStyle}" />
-
-                        <!-- 文本 -->
-                        <TextBlock Text="文本" Style="{StaticResource AppearanceGroupTitleStyle}" />
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="320" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="字体" Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock Text="{Binding CurrentFontText}" Style="{StaticResource SettingHintStyle}" />
-                                <TextBlock
-                                    Margin="0,6,0,0"
-                                    Text="写入 profiles.defaults.font.face；内置 Cascadia Code NF 已随本程序打包，未安装时可一键按当前用户安装。"
-                                    Style="{StaticResource SettingHintStyle}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1">
-                                <ComboBox
-                                    ItemsSource="{Binding FontOptions}"
-                                    SelectedItem="{Binding SelectedFont, Mode=TwoWay}"
-                                    ToolTip="{Binding WtSettingsPath}" />
-                                <ui:Button
-                                    Margin="0,8,0,0"
-                                    HorizontalAlignment="Stretch"
-                                    Appearance="Secondary"
-                                    Click="InstallBundledFontButton_Click"
-                                    Content="安装内置字体"
-                                    Icon="{ui:SymbolIcon FontIncrease24}"
-                                    IsEnabled="{Binding CanInstallBundledFont}"
-                                    ToolTip="把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。" />
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock
-                            Text="想要其他 Nerd Font？安装 Scoop 后执行：scoop bucket add nerd-fonts，再安装如 JetBrains-Mono-NF、FiraCode-NF 等包，重启本页即可在下拉中看到。"
-                            Style="{StaticResource SettingHintStyle}" />
-
-                        <!-- 显示效果 -->
-                        <TextBlock Text="显示效果" Style="{StaticResource AppearanceGroupTitleStyle}" />
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="320" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="复古风格终端显示" Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock
-                                    Text="CRT 扫描线与辉光效果（experimental.retroTerminalEffect）。"
-                                    Style="{StaticResource SettingHintStyle}" />
-                            </StackPanel>
-                            <CheckBox
-                                Grid.Column="1"
-                                VerticalAlignment="Center"
-                                Content="启用复古效果"
-                                IsChecked="{Binding RetroTerminalEffect, Mode=TwoWay}" />
-                        </Grid>
-
-                        <!-- 光标 -->
-                        <TextBlock Text="光标" Style="{StaticResource AppearanceGroupTitleStyle}" />
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="320" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="光标形状" Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock Text="对应 cursorShape；选「终端默认」即删除该设置。" Style="{StaticResource SettingHintStyle}" />
-                            </StackPanel>
-                            <ComboBox
-                                Grid.Column="1"
-                                DisplayMemberPath="DisplayName"
-                                ItemsSource="{Binding CursorShapeOptions}"
-                                SelectedValue="{Binding SelectedCursorShapeId, Mode=TwoWay}"
-                                SelectedValuePath="Id" />
-                        </Grid>
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="320" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="光标颜色" Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock Text="对应 cursorColor，填 #RGB 或 #RRGGBB；留空使用配色方案里的光标色。" Style="{StaticResource SettingHintStyle}" />
-                            </StackPanel>
-                            <TextBox
-                                Grid.Column="1"
-                                VerticalAlignment="Center"
-                                FontFamily="{StaticResource MonoFontFamily}"
-                                Text="{Binding CursorColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                ToolTip="例如 #FFFFFF；留空表示不设置" />
-                        </Grid>
-
-                        <!-- 背景图 -->
-                        <TextBlock Text="背景图" Style="{StaticResource AppearanceGroupTitleStyle}" />
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="320" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="背景图路径" Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock Text="对应 backgroundImage；也支持 desktopWallpaper 与 ms-appdata URI。清空即移除背景图。" Style="{StaticResource SettingHintStyle}" />
-                            </StackPanel>
-                            <Grid Grid.Column="1">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox
-                                    Grid.Column="0"
-                                    FontFamily="{StaticResource MonoFontFamily}"
-                                    FontSize="12"
-                                    Text="{Binding BackgroundImage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    ToolTip="{Binding BackgroundImage}" />
-                                <Button
-                                    Grid.Column="1"
-                                    Margin="6,0,0,0"
-                                    Padding="8,3"
-                                    Click="BrowseBackgroundImageButton_Click"
-                                    Content="浏览…" />
-                                <Button
-                                    Grid.Column="2"
-                                    Margin="6,0,0,0"
-                                    Padding="8,3"
-                                    Click="ClearBackgroundImageButton_Click"
-                                    Content="清空"
-                                    ToolTip="移除背景图设置" />
-                            </Grid>
-                        </Grid>
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="320" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="背景图透明度" Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock Text="对应 backgroundImageOpacity（0~1），这里按百分比显示。" Style="{StaticResource SettingHintStyle}" />
-                            </StackPanel>
-                            <Grid Grid.Column="1">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="52" />
-                                </Grid.ColumnDefinitions>
-                                <Slider
-                                    Grid.Column="0"
-                                    VerticalAlignment="Center"
-                                    IsSnapToTickEnabled="True"
-                                    Maximum="100"
-                                    Minimum="0"
-                                    TickFrequency="1"
-                                    Value="{Binding BackgroundImageOpacity, Mode=TwoWay}" />
-                                <TextBlock
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    FontFamily="{StaticResource MonoFontFamily}"
-                                    Text="{Binding BackgroundImageOpacityText}" />
-                            </Grid>
-                        </Grid>
-
-                        <!-- 窗口 -->
-                        <TextBlock Text="窗口" Style="{StaticResource AppearanceGroupTitleStyle}" />
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="320" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="窗口透明度" Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock Text="对应 opacity（0~100，100 为完全不透明）；需低于 100 才能看出效果。" Style="{StaticResource SettingHintStyle}" />
-                            </StackPanel>
-                            <Grid Grid.Column="1">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="52" />
-                                </Grid.ColumnDefinitions>
-                                <Slider
-                                    Grid.Column="0"
-                                    VerticalAlignment="Center"
-                                    IsSnapToTickEnabled="True"
-                                    Maximum="100"
-                                    Minimum="0"
-                                    TickFrequency="1"
-                                    Value="{Binding WindowOpacity, Mode=TwoWay}" />
-                                <TextBlock
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    FontFamily="{StaticResource MonoFontFamily}"
-                                    Text="{Binding WindowOpacityText}" />
-                            </Grid>
-                        </Grid>
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="320" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="窗口透明亚克力材质" Style="{StaticResource SettingLabelStyle}" />
-                                <TextBlock Text="对应 useAcrylic；开启后透明背景带模糊（Windows 11 效果最佳）。" Style="{StaticResource SettingHintStyle}" />
-                            </StackPanel>
-                            <CheckBox
-                                Grid.Column="1"
-                                VerticalAlignment="Center"
-                                Content="使用亚克力材质"
-                                IsChecked="{Binding UseAcrylic, Mode=TwoWay}" />
-                        </Grid>
-
-                        <!-- 保存 / 放弃 -->
-                        <TextBlock Margin="0,8,0,0" Style="{StaticResource SettingHintStyle}" Text="{Binding AppearanceStatusText}" />
-                        <StackPanel Margin="0,10,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
-                            <ui:Button
-                                Appearance="Secondary"
-                                Click="DiscardAppearanceButton_Click"
-                                Content="放弃更改"
-                                Icon="{ui:SymbolIcon ArrowReset24}"
-                                IsEnabled="{Binding CanDiscardAppearance}" />
-                            <ui:Button
-                                Margin="8,0,0,0"
-                                Appearance="Primary"
-                                Click="ApplyAppearanceButton_Click"
-                                Content="保存外观设置"
-                                Icon="{ui:SymbolIcon CheckmarkCircle24}"
-                                IsEnabled="{Binding CanApplyAppearance}" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
 
                 <!-- Starship -->
                 <Border Style="{StaticResource CardStyle}">
@@ -393,23 +194,31 @@
                                 </StackPanel>
                                 <TextBlock
                                     Margin="0,8,0,0"
-                                    Text="Starship 是跨 shell 的提示符引擎；通过 Scoop 安装后自动可用，无需手动配置 PATH。"
+                                    Text="Starship 用来美化命令行提示符；装好后就能用，不用手动配置。"
                                     Style="{StaticResource SettingHintStyle}" />
                                 <TextBlock
                                     Margin="0,6,0,0"
                                     Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="Starship 官方建议先装好 Nerd Font：请在上方选择字体后再安装。"
+                                    Text="建议先装好图标字体，否则主题里的符号可能显示成方块。"
                                     Visibility="{Binding HasFontSelection, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
                                 <TextBlock
                                     Margin="0,6,0,0"
                                     Foreground="{DynamicResource SystemFillColorSuccessBrush}"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="已安装，无需重复安装；换字体后重新打开终端即可生效。"
+                                    Text="已经装好了；换字体后重新打开终端生效。"
                                     Visibility="{Binding IsStarshipInstalled, Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <ui:Button
+                                    HorizontalAlignment="Stretch"
+                                    Appearance="Secondary"
+                                    Click="InstallBundledFontButton_Click"
+                                    Content="安装内置字体"
+                                    Icon="{ui:SymbolIcon FontIncrease24}"
+                                    IsEnabled="{Binding CanInstallBundledFont}"
+                                    ToolTip="把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。" />
                                 <ui:Button
                                     HorizontalAlignment="Stretch"
                                     Appearance="Primary"
@@ -435,7 +244,26 @@
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
                         <TextBlock Text="主题" Style="{StaticResource CardTitleStyle}" />
-                        <Grid Margin="0,14,0,0">
+                        <!-- 提示符方案：二选一，切换后由下方统一按钮提交。 -->
+                        <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
+                            <RadioButton
+                                Content="主题预设"
+                                FontSize="13"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                GroupName="PresetScheme"
+                                IsChecked="{Binding UsePresetScheme, Mode=TwoWay}"
+                                VerticalContentAlignment="Center" />
+                            <RadioButton
+                                Margin="20,0,0,0"
+                                Content="自定义提示符"
+                                FontSize="13"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                GroupName="CustomScheme"
+                                IsChecked="{Binding UseCustomPrompt, Mode=TwoWay}"
+                                VerticalContentAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Margin="0,6,0,0" Text="两种方案二选一，切换后点下方的「保存设置」生效。" Style="{StaticResource SettingHintStyle}" />
+                        <Grid Margin="0,14,0,0" Visibility="{Binding UseCustomPrompt, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="320" />
@@ -450,7 +278,7 @@
                                     Margin="0,6,0,0"
                                     Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="标注“需 Nerd Font”的预设要先装好字体，否则提示符会出现乱码方块。" />
+                                    Text="标了「需图标字体」的主题要先装好字体，否则符号会显示成方块。" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="1">
@@ -459,180 +287,427 @@
                                     ItemsSource="{Binding PresetOptions}"
                                     SelectedValue="{Binding SelectedPresetId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                     SelectedValuePath="Id" />
-                                <ui:Button
-                                    Margin="0,8,0,0"
-                                    HorizontalAlignment="Right"
-                                    Appearance="Primary"
-                                    Click="ApplyPresetButton_Click"
-                                    Content="应用主题"
-                                    Icon="{ui:SymbolIcon CheckmarkCircle24}"
-                                    IsEnabled="{Binding CanApplyPreset}" />
                             </StackPanel>
                         </Grid>
-                    </StackPanel>
-                </Border>
+                            <Border
+                                Margin="0,14,0,0"
+                                Style="{StaticResource SubCardStyle}"
+                                Visibility="{Binding UseCustomPrompt, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="自定义提示符" Style="{StaticResource SubCardTitleStyle}" />
+                                    <TextBlock
+                                        Margin="0,6,0,0"
+                                        Text="点「添加片段」从左到右拼出提示符：每段用下拉选内容（用户名、目录、符号等）和颜色。下面的预览会实时更新；应用后只改提示符这一行，其它设置不动。"
+                                        Style="{StaticResource SettingHintStyle}" />
 
-                <!-- 自定义提示符 -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="自定义提示符" Style="{StaticResource CardTitleStyle}" />
-                        <TextBlock
-                            Margin="0,6,0,0"
-                            Text="用户名、主机名、当前路径等是 Starship 读取到的值，不用手填：点「添加片段」加入一个提示符元素，再用下拉选变量或固定符号，每个片段可单独选颜色，整体由选择组合而成，变量不再手填、不能直接编辑。下方预览实时反映，应用时只替换 starship.toml 的顶层 format，其余配置原样保留。"
-                            Style="{StaticResource SettingHintStyle}" />
-
-                        <!-- 实时预览（深色底模拟终端） -->
-                        <Border
-                            Margin="0,12,0,0"
-                            Padding="12,10"
-                            Background="#1E1E1E"
-                            CornerRadius="6">
-                            <ItemsControl Focusable="False" ItemsSource="{Binding PromptPreviewParts}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock
-                                            FontFamily="{StaticResource MonoFontFamily}"
-                                            FontSize="14"
-                                            Foreground="{Binding Brush}"
-                                            Text="{Binding Text}" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Border>
-                        <TextBlock
-                            Margin="0,4,0,0"
-                            Text="预览为示意值，实际文字由 Starship 按系统状态生成（切换目录时路径会跟着变）。"
-                            Style="{StaticResource SettingHintStyle}" />
-
-                        <!-- 格式：点选片段组合，不直接编辑 -->
-                        <TextBlock
-                            Margin="0,12,0,0"
-                            Style="{StaticResource SettingLabelStyle}"
-                            Text="格式" />
-
-                        <!-- 片段组合区：水平一排可选项，每个片段选内容 + 颜色，可加 / 删 -->
-                        <ItemsControl
-                            x:Name="PromptSegmentBuilder"
-                            Margin="0,8,0,0"
-                            ItemsSource="{Binding PromptSegments}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
+                                    <!-- 实时预览（深色底模拟终端） -->
                                     <Border
-                                        Margin="0,0,6,6"
-                                        Padding="6,4"
-                                        Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                        Margin="0,12,0,0"
+                                        Padding="12,10"
+                                        Background="#1E1E1E"
                                         CornerRadius="6">
-                                        <StackPanel Orientation="Horizontal">
-                                            <ComboBox
-                                                Width="100"
-                                                ItemsSource="{Binding Choices}"
-                                                ItemTemplateSelector="{StaticResource SegmentChoiceTemplateSelector}"
-                                                SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
-                                                ToolTip="{Binding SelectedOption.ToolTipText}" />
-                                            <TextBox
-                                                Width="110"
-                                                Margin="5,0,0,0"
-                                                FontFamily="{StaticResource MonoFontFamily}"
-                                                FontSize="12"
-                                                Padding="4,2"
-                                                Text="{Binding CustomText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                ToolTip="输入任意文字或 $变量"
-                                                Visibility="{Binding SelectedOption, Converter={StaticResource CustomSelectedToVisibility}}" />
-                                            <!-- 颜色：与变量下拉同款 ComboBox；选「自定义…」后右侧出现可编辑色号框。 -->
-                                            <ComboBox
-                                                Width="118"
-                                                Margin="5,0,0,0"
-                                                ItemsSource="{Binding ColorChoices}"
-                                                ItemTemplateSelector="{StaticResource ColorChoiceTemplateSelector}"
-                                                SelectedItem="{Binding SelectedColorOption, Mode=TwoWay}"
-                                                ToolTip="{Binding Color}" />
-                                            <TextBox
-                                                Width="66"
-                                                Margin="5,0,0,0"
-                                                FontFamily="{StaticResource MonoFontFamily}"
-                                                FontSize="12"
-                                                Padding="4,2"
-                                                Text="{Binding HexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                ToolTip="输入 6 位十六进制色号（即 # 后面的部分）"
-                                                Visibility="{Binding SelectedColorOption, Converter={StaticResource ColorCustomToVisibility}}" />
-                                            <Button
-                                                MinWidth="24"
-                                                Margin="5,0,0,0"
-                                                Padding="5,2"
-                                                Click="RemoveSegmentButton_Click"
-                                                Content="×"
-                                                ToolTip="删除该片段" />
-                                        </StackPanel>
+                                        <ItemsControl Focusable="False" ItemsSource="{Binding PromptPreviewParts}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock
+                                                        FontFamily="{StaticResource MonoFontFamily}"
+                                                        FontSize="14"
+                                                        Foreground="{Binding Brush}"
+                                                        Text="{Binding Text}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                    <TextBlock
+                                        Margin="0,4,0,0"
+                                        Text="预览是示例文字，实际内容会随目录、时间等自动变化。"
+                                        Style="{StaticResource SettingHintStyle}" />
 
-                        <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
-                            <ui:Button
-                                Appearance="Secondary"
-                                Click="AddSegmentButton_Click"
-                                Content="添加片段" />
+                                    <!-- 格式：点选片段组合，不直接编辑 -->
+                                    <TextBlock
+                                        Margin="0,12,0,0"
+                                        Style="{StaticResource SettingLabelStyle}"
+                                        Text="格式" />
+
+                                    <!-- 片段组合区：水平一排可选项，每个片段选内容 + 颜色，可加 / 删 -->
+                                    <ItemsControl
+                                        x:Name="PromptSegmentBuilder"
+                                        Margin="0,8,0,0"
+                                        ItemsSource="{Binding PromptSegments}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    Margin="0,0,6,6"
+                                                    Padding="6,4"
+                                                    Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                                    CornerRadius="6">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <ComboBox
+                                                            Width="100"
+                                                            ItemsSource="{Binding Choices}"
+                                                            ItemTemplateSelector="{StaticResource SegmentChoiceTemplateSelector}"
+                                                            SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
+                                                            ToolTip="{Binding SelectedOption.ToolTipText}" />
+                                                        <TextBox
+                                                            Width="110"
+                                                            Margin="5,0,0,0"
+                                                            FontFamily="{StaticResource MonoFontFamily}"
+                                                            FontSize="12"
+                                                            Padding="4,2"
+                                                            Text="{Binding CustomText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            ToolTip="输入任意文字或 $变量"
+                                                            Visibility="{Binding SelectedOption, Converter={StaticResource CustomSelectedToVisibility}}" />
+                                                        <!-- 颜色：与变量下拉同款 ComboBox；选「自定义…」后右侧出现可编辑色号框。 -->
+                                                        <ComboBox
+                                                            Width="118"
+                                                            Margin="5,0,0,0"
+                                                            ItemsSource="{Binding ColorChoices}"
+                                                            ItemTemplateSelector="{StaticResource ColorChoiceTemplateSelector}"
+                                                            SelectedItem="{Binding SelectedColorOption, Mode=TwoWay}"
+                                                            ToolTip="{Binding Color}" />
+                                                        <TextBox
+                                                            Width="66"
+                                                            Margin="5,0,0,0"
+                                                            FontFamily="{StaticResource MonoFontFamily}"
+                                                            FontSize="12"
+                                                            Padding="4,2"
+                                                            Text="{Binding HexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            ToolTip="输入 6 位十六进制色号（即 # 后面的部分）"
+                                                            Visibility="{Binding SelectedColorOption, Converter={StaticResource ColorCustomToVisibility}}" />
+                                                        <Button
+                                                            MinWidth="24"
+                                                            Margin="5,0,0,0"
+                                                            Padding="5,2"
+                                                            Click="RemoveSegmentButton_Click"
+                                                            Content="×"
+                                                            ToolTip="删除该片段" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
+                                        <ui:Button
+                                            Appearance="Secondary"
+                                            Click="AddSegmentButton_Click"
+                                            Content="添加片段" />
+                                        <TextBlock
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource SettingHintStyle}"
+                                            Text="下拉里能选变量和符号；颜色选预设，或选「自定义…」后填 6 位色号。" />
+                                    </StackPanel>
+
+                                    <TextBlock Margin="0,8,0,0" Style="{StaticResource SettingHintStyle}" Text="{Binding PromptStatusText}" />
+                                    <TextBlock
+                                        FontFamily="{StaticResource MonoFontFamily}"
+                                        Style="{StaticResource SettingHintStyle}"
+                                        Text="{Binding PromptConfigPath}"
+                                        TextTrimming="CharacterEllipsis"
+                                        ToolTip="{Binding PromptConfigPath}" />
+                                </StackPanel>
+                            </Border>
+                        <!-- 通用选项：两种提示符方案共用，位于高级选项上方。 -->
+                        <StackPanel Margin="0,16,0,0">
                             <TextBlock
-                                Margin="12,0,0,0"
-                                VerticalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                Text="通用设置" />
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="12" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="提示符前空一行" Style="{StaticResource SettingLabelStyle}" />
+                                    <TextBlock Text="开启后，每条命令前会多一个空行。" Style="{StaticResource SettingHintStyle}" />
+                                </StackPanel>
+                                <ui:ToggleSwitch
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{Binding PromptAddNewline, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <StackPanel Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="路径分隔符用 /" Style="{StaticResource SettingLabelStyle}" />
+                                    <TextBlock Text="关闭后，路径分隔符跟随系统默认。" Style="{StaticResource SettingHintStyle}" />
+                                </StackPanel>
+                                <ui:ToggleSwitch
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{Binding PromptUseForwardSlash, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                            <TextBlock
+                                Margin="0,6,0,0"
                                 Style="{StaticResource SettingHintStyle}"
-                                Text="变量（用户名 / 主机名 / 当前路径…）与固定符号（@ : ~ $ 空格）都在下拉里选；颜色选预设色号，选「自定义…」后可在右侧直接填 # 后面的 6 位。" />
+                                Text="主题预设和自定义提示符都会用这两个设置。" />
                         </StackPanel>
 
-                        <!-- 换行与分隔符：随托管块写入 starship.toml，也从块里读回 -->
-                        <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
-                            <CheckBox
-                                Content="提示符前空一行"
-                                IsChecked="{Binding PromptAddNewline}"
-                                ToolTip="开启后每个提示符前会空一行（Starship add_newline）。" />
-                            <CheckBox
-                                Margin="16,0,0,0"
-                                Content="路径分隔符用 /"
-                                IsChecked="{Binding PromptUseForwardSlash}"
-                                ToolTip="取消后路径用系统默认的反斜杠 \ 分隔（Starship use_os_path_sep）。" />
-                        </StackPanel>
+                        <!-- 高级选项：主题卡内部，默认收起。 -->
+                        <Border Margin="0,16,0,0" Padding="0,12,0,0" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                            <ToggleButton x:Name="AdvancedOptionsToggle" Style="{StaticResource AdvancedToggleStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="▸" Visibility="{Binding IsChecked, ElementName=AdvancedOptionsToggle, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="▾" Visibility="{Binding IsChecked, ElementName=AdvancedOptionsToggle, Converter={StaticResource BoolToVisibility}}" />
+                                    <TextBlock Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="高级选项" />
+                                    <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Style="{StaticResource SettingHintStyle}" Text="外观" />
+                                </StackPanel>
+                            </ToggleButton>
+                        </Border>
+                        <StackPanel Visibility="{Binding IsChecked, ElementName=AdvancedOptionsToggle, Converter={StaticResource BoolToVisibility}}">
+                            <Border Style="{StaticResource SubCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="外观" Style="{StaticResource SubCardTitleStyle}" />
+                                    <TextBlock
+                                        Margin="0,4,0,0"
+                                        Text="只保存改动过的项目；留空或选「终端默认」就恢复系统默认。"
+                                        Style="{StaticResource SettingHintStyle}" />
+                                    <TextBlock Margin="0,6,0,0" Style="{StaticResource SettingHintStyle}" Text="{Binding AppearanceStatusText}" />
+                                    <TextBlock Margin="0,4,0,0" Text="改完后点下面的「保存设置」。" Style="{StaticResource SettingHintStyle}" />
+                                    <!-- 字体 -->
+                                    <TextBlock Margin="0,12,0,10" Text="字体" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="320" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding CurrentFontText}" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock
+                                                Margin="0,6,0,0"
+                                                Text="内置图标字体已随程序打包，安装时不需要管理员权限。"
+                                                Style="{StaticResource SettingHintStyle}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <ComboBox
+                                                ItemsSource="{Binding FontOptions}"
+                                                SelectedItem="{Binding SelectedFont, Mode=TwoWay}"
+                                                ToolTip="{Binding WtSettingsPath}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock
+                                        Text="想用别的图标字体？装好 Scoop 后执行 scoop bucket add nerd-fonts，再安装喜欢的字体，点「刷新状态」就能在下拉里看到。"
+                                        Style="{StaticResource SettingHintStyle}" />
+                                    <!-- 显示效果 -->
+                                    <TextBlock Margin="0,12,0,10" Text="显示效果" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="320" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="复古风格终端显示" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock
+                                                Text="模拟老式显示器的扫描线和光晕。"
+                                                Style="{StaticResource SettingHintStyle}" />
+                                        </StackPanel>
+                                        <CheckBox
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Content="启用复古效果"
+                                            IsChecked="{Binding RetroTerminalEffect, Mode=TwoWay}" />
+                                    </Grid>
 
-                        <StackPanel Margin="0,12,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                                    <!-- 光标 -->
+                                    <TextBlock Text="光标" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="320" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="光标形状" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="选「终端默认」表示不特别设置。" Style="{StaticResource SettingHintStyle}" />
+                                        </StackPanel>
+                                        <ComboBox
+                                            Grid.Column="1"
+                                            DisplayMemberPath="DisplayName"
+                                            ItemsSource="{Binding CursorShapeOptions}"
+                                            SelectedValue="{Binding SelectedCursorShapeId, Mode=TwoWay}"
+                                            SelectedValuePath="Id" />
+                                    </Grid>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="320" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="光标颜色" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="填 #RGB 或 #RRGGBB；留空跟随系统配色。" Style="{StaticResource SettingHintStyle}" />
+                                        </StackPanel>
+                                        <TextBox
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontFamily="{StaticResource MonoFontFamily}"
+                                            Text="{Binding CursorColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            ToolTip="例如 #FFFFFF；留空表示不设置" />
+                                    </Grid>
+
+                                    <!-- 背景图 -->
+                                    <TextBlock Text="背景图" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="320" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="背景图路径" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="选一张本地图片；清空就取消背景图。" Style="{StaticResource SettingHintStyle}" />
+                                        </StackPanel>
+                                        <Grid Grid.Column="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox
+                                                Grid.Column="0"
+                                                FontFamily="{StaticResource MonoFontFamily}"
+                                                FontSize="12"
+                                                Text="{Binding BackgroundImage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                ToolTip="{Binding BackgroundImage}" />
+                                            <Button
+                                                Grid.Column="1"
+                                                Margin="6,0,0,0"
+                                                Padding="8,3"
+                                                Click="BrowseBackgroundImageButton_Click"
+                                                Content="浏览…" />
+                                            <Button
+                                                Grid.Column="2"
+                                                Margin="6,0,0,0"
+                                                Padding="8,3"
+                                                Click="ClearBackgroundImageButton_Click"
+                                                Content="清空"
+                                                ToolTip="移除背景图设置" />
+                                        </Grid>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="320" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="背景图透明度" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="数值越大，背景图越清晰。" Style="{StaticResource SettingHintStyle}" />
+                                        </StackPanel>
+                                        <Grid Grid.Column="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="52" />
+                                            </Grid.ColumnDefinitions>
+                                            <Slider
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                IsSnapToTickEnabled="True"
+                                                Maximum="100"
+                                                Minimum="0"
+                                                TickFrequency="1"
+                                                Value="{Binding BackgroundImageOpacity, Mode=TwoWay}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                FontFamily="{StaticResource MonoFontFamily}"
+                                                Text="{Binding BackgroundImageOpacityText}" />
+                                        </Grid>
+                                    </Grid>
+
+                                    <!-- 窗口 -->
+                                    <TextBlock Text="窗口" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="320" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="窗口透明度" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="100 是完全不透明，调低才能看出效果。" Style="{StaticResource SettingHintStyle}" />
+                                        </StackPanel>
+                                        <Grid Grid.Column="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="52" />
+                                            </Grid.ColumnDefinitions>
+                                            <Slider
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                IsSnapToTickEnabled="True"
+                                                Maximum="100"
+                                                Minimum="0"
+                                                TickFrequency="1"
+                                                Value="{Binding WindowOpacity, Mode=TwoWay}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                FontFamily="{StaticResource MonoFontFamily}"
+                                                Text="{Binding WindowOpacityText}" />
+                                        </Grid>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="320" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="窗口透明亚克力材质" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="让透明背景带一点模糊，Windows 11 上效果最好。" Style="{StaticResource SettingHintStyle}" />
+                                        </StackPanel>
+                                        <CheckBox
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Content="使用亚克力材质"
+                                            IsChecked="{Binding UseAcrylic, Mode=TwoWay}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                        <!-- 统一操作：位于高级选项下方，两种方案共用。 -->
+                        <StackPanel Margin="0,14,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
                             <ui:Button
                                 Appearance="Secondary"
-                                Click="ResetPromptButton_Click"
-                                Content="重置为默认"
-                                Icon="{ui:SymbolIcon ArrowReset24}"
-                                IsEnabled="{Binding CanResetPrompt}" />
+                                Click="RestoreDefaultsButton_Click"
+                                Content="恢复默认"
+                                Icon="{ui:SymbolIcon ArrowSync24}"
+                                IsEnabled="{Binding CanRestoreDefaults}"
+                                ToolTip="把当前方案恢复成程序默认，点「保存设置」后才写入。" />
                             <ui:Button
                                 Margin="8,0,0,0"
                                 Appearance="Secondary"
-                                Click="RestorePromptButton_Click"
-                                Content="恢复应用前配置"
+                                Click="DiscardChangesButton_Click"
+                                Content="放弃更改"
                                 Icon="{ui:SymbolIcon ArrowReset24}"
-                                IsEnabled="{Binding CanRestorePrompt}" />
+                                IsEnabled="{Binding CanDiscardChanges}"
+                                ToolTip="回到上次保存的状态，不写入文件。" />
                             <ui:Button
                                 Margin="8,0,0,0"
                                 Appearance="Primary"
-                                Click="ApplyPromptButton_Click"
-                                Content="应用到 Starship"
+                                Click="SaveSettingsButton_Click"
+                                Content="保存设置"
                                 Icon="{ui:SymbolIcon CheckmarkCircle24}"
-                                IsEnabled="{Binding CanApplyPrompt}" />
+                                IsEnabled="{Binding CanSaveSettings}"
+                                ToolTip="按当前方案写入提示符，并保存字体与外观改动。" />
                         </StackPanel>
-
-                        <TextBlock Margin="0,8,0,0" Style="{StaticResource SettingHintStyle}" Text="{Binding PromptStatusText}" />
-                        <TextBlock
-                            FontFamily="{StaticResource MonoFontFamily}"
-                            Style="{StaticResource SettingHintStyle}"
-                            Text="{Binding PromptConfigPath}"
-                            TextTrimming="CharacterEllipsis"
-                            ToolTip="{Binding PromptConfigPath}" />
                     </StackPanel>
                 </Border>
 
@@ -656,7 +731,7 @@
                                         FontFamily="{StaticResource MonoFontFamily}"
                                         FontSize="12"
                                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding TomlPath}"
+                                        Text="{Binding TomlPathDisplay}"
                                         TextTrimming="CharacterEllipsis"
                                         ToolTip="{Binding TomlPath}" />
                                 </Border>
@@ -665,18 +740,18 @@
                                     <TextBlock Margin="12,0,0,0" Text="{Binding InitLineText}" Style="{StaticResource SettingHintStyle}" />
                                     <TextBlock
                                         Margin="12,0,0,0"
-                                        Text="starship.toml.bak 存在"
+                                        Text="主题备份存在"
                                         Style="{StaticResource SettingHintStyle}"
                                         Visibility="{Binding HasTomlBackup, Converter={StaticResource BoolToVisibility}}" />
                                 </StackPanel>
                                 <TextBlock
                                     Margin="0,10,0,0"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="「恢复 starship.toml 备份」：应用主题前会先把当时的 starship.toml 备份为 starship.toml.bak，点此恢复到最近一次应用主题前的配置。" />
+                                    Text="应用主题前会自动备份，点这里还原上次的配置。" />
                                 <TextBlock
                                     Margin="0,4,0,0"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="「恢复 Windows Terminal 备份」：本程序第一次修改终端配置（字体 / 外观）时会把当时的 settings.json 完整备份为 settings.json.bak，之后无论改多少次都不覆盖；点此永远恢复到安装本软件前的配置。备份保留，可反复恢复。" />
+                                    Text="第一次改终端设置时会备份原始配置，点这里可还原；备份不会被覆盖。" />
                                 <TextBlock
                                     Margin="0,6,0,0"
                                     Style="{StaticResource SettingHintStyle}"
@@ -687,7 +762,7 @@
                                     Style="{StaticResource SettingHintStyle}"
                                     Text="{Binding WtBackupPathText}"
                                     TextTrimming="CharacterEllipsis"
-                                    ToolTip="{Binding WtBackupPathText}" />
+                                    ToolTip="{Binding WtBackupPathFullText}" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -703,7 +778,7 @@
                                     HorizontalAlignment="Stretch"
                                     Appearance="Secondary"
                                     Click="RestoreTomlButton_Click"
-                                    Content="恢复 starship.toml 备份"
+                                    Content="恢复上次主题设置"
                                     Icon="{ui:SymbolIcon ArrowReset24}"
                                     IsEnabled="{Binding CanRestoreToml}" />
                                 <ui:Button
@@ -711,10 +786,10 @@
                                     HorizontalAlignment="Stretch"
                                     Appearance="Secondary"
                                     Click="RestoreWtBackupButton_Click"
-                                    Content="恢复 Windows Terminal 备份"
+                                    Content="恢复终端备份"
                                     Icon="{ui:SymbolIcon ArrowReset24}"
                                     IsEnabled="{Binding CanRestoreWtBackup}"
-                                    ToolTip="回到本软件第一次修改前的 settings.json；原始备份不会被覆盖或删除，可反复恢复。" />
+                                    ToolTip="还原到第一次修改前的样子；备份会保留。" />
                             </StackPanel>
                         </Grid>
                     </StackPanel>

@@ -68,8 +68,12 @@ public sealed partial class StarshipService
         return true;
     }
 
-    /// <summary>应用内置主题预设：备份 → 写 starship.toml → 确保 $PROFILE 有 init 行。</summary>
-    public StarshipApplyResult ApplyPreset(string presetId, string profilePath)
+    /// <summary>
+    /// 应用内置主题预设：备份 → 写 starship.toml → 确保 $PROFILE 有 init 行。
+    /// 传入 options 时一并写入两个通用提示符选项；带标记的选项行不影响 <see cref="DetectAppliedPreset" />。
+    /// </summary>
+    public StarshipApplyResult ApplyPreset(
+        string presetId, string profilePath, (bool AddNewline, bool UseForwardSlash)? options = null)
     {
         var configPath = GetConfigPath();
         Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
@@ -77,6 +81,10 @@ public sealed partial class StarshipService
         BackupConfig();
         var content = ExtractPreset(presetId)
             ?? throw new InvalidOperationException($"未找到内置主题预设：{presetId}");
+        if (options is { } value)
+        {
+            content = ApplyCommonOptions(content, value.AddNewline, value.UseForwardSlash);
+        }
 
         // TOML 规范不建议带 BOM，Starship 直接按 UTF-8 读取。
         ProfileFileStore.Write(configPath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
@@ -86,7 +94,7 @@ public sealed partial class StarshipService
     }
 
     /// <summary>
-    /// 识别当前 starship.toml 是否与某个内置预设完全一致（忽略换行与结尾空白差异）。
+    /// 识别当前 starship.toml 是否与某个内置预设一致（忽略换行、结尾空白与带标记的通用选项行）。
     /// 应用预设后未手动修改时可识别；存在 PAM 提示符块或已手动修改则返回 null。
     /// </summary>
     public string? DetectAppliedPreset()
@@ -97,20 +105,17 @@ public sealed partial class StarshipService
             return null;
         }
 
-        var current = Normalize(File.ReadAllText(configPath, Encoding.UTF8));
+        var current = StripCommonOptions(File.ReadAllText(configPath, Encoding.UTF8));
         foreach (var preset in GetPresets())
         {
             var content = ExtractPreset(preset.Id);
-            if (content is not null && Normalize(content) == current)
+            if (content is not null && StripCommonOptions(content) == current)
             {
                 return preset.Id;
             }
         }
 
         return null;
-
-        static string Normalize(string text)
-            => text.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd();
     }
 
     /// <summary>打开 starship.toml（不存在则先创建空文件），交给系统默认编辑器。</summary>

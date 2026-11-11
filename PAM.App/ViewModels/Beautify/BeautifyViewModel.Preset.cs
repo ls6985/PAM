@@ -5,8 +5,8 @@ using PAM.Core;
 namespace PAM.App.ViewModels;
 
 /// <summary>
-/// 主题预设功能：把内置 Starship 主题写入 starship.toml（写前单槽备份；会保留已有的
-/// PAM 自定义提示符块并剥掉预设自带的顶层 format），下拉选项维护。修改主题逻辑只看本文件。
+/// 主题预设功能：把内置 Starship 主题写入 starship.toml（写前单槽备份，一并写入两个通用
+/// 提示符选项），以及下拉选项维护。修改主题逻辑只看本文件。
 /// </summary>
 public sealed partial class BeautifyViewModel
 {
@@ -30,7 +30,7 @@ public sealed partial class BeautifyViewModel
         {
             if (_promptCustomized)
             {
-                return Loc.T("当前使用自定义提示符：美化页的提示符已接管顶层 format，重新应用主题会覆盖它。");
+                return Loc.T("当前使用自定义提示符；重新应用主题会覆盖它。");
             }
 
             if (_detectedPresetId is not null)

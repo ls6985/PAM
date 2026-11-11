@@ -105,6 +105,8 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
             .ToList();
 
         RefreshPromptState();
+        RefreshCommonOptions(forceReload: true);
+        _useCustomPrompt = _promptCustomized;
         LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
 
         // 仅构造时启动一次状态探测以填充界面；之后进入页签不再自动刷新，
@@ -129,6 +131,9 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(CanApplyAppearance));
             OnPropertyChanged(nameof(CanDiscardAppearance));
             OnPropertyChanged(nameof(CanApplyPreset));
+            OnPropertyChanged(nameof(CanSaveSettings));
+            OnPropertyChanged(nameof(CanRestoreDefaults));
+            OnPropertyChanged(nameof(CanDiscardChanges));
             OnPropertyChanged(nameof(CanOpenToml));
             OnPropertyChanged(nameof(CanRestoreToml));
             OnPropertyChanged(nameof(CanRestoreWtBackup));

@@ -15,8 +15,9 @@ namespace PAM.Core;
 /// 外层 (fg:…) 只能染色裸文字，模块段落里的 format / 样式会盖过它，且 TOML 不允许重复定义表，
 /// 所以被引用的段落整段移走、按段选色内嵌进模块自身 format 重写（模板见
 /// <c>StarshipPromptService.Modules.cs</c>），块外的旧顶层 format / add_newline 也一并移走防重复键，
-/// 其余段落 / 注释原样保留。add_newline（提示符前空一行）与 use_os_path_sep（/ 分隔符）随块写入、
-/// 从块读回，不在 settings.json 里另存。</para>
+/// 其余段落 / 注释原样保留。add_newline（提示符前空一行）与 use_os_path_sep（/ 分隔符）随块写入；
+/// 主题预设由 StarshipService 写入同样的键，两者都可由 StarshipService.ReadCommonOptions() 读回，
+/// 不在 settings.json 里另存。</para>
 ///
 /// <para>备份用独立的 <c>starship.toml.pam-prompt.bak</c> 且**只在首次写入时创建**，
 /// 不与主题预设的 <c>starship.toml.bak</c> 抢同一个槽位，也不会被连续两次应用覆盖掉原始配置。
