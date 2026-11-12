@@ -103,23 +103,17 @@ public static class ProfileRenderer
             FindConflictingNames(userLines, data.Aliases));
     }
 
+    /// <summary>托管区结构版本：新增或移除受控标记块时递增，触发下次启动强制重新检测。</summary>
+    public const string ManagedStructureVersion = "1";
+
+    /// <summary>读取当前托管区的完整状态（一次读取，供哈希、标记块与边界检测共用）。</summary>
+    private sealed record ManagedState(bool HasMarker, string Hash, bool HasCurrentMarkers);
+
     /// <summary>读取当前托管区的哈希；文件不存在或没有边界标记时返回空哈希。</summary>
     public static ManagedSectionState Inspect(string profilePath)
     {
-        if (string.IsNullOrWhiteSpace(profilePath) || !File.Exists(profilePath))
-        {
-            return new ManagedSectionState(false, string.Empty);
-        }
-
-        var lines = ProfileDocument.Read(profilePath).Lines;
-        var markerIndex = lines.FindIndex(IsStartMarker);
-        if (markerIndex < 0)
-        {
-            return new ManagedSectionState(false, string.Empty);
-        }
-
-        var managedLines = lines.Skip(markerIndex).ToList();
-        return new ManagedSectionState(true, ComputeHash(managedLines));
+        var state = InspectState(profilePath);
+        return new ManagedSectionState(state.HasMarker, state.Hash);
     }
 
     /// <summary>
@@ -128,22 +122,7 @@ public static class ProfileRenderer
     /// 导致的新块永远写不进去。
     /// </summary>
     public static bool ManagedSectionHasCurrentMarkers(string profilePath)
-    {
-        if (string.IsNullOrWhiteSpace(profilePath) || !File.Exists(profilePath))
-        {
-            return false;
-        }
-
-        var lines = ProfileDocument.Read(profilePath).Lines;
-        var markerIndex = lines.FindIndex(IsStartMarker);
-        if (markerIndex < 0)
-        {
-            return false;
-        }
-
-        var managed = lines.Skip(markerIndex);
-        return managed.Any(IsCommandHintStart) && managed.Any(PamCustomRegion.IsHeader);
-    }
+        => InspectState(profilePath).HasCurrentMarkers;
 
     /// <summary>
     /// 单个托管配置文件是否需要重建：文件缺失、边界标记缺失、缺少当前版本的固定标记块，
@@ -151,23 +130,39 @@ public static class ProfileRenderer
     /// </summary>
     public static bool NeedsRebuild(string profilePath, string expectedHash)
     {
-        if (string.IsNullOrWhiteSpace(profilePath) || !File.Exists(profilePath))
-        {
-            return true;
-        }
-
-        var state = Inspect(profilePath);
+        var state = InspectState(profilePath);
         if (!state.HasMarker)
         {
             return true;
         }
 
-        if (!ManagedSectionHasCurrentMarkers(profilePath))
+        if (!state.HasCurrentMarkers)
         {
             return true;
         }
 
         return !string.Equals(state.Hash, expectedHash, StringComparison.Ordinal);
+    }
+
+    /// <summary>读取托管区并返回边界、哈希与标记块状态；文件/标记缺失时返回默认值，不抛异常。</summary>
+    private static ManagedState InspectState(string profilePath)
+    {
+        if (string.IsNullOrWhiteSpace(profilePath) || !File.Exists(profilePath))
+        {
+            return new ManagedState(false, string.Empty, false);
+        }
+
+        var lines = ProfileDocument.Read(profilePath).Lines;
+        var markerIndex = lines.FindIndex(IsStartMarker);
+        if (markerIndex < 0)
+        {
+            return new ManagedState(false, string.Empty, false);
+        }
+
+        var managed = lines.Skip(markerIndex);
+        var hash = ComputeHash(managed);
+        var hasCurrentMarkers = managed.Any(IsCommandHintStart) && managed.Any(PamCustomRegion.IsHeader);
+        return new ManagedState(true, hash, hasCurrentMarkers);
     }
 
     /// <summary>按同一份数据快照依次重建多个 $PROFILE 的托管区，返回最后一次渲染的结果。</summary>

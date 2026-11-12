@@ -1,3 +1,5 @@
+using System;
+
 namespace PAM.Core;
 
 /// <summary>
@@ -14,6 +16,12 @@ public sealed class PamData
     /// <summary>最近一次生成的托管区内容哈希，用于识别 $PROFILE 是否被外部修改。</summary>
     public string? ManagedHash { get; set; }
 
+    /// <summary>最近一次重建/自检时所处的托管区结构版本；用于启动时判断是否需强制重新检测（代码新增/移除受控标记块）。</summary>
+    public string? LastBuiltVersion { get; set; }
+
+    /// <summary>各受管 $PROFILE 上次检测时的文件元数据（写入时间与大小），用于跳过未改动文件的读取与哈希校验。</summary>
+    public List<ProfileState> ProfileStates { get; set; } = [];
+
     public List<AliasData> Aliases { get; set; } = [];
 
     public List<CustomCommandData> CustomCommands { get; set; } = [];
@@ -28,6 +36,7 @@ public sealed class PamData
 
         Aliases ??= [];
         CustomCommands ??= [];
+        ProfileStates ??= [];
 
         Aliases.RemoveAll(static alias => string.IsNullOrWhiteSpace(alias?.Name));
         CustomCommands.RemoveAll(static command => string.IsNullOrWhiteSpace(command?.Name));
@@ -55,6 +64,13 @@ public sealed class PamData
         {
             Version = Version,
             ManagedHash = ManagedHash,
+            LastBuiltVersion = LastBuiltVersion,
+            ProfileStates = ProfileStates.Select(static s => new ProfileState
+            {
+                ProfilePath = s.ProfilePath,
+                LastWriteUtc = s.LastWriteUtc,
+                Length = s.Length,
+            }).ToList(),
             Aliases = Aliases.Select(static alias => new AliasData
             {
                 Name = alias.Name,
@@ -75,6 +91,14 @@ public sealed class PamData
 
         return clone;
     }
+}
+
+/// <summary>单个受管 $PROFILE 的轻量元数据指纹，用于判断文件自上次检测后是否被改动。</summary>
+public sealed class ProfileState
+{
+    public string ProfilePath { get; set; } = string.Empty;
+    public DateTime LastWriteUtc { get; set; }
+    public long Length { get; set; }
 }
 
 /// <summary>一条别名启动记录，对应托管区里生成的同名函数。</summary>

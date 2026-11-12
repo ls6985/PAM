@@ -184,10 +184,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
             var data = AppServices.Data;
             var profileExists = await Task.Run(() => File.Exists(path));
 
-            // 任一托管配置文件缺失边界标记、缺少当前版本固定写入的区块，或哈希不符
-            // （外部改动、旧版代码写入、切换到另一终端的 $PROFILE）时，按数据重建全部受管配置文件。
+            // 仅在“代码结构版本变更”或“受管 $PROFILE 文件被改动”时才读取并校验，
+            // 否则跳过读取/哈希/重建，避免每次启动都扫描 $PROFILE。
             var managedPaths = await Task.Run(() => GetManagedProfilePaths());
-            var needsRebuild = managedPaths.Any(p => ProfileRenderer.NeedsRebuild(p, data.ManagedHash ?? string.Empty));
+            var versionChanged = !string.Equals(data.LastBuiltVersion, ProfileRenderer.ManagedStructureVersion, StringComparison.Ordinal);
+            var metadataChanged = managedPaths.Any(p => ProfileMetadataChanged(data, p));
+            var needsCheck = versionChanged || metadataChanged;
+
+            var needsRebuild = false;
+            if (needsCheck)
+            {
+                needsRebuild = managedPaths.Any(p => ProfileRenderer.NeedsRebuild(p, data.ManagedHash ?? string.Empty));
+            }
+
             if (needsRebuild)
             {
                 // 让“当前终端”对应的配置文件最后渲染，使冲突名称列表以它为准。
@@ -198,11 +207,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 {
                     var render = ProfileRenderer.RenderToProfiles(ordered, data);
                     data.ManagedHash = render.ManagedHash;
-                    AppServices.SaveData(data);
                     return render;
                 });
 
                 LastConflictingNames = fresh.ConflictingNames;
+            }
+
+            // 仅在确实需要检测时才落盘记录状态，常态下不写盘。
+            if (needsCheck || needsRebuild)
+            {
+                data.LastBuiltVersion = ProfileRenderer.ManagedStructureVersion;
+                RecordProfileStates(data, managedPaths);
+                AppServices.SaveData(data);
             }
 
             Aliases.Clear();
@@ -256,6 +272,58 @@ public sealed class MainViewModel : INotifyPropertyChanged
         return paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    /// <summary>
+    /// 受管 $PROFILE 自上次检测后是否可能被改动：文件不存在、或写入时间与大小与记录不符。
+    /// 仅做 O(1) 的元数据比对，不读取文件内容。
+    /// </summary>
+    private static bool ProfileMetadataChanged(PamData data, string path)
+    {
+        var info = new FileInfo(path);
+        if (!info.Exists)
+        {
+            return true;
+        }
+
+        var stored = data.ProfileStates
+            .FirstOrDefault(s => string.Equals(s.ProfilePath, path, StringComparison.OrdinalIgnoreCase));
+        if (stored is null)
+        {
+            return true;
+        }
+
+        return stored.LastWriteUtc != info.LastWriteTimeUtc || stored.Length != info.Length;
+    }
+
+    /// <summary>把受管 $PROFILE 的当前元数据写入数据快照，供下次启动跳过未改动的文件。</summary>
+    private static void RecordProfileStates(PamData data, List<string> paths)
+    {
+        var next = data.ProfileStates
+            .Where(s => paths.Any(p => string.Equals(p, s.ProfilePath, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        foreach (var path in paths)
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists)
+            {
+                continue;
+            }
+
+            var existing = next.FirstOrDefault(s => string.Equals(s.ProfilePath, path, StringComparison.OrdinalIgnoreCase));
+            if (existing is null)
+            {
+                next.Add(new ProfileState { ProfilePath = path, LastWriteUtc = info.LastWriteTimeUtc, Length = info.Length });
+            }
+            else
+            {
+                existing.LastWriteUtc = info.LastWriteTimeUtc;
+                existing.Length = info.Length;
+            }
+        }
+
+        data.ProfileStates = next;
+    }
+
     public async Task<bool> SaveAsync()
     {
         if (IsEditorOpen && !TryCommitEditor()) return false;
@@ -294,6 +362,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 var paths = GetManagedProfilePaths();
                 var result = ProfileRenderer.RenderToProfiles(paths, data);
                 data.ManagedHash = result.ManagedHash;
+                data.LastBuiltVersion = ProfileRenderer.ManagedStructureVersion;
+                RecordProfileStates(data, paths);
                 AppServices.SaveData(data);
                 return result;
             });
