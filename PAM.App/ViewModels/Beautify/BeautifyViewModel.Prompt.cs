@@ -68,7 +68,7 @@ public sealed partial class BeautifyViewModel
         set => SetField(ref _promptUseForwardSlash, value);
     }
 
-    public string PromptStatusText => Loc.T(_promptStatusSource);
+    public string PromptStatusText => Loc.T(_promptStatusKey);
     public string PromptConfigPath => _promptConfigPath;
     public bool PromptCustomized => _promptCustomized;
     public bool HasPromptBackup => _hasPromptBackup;
@@ -89,11 +89,11 @@ public sealed partial class BeautifyViewModel
         _promptConfigPath = state.ConfigPath;
         _promptCustomized = state.Customized;
         _hasPromptBackup = state.HasBackup;
-        _promptStatusSource = !state.ConfigExists
-            ? "starship.toml 尚未创建，应用后会自动生成"
+        _promptStatusKey = !state.ConfigExists
+            ? LocKey.StarshipTomlDoesNotExistYetApplyingWillCreateIt
             : state.Customized
-                ? "当前提示符由 PowerShell 管理器接管"
-                : "当前使用原有提示符配置（尚未应用过自定义）";
+                ? LocKey.ThePromptIsCurrentlyManagedByPowerShellManager
+                : LocKey.UsingTheOriginalPromptCustomPromptNotAppliedYet;
 
         if (forceReload || !_promptLoaded)
         {

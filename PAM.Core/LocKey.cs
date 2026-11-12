@@ -913,6 +913,15 @@ public enum LocKey
     Copied0,
     /// <summary>复制失败：{0}</summary>
     CopyFailed0,
+    CommandGuideGitStatus,
+    CommandGuideListLong,
+    CommandGuidePublicIp,
+    CommandGuideCleanTemp,
+    CommandGuideWifiPassword,
+    CommandGuidePing,
+    AliasExampleHint,
+    /// <summary>语言切换后状态栏显示的结果提示。</summary>
+    LanguageSwitchTip,
 }
 
 /// <summary>LocKey 对应的 {zh, en} 语言表，以及中文→英文的兜底查表（供动态字符串与 XAML 桥接）。</summary>
@@ -1376,6 +1385,14 @@ internal static class LocTable
             [LocKey.Close] = ("关闭", "Close"),
             [LocKey.Copied0] = ("已复制：{0}", "Copied: {0}"),
             [LocKey.CopyFailed0] = ("复制失败：{0}", "Copy failed: {0}"),
+            [LocKey.CommandGuideGitStatus] = ("查看 Git 工作区状态", "Check Git working tree status"),
+            [LocKey.CommandGuideListLong] = ("长格式列出当前目录文件（含隐藏项）", "Long listing of the current directory (including hidden)"),
+            [LocKey.CommandGuidePublicIp] = ("查询公网 IP 及归属地", "Look up public IP and geolocation"),
+            [LocKey.CommandGuideCleanTemp] = ("清理临时文件与回收站", "Clean temp files and the recycle bin"),
+            [LocKey.CommandGuideWifiPassword] = ("导出已保存的 WiFi 密码", "Export saved WiFi passwords"),
+            [LocKey.CommandGuidePing] = ("持续 ping 指定地址直到手动停止", "Ping an address continuously until stopped"),
+            [LocKey.AliasExampleHint] = ("别名示例：{0}", "Alias example: {0}"),
+            [LocKey.LanguageSwitchTip] = ("语言切换成功，部分设置重启后生效。", "Language switched. Some settings will take effect after a restart."),
         };
 
     public static readonly IReadOnlyDictionary<string, string> ZhToEn = BuildZhToEn();

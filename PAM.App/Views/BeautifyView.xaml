@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:loc="clr-namespace:PAM.App"
     xmlns:vm="clr-namespace:PAM.App.ViewModels"
     xmlns:local="clr-namespace:PAM.App.Views"
     d:DesignHeight="700"
@@ -49,7 +50,7 @@
             </StackPanel>
         </DataTemplate>
         <DataTemplate x:Key="ColorCustomTemplate">
-            <TextBlock FontSize="12" Text="自定义…" />
+            <TextBlock FontSize="12" Text="{loc:Loc '自定义…'}" />
         </DataTemplate>
 
         <local:ColorChoiceTemplateSelector
@@ -147,10 +148,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="美化" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock Text="{loc:Loc '美化'}" Style="{StaticResource SectionTitleStyle}" />
                         <TextBlock
                             Margin="0,4,0,0"
-                            Text="设置终端字体、外观和命令行提示符。第一次修改前会自动备份，随时可以还原；点「刷新状态」重新检测。"
+                            Text="{loc:Loc '设置终端字体、外观和命令行提示符。第一次修改前会自动备份，随时可以还原；点「刷新状态」重新检测。'}"
                             Style="{StaticResource SecondaryTextStyle}" />
                     </StackPanel>
                     <StackPanel
@@ -160,14 +161,14 @@
                         <ui:Button
                             Appearance="Secondary"
                             Click="RefreshButton_Click"
-                            Content="刷新状态"
+                            Content="{loc:Loc '刷新状态'}"
                             Icon="{ui:SymbolIcon ArrowSync24}"
                             IsEnabled="{Binding CanRefresh}"
-                            ToolTip="重新探测 Starship、Scoop、字体与终端配置状态。" />
+                            ToolTip="{loc:Loc '重新探测 Starship、Scoop、字体与终端配置状态。'}" />
                         <Border
                             Margin="8,0,0,0"
                             Style="{StaticResource PageTagBorderStyle}"
-                            ToolTip="保存时只重写该区块，区块外的 $PROFILE 内容不会被修改。">
+                            ToolTip="{loc:Loc '保存时只重写该区块，区块外的 $PROFILE 内容不会被修改。'}">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon
                                     Margin="0,0,8,0"
@@ -212,19 +213,19 @@
                                 </StackPanel>
                                 <TextBlock
                                     Margin="0,8,0,0"
-                                    Text="Starship 用来美化命令行提示符；装好后就能用，不用手动配置。"
+                                    Text="{loc:Loc 'Starship 用来美化命令行提示符；装好后就能用，不用手动配置。'}"
                                     Style="{StaticResource SettingHintStyle}" />
                                 <TextBlock
                                     Margin="0,6,0,0"
                                     Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="建议先装好图标字体，否则主题里的符号可能显示成方块。"
+                                    Text="{loc:Loc '建议先装好图标字体，否则主题里的符号可能显示成方块。'}"
                                     Visibility="{Binding HasFontSelection, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
                                 <TextBlock
                                     Margin="0,6,0,0"
                                     Foreground="{DynamicResource SystemFillColorSuccessBrush}"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="已经装好了；换字体后重新打开终端生效。"
+                                    Text="{loc:Loc '已经装好了；换字体后重新打开终端生效。'}"
                                     Visibility="{Binding IsStarshipInstalled, Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
 
@@ -233,25 +234,25 @@
                                     HorizontalAlignment="Stretch"
                                     Appearance="Secondary"
                                     Click="InstallBundledFontButton_Click"
-                                    Content="安装内置NF字体"
+                                    Content="{loc:Loc '安装内置NF字体'}"
                                     Icon="{ui:SymbolIcon FontIncrease24}"
                                     IsEnabled="{Binding CanInstallBundledFont}"
-                                    ToolTip="把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。" />
+                                    ToolTip="{loc:Loc '把打包的 Cascadia Code NF 安装为当前用户字体（免管理员权限）。'}" />
                                 <ui:Button
                                     Margin="0,8,0,0"
                                     HorizontalAlignment="Stretch"
                                     Appearance="Primary"
                                     Click="OneClickInstallButton_Click"
-                                    Content="一键安装（含 Scoop）"
+                                    Content="{loc:Loc '一键安装（含 Scoop）'}"
                                     Icon="{ui:SymbolIcon Wand24}"
                                     IsEnabled="{Binding CanOneClickInstall}"
-                                    ToolTip="未选字体或已安装时不可用。" />
+                                    ToolTip="{loc:Loc '未选字体或已安装时不可用。'}" />
                                 <ui:Button
                                     Margin="0,8,0,0"
                                     HorizontalAlignment="Stretch"
                                     Appearance="Secondary"
                                     Click="RefreshButton_Click"
-                                    Content="重新检测"
+                                    Content="{loc:Loc '重新检测'}"
                                     Icon="{ui:SymbolIcon ArrowSync24}"
                                     IsEnabled="{Binding CanRefresh}" />
                             </StackPanel>
@@ -262,7 +263,7 @@
                 <!-- 主题 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <TextBlock Text="主题" Style="{StaticResource CardTitleStyle}" />
+                        <TextBlock Text="{loc:Loc '主题'}" Style="{StaticResource CardTitleStyle}" />
                         <!-- 当前生效的提示符方案：与上方 Starship 状态文字同亮度。 -->
                         <TextBlock
                             Margin="0,14,0,0"
@@ -274,11 +275,11 @@
                         <TextBlock
                             Margin="0,6,0,0"
                             Style="{StaticResource SettingHintStyle}"
-                            Text="两种方案二选一，切换后点下方的「保存设置」生效。" />
+                            Text="{loc:Loc '两种方案二选一，切换后点下方的「保存设置」生效。'}" />
                         <!-- 提示符方案：二选一，切换后由下方统一按钮提交。 -->
                         <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
                             <RadioButton
-                                Content="主题预设"
+                                Content="{loc:Loc '主题预设'}"
                                 FontSize="13"
                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                 GroupName="PresetScheme"
@@ -286,7 +287,7 @@
                                 VerticalContentAlignment="Center" />
                             <RadioButton
                                 Margin="20,0,0,0"
-                                Content="自定义提示符"
+                                Content="{loc:Loc '自定义提示符'}"
                                 FontSize="13"
                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                 GroupName="CustomScheme"
@@ -300,12 +301,12 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="主题预设" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock Text="{loc:Loc '主题预设'}" Style="{StaticResource SettingLabelStyle}" />
                                 <TextBlock
                                     Margin="0,6,0,0"
                                     Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="标了「需 Nerd Font」的主题要先装好字体，否则符号会显示成方块。" />
+                                    Text="{loc:Loc '标了「需 Nerd Font」的主题要先装好字体，否则符号会显示成方块。'}" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="1">
@@ -327,10 +328,10 @@
                                         FontSize="13"
                                         FontWeight="SemiBold"
                                         Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                        Text="自定义提示符" />
+                                        Text="{loc:Loc '自定义提示符'}" />
                                     <TextBlock
                                         Margin="0,6,0,0"
-                                        Text="点「添加片段」从左到右拼出提示符：每段用下拉选内容（用户名、目录、符号等）和颜色。下面的预览会实时更新；应用后只改提示符这一行，其它设置不动。"
+                                        Text="{loc:Loc '点「添加片段」从左到右拼出提示符：每段用下拉选内容（用户名、目录、符号等）和颜色。下面的预览会实时更新；应用后只改提示符这一行，其它设置不动。'}"
                                         Style="{StaticResource SettingHintStyle}" />
 
                                     <!-- 实时预览（深色底模拟终端） -->
@@ -358,14 +359,14 @@
                                     </Border>
                                     <TextBlock
                                         Margin="0,4,0,0"
-                                        Text="预览是示例文字，实际内容会随目录、时间等自动变化。"
+                                        Text="{loc:Loc '预览是示例文字，实际内容会随目录、时间等自动变化。'}"
                                         Style="{StaticResource SettingHintStyle}" />
 
                                     <!-- 格式：点选片段组合，不直接编辑 -->
                                     <TextBlock
                                         Margin="0,12,0,0"
                                         Style="{StaticResource SettingLabelStyle}"
-                                        Text="格式" />
+                                        Text="{loc:Loc '格式'}" />
 
                                     <!-- 片段组合区：水平一排可选项，每个片段选内容 + 颜色，可加 / 删 -->
                                     <ItemsControl
@@ -398,7 +399,7 @@
                                                             FontSize="12"
                                                             Padding="4,2"
                                                             Text="{Binding CustomText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                            ToolTip="输入任意文字或 $变量"
+                                                            ToolTip="{loc:Loc '输入任意文字或 $变量'}"
                                                             Visibility="{Binding SelectedOption, Converter={StaticResource CustomSelectedToVisibility}}" />
                                                         <!-- 颜色：与变量下拉同款 ComboBox；选「自定义…」后右侧出现可编辑色号框。 -->
                                                         <ComboBox
@@ -415,7 +416,7 @@
                                                             FontSize="12"
                                                             Padding="4,2"
                                                             Text="{Binding HexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                            ToolTip="输入 6 位十六进制色号（即 # 后面的部分）"
+                                                            ToolTip="{loc:Loc '输入 6 位十六进制色号（即 # 后面的部分）'}"
                                                             Visibility="{Binding SelectedColorOption, Converter={StaticResource ColorCustomToVisibility}}" />
                                                         <Button
                                                             MinWidth="24"
@@ -423,7 +424,7 @@
                                                             Padding="5,2"
                                                             Click="RemoveSegmentButton_Click"
                                                             Content="×"
-                                                            ToolTip="删除该片段" />
+                                                            ToolTip="{loc:Loc '删除该片段'}" />
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
@@ -434,12 +435,12 @@
                                         <ui:Button
                                             Appearance="Secondary"
                                             Click="AddSegmentButton_Click"
-                                            Content="添加片段" />
+                                            Content="{loc:Loc '添加片段'}" />
                                         <TextBlock
                                             Margin="12,0,0,0"
                                             VerticalAlignment="Center"
                                             Style="{StaticResource SettingHintStyle}"
-                                            Text="下拉里能选变量和符号；颜色选预设，或选「自定义…」后填 6 位色号。" />
+                                            Text="{loc:Loc '下拉里能选变量和符号；颜色选预设，或选「自定义…」后填 6 位色号。'}" />
                                     </StackPanel>
 
                                     <TextBlock Margin="0,8,0,0" Style="{StaticResource SettingHintStyle}" Text="{Binding PromptStatusText}" />
@@ -457,7 +458,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="▸" Visibility="{Binding IsChecked, ElementName=CommonOptionsToggle, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
                                     <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="▾" Visibility="{Binding IsChecked, ElementName=CommonOptionsToggle, Converter={StaticResource BoolToVisibility}}" />
-                                    <TextBlock Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="通用设置" />
+                                    <TextBlock Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{loc:Loc '通用设置'}" />
                                 </StackPanel>
                             </ToggleButton>
                         </Border>
@@ -473,8 +474,8 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="提示符前空一行" Style="{StaticResource SettingLabelStyle}" />
-                                    <TextBlock Text="开启后，每条命令前会多一个空行。" Style="{StaticResource SettingHintStyle}" />
+                                    <TextBlock Text="{loc:Loc '提示符前空一行'}" Style="{StaticResource SettingLabelStyle}" />
+                                    <TextBlock Text="{loc:Loc '开启后，每条命令前会多一个空行。'}" Style="{StaticResource SettingHintStyle}" />
                                 </StackPanel>
                                 <ui:ToggleSwitch
                                     Grid.Row="0"
@@ -483,8 +484,8 @@
                                     VerticalAlignment="Center"
                                     IsChecked="{Binding PromptAddNewline, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <StackPanel Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="路径分隔符用 /" Style="{StaticResource SettingLabelStyle}" />
-                                    <TextBlock Text="关闭后，路径分隔符跟随系统默认。" Style="{StaticResource SettingHintStyle}" />
+                                    <TextBlock Text="{loc:Loc '路径分隔符用 /'}" Style="{StaticResource SettingLabelStyle}" />
+                                    <TextBlock Text="{loc:Loc '关闭后，路径分隔符跟随系统默认。'}" Style="{StaticResource SettingHintStyle}" />
                                 </StackPanel>
                                 <ui:ToggleSwitch
                                     Grid.Row="2"
@@ -496,7 +497,7 @@
                             <TextBlock
                                 Margin="0,8,0,0"
                                 Style="{StaticResource SettingHintStyle}"
-                                Text="主题预设和自定义提示符都会用这两个设置。" />
+                                Text="{loc:Loc '主题预设和自定义提示符都会用这两个设置。'}" />
                         </StackPanel>
 
                         <!-- 高级选项：主题卡内部，默认收起。 -->
@@ -505,22 +506,22 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="▸" Visibility="{Binding IsChecked, ElementName=AdvancedOptionsToggle, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
                                     <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="▾" Visibility="{Binding IsChecked, ElementName=AdvancedOptionsToggle, Converter={StaticResource BoolToVisibility}}" />
-                                    <TextBlock Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="高级选项" />
+                                    <TextBlock Margin="8,0,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{loc:Loc '高级选项'}" />
                                 </StackPanel>
                             </ToggleButton>
                         </Border>
                         <StackPanel Visibility="{Binding IsChecked, ElementName=AdvancedOptionsToggle, Converter={StaticResource BoolToVisibility}}">
                             <Border Style="{StaticResource SubCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="外观" Style="{StaticResource SubCardTitleStyle}" />
+                                    <TextBlock Text="{loc:Loc '外观'}" Style="{StaticResource SubCardTitleStyle}" />
                                     <TextBlock
                                         Margin="0,4,0,0"
-                                        Text="只保存改动过的项目；留空或选「终端默认」就恢复系统默认。"
+                                        Text="{loc:Loc '只保存改动过的项目；留空或选「终端默认」就恢复系统默认。'}"
                                         Style="{StaticResource SettingHintStyle}" />
                                     <TextBlock Margin="0,6,0,0" Style="{StaticResource SettingHintStyle}" Text="{Binding AppearanceStatusText}" />
-                                    <TextBlock Margin="0,4,0,0" Text="改完后点下面的「保存设置」。" Style="{StaticResource SettingHintStyle}" />
+                                    <TextBlock Margin="0,4,0,0" Text="{loc:Loc '改完后点下面的「保存设置」。'}" Style="{StaticResource SettingHintStyle}" />
                                     <!-- 字体 -->
-                                    <TextBlock Margin="0,12,0,10" Text="字体" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <TextBlock Margin="0,12,0,10" Text="{loc:Loc '字体'}" Style="{StaticResource AppearanceGroupTitleStyle}" />
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -530,7 +531,7 @@
                                             <TextBlock Text="{Binding CurrentFontText}" Style="{StaticResource SettingLabelStyle}" />
                                             <TextBlock
                                                 Margin="0,6,0,0"
-                                                Text="内置图标字体已随程序打包，安装时不需要管理员权限。"
+                                                Text="{loc:Loc '内置图标字体已随程序打包，安装时不需要管理员权限。'}"
                                                 Style="{StaticResource SettingHintStyle}" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="1">
@@ -541,38 +542,38 @@
                                         </StackPanel>
                                     </Grid>
                                     <TextBlock
-                                        Text="想用别的图标字体？装好 Scoop 后执行 scoop bucket add nerd-fonts，再安装喜欢的字体，点「刷新状态」就能在下拉里看到。"
+                                        Text="{loc:Loc '想用别的图标字体？装好 Scoop 后执行 scoop bucket add nerd-fonts，再安装喜欢的字体，点「刷新状态」就能在下拉里看到。'}"
                                         Style="{StaticResource SettingHintStyle}" />
                                     <!-- 显示效果 -->
-                                    <TextBlock Margin="0,12,0,10" Text="显示效果" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <TextBlock Margin="0,12,0,10" Text="{loc:Loc '显示效果'}" Style="{StaticResource AppearanceGroupTitleStyle}" />
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="320" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="复古风格终端显示" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="{loc:Loc '复古风格终端显示'}" Style="{StaticResource SettingLabelStyle}" />
                                             <TextBlock
-                                                Text="模拟老式显示器的扫描线和光晕。"
+                                                Text="{loc:Loc '模拟老式显示器的扫描线和光晕。'}"
                                                 Style="{StaticResource SettingHintStyle}" />
                                         </StackPanel>
                                         <CheckBox
                                             Grid.Column="1"
                                             VerticalAlignment="Center"
-                                            Content="启用复古效果"
+                                            Content="{loc:Loc '启用复古效果'}"
                                             IsChecked="{Binding RetroTerminalEffect, Mode=TwoWay}" />
                                     </Grid>
 
                                     <!-- 光标 -->
-                                    <TextBlock Text="光标" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <TextBlock Text="{loc:Loc '光标'}" Style="{StaticResource AppearanceGroupTitleStyle}" />
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="320" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="光标形状" Style="{StaticResource SettingLabelStyle}" />
-                                            <TextBlock Text="选「终端默认」表示不特别设置。" Style="{StaticResource SettingHintStyle}" />
+                                            <TextBlock Text="{loc:Loc '光标形状'}" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="{loc:Loc '选「终端默认」表示不特别设置。'}" Style="{StaticResource SettingHintStyle}" />
                                         </StackPanel>
                                         <ComboBox
                                             Grid.Column="1"
@@ -587,27 +588,27 @@
                                             <ColumnDefinition Width="320" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="光标颜色" Style="{StaticResource SettingLabelStyle}" />
-                                            <TextBlock Text="填 #RGB 或 #RRGGBB；留空跟随系统配色。" Style="{StaticResource SettingHintStyle}" />
+                                            <TextBlock Text="{loc:Loc '光标颜色'}" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="{loc:Loc '填 #RGB 或 #RRGGBB；留空跟随系统配色。'}" Style="{StaticResource SettingHintStyle}" />
                                         </StackPanel>
                                         <TextBox
                                             Grid.Column="1"
                                             VerticalAlignment="Center"
                                             FontFamily="{StaticResource MonoFontFamily}"
                                             Text="{Binding CursorColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                            ToolTip="例如 #FFFFFF；留空表示不设置" />
+                                            ToolTip="{loc:Loc '例如 #FFFFFF；留空表示不设置'}" />
                                     </Grid>
 
                                     <!-- 背景图 -->
-                                    <TextBlock Text="背景图" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <TextBlock Text="{loc:Loc '背景图'}" Style="{StaticResource AppearanceGroupTitleStyle}" />
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="320" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="背景图路径" Style="{StaticResource SettingLabelStyle}" />
-                                            <TextBlock Text="选一张本地图片；清空就取消背景图。" Style="{StaticResource SettingHintStyle}" />
+                                            <TextBlock Text="{loc:Loc '背景图路径'}" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="{loc:Loc '选一张本地图片；清空就取消背景图。'}" Style="{StaticResource SettingHintStyle}" />
                                         </StackPanel>
                                         <Grid Grid.Column="1">
                                             <Grid.ColumnDefinitions>
@@ -626,14 +627,14 @@
                                                 Margin="6,0,0,0"
                                                 Padding="8,3"
                                                 Click="BrowseBackgroundImageButton_Click"
-                                                Content="浏览…" />
+                                                Content="{loc:Loc '浏览…'}" />
                                             <Button
                                                 Grid.Column="2"
                                                 Margin="6,0,0,0"
                                                 Padding="8,3"
                                                 Click="ClearBackgroundImageButton_Click"
-                                                Content="清空"
-                                                ToolTip="移除背景图设置" />
+                                                Content="{loc:Loc '清空'}"
+                                                ToolTip="{loc:Loc '移除背景图设置'}" />
                                         </Grid>
                                     </Grid>
                                     <Grid Margin="0,0,0,10">
@@ -642,8 +643,8 @@
                                             <ColumnDefinition Width="320" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="背景图透明度" Style="{StaticResource SettingLabelStyle}" />
-                                            <TextBlock Text="数值越大，背景图越清晰。" Style="{StaticResource SettingHintStyle}" />
+                                            <TextBlock Text="{loc:Loc '背景图透明度'}" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="{loc:Loc '数值越大，背景图越清晰。'}" Style="{StaticResource SettingHintStyle}" />
                                         </StackPanel>
                                         <Grid Grid.Column="1">
                                             <Grid.ColumnDefinitions>
@@ -668,15 +669,15 @@
                                     </Grid>
 
                                     <!-- 窗口 -->
-                                    <TextBlock Text="窗口" Style="{StaticResource AppearanceGroupTitleStyle}" />
+                                    <TextBlock Text="{loc:Loc '窗口'}" Style="{StaticResource AppearanceGroupTitleStyle}" />
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="320" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="窗口透明度" Style="{StaticResource SettingLabelStyle}" />
-                                            <TextBlock Text="100 是完全不透明，调低才能看出效果。" Style="{StaticResource SettingHintStyle}" />
+                                            <TextBlock Text="{loc:Loc '窗口透明度'}" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="{loc:Loc '100 是完全不透明，调低才能看出效果。'}" Style="{StaticResource SettingHintStyle}" />
                                         </StackPanel>
                                         <Grid Grid.Column="1">
                                             <Grid.ColumnDefinitions>
@@ -705,13 +706,13 @@
                                             <ColumnDefinition Width="320" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="窗口透明亚克力材质" Style="{StaticResource SettingLabelStyle}" />
-                                            <TextBlock Text="让透明背景带一点模糊，Windows 11 上效果最好。" Style="{StaticResource SettingHintStyle}" />
+                                            <TextBlock Text="{loc:Loc '窗口透明亚克力材质'}" Style="{StaticResource SettingLabelStyle}" />
+                                            <TextBlock Text="{loc:Loc '让透明背景带一点模糊，Windows 11 上效果最好。'}" Style="{StaticResource SettingHintStyle}" />
                                         </StackPanel>
                                         <CheckBox
                                             Grid.Column="1"
                                             VerticalAlignment="Center"
-                                            Content="使用亚克力材质"
+                                            Content="{loc:Loc '使用亚克力材质'}"
                                             IsChecked="{Binding UseAcrylic, Mode=TwoWay}" />
                                     </Grid>
                                 </StackPanel>
@@ -723,26 +724,26 @@
                             <ui:Button
                                 Appearance="Secondary"
                                 Click="RestoreDefaultsButton_Click"
-                                Content="恢复默认"
+                                Content="{loc:Loc '恢复默认'}"
                                 Icon="{ui:SymbolIcon ArrowSync24}"
                                 IsEnabled="{Binding CanRestoreDefaults}"
-                                ToolTip="把当前方案恢复成程序默认，点「保存设置」后才写入。" />
+                                ToolTip="{loc:Loc '把当前方案恢复成程序默认，点「保存设置」后才写入。'}" />
                             <ui:Button
                                 Margin="8,0,0,0"
                                 Appearance="Secondary"
                                 Click="DiscardChangesButton_Click"
-                                Content="放弃更改"
+                                Content="{loc:Loc '放弃更改'}"
                                 Icon="{ui:SymbolIcon ArrowReset24}"
                                 IsEnabled="{Binding CanDiscardChanges}"
-                                ToolTip="回到上次保存的状态，不写入文件。" />
+                                ToolTip="{loc:Loc '回到上次保存的状态，不写入文件。'}" />
                             <ui:Button
                                 Margin="8,0,0,0"
                                 Appearance="Primary"
                                 Click="SaveSettingsButton_Click"
-                                Content="保存设置"
+                                Content="{loc:Loc '保存设置'}"
                                 Icon="{ui:SymbolIcon CheckmarkCircle24}"
                                 IsEnabled="{Binding CanSaveSettings}"
-                                ToolTip="按当前方案写入提示符，并保存字体与外观改动。" />
+                                ToolTip="{loc:Loc '按当前方案写入提示符，并保存字体与外观改动。'}" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -750,7 +751,7 @@
                 <!-- 配置维护 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <TextBlock Text="配置维护" Style="{StaticResource CardTitleStyle}" />
+                        <TextBlock Text="{loc:Loc '配置维护'}" Style="{StaticResource CardTitleStyle}" />
                         <Grid Margin="0,14,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -774,11 +775,11 @@
                                 <TextBlock
                                     Margin="0,10,0,0"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="应用主题前会自动备份，点这里还原上次的配置。" />
+                                    Text="{loc:Loc '应用主题前会自动备份，点这里还原上次的配置。'}" />
                                 <TextBlock
                                     Margin="0,4,0,0"
                                     Style="{StaticResource SettingHintStyle}"
-                                    Text="第一次改终端设置时会备份原始配置，点这里可还原；备份不会被覆盖。" />
+                                    Text="{loc:Loc '第一次改终端设置时会备份原始配置，点这里可还原；备份不会被覆盖。'}" />
                                 <TextBlock
                                     Margin="0,6,0,0"
                                     Style="{StaticResource SettingHintStyle}"
@@ -797,7 +798,7 @@
                                     HorizontalAlignment="Stretch"
                                     Appearance="Secondary"
                                     Click="OpenTomlButton_Click"
-                                    Content="打开 starship.toml"
+                                    Content="{loc:Loc '打开 starship.toml'}"
                                     Icon="{ui:SymbolIcon DocumentText24}"
                                     IsEnabled="{Binding CanOpenToml}" />
                                 <ui:Button
@@ -805,7 +806,7 @@
                                     HorizontalAlignment="Stretch"
                                     Appearance="Secondary"
                                     Click="RestoreTomlButton_Click"
-                                    Content="恢复上次主题设置"
+                                    Content="{loc:Loc '恢复上次主题设置'}"
                                     Icon="{ui:SymbolIcon ArrowReset24}"
                                     IsEnabled="{Binding CanRestoreToml}" />
                                 <ui:Button
@@ -813,10 +814,10 @@
                                     HorizontalAlignment="Stretch"
                                     Appearance="Secondary"
                                     Click="RestoreWtBackupButton_Click"
-                                    Content="恢复终端备份"
+                                    Content="{loc:Loc '恢复终端备份'}"
                                     Icon="{ui:SymbolIcon ArrowReset24}"
                                     IsEnabled="{Binding CanRestoreWtBackup}"
-                                    ToolTip="还原到第一次修改前的样子；备份会保留。" />
+                                    ToolTip="{loc:Loc '还原到第一次修改前的样子；备份会保留。'}" />
                             </StackPanel>
                         </Grid>
                     </StackPanel>

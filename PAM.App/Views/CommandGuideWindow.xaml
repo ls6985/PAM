@@ -5,7 +5,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="示例 / 指南"
+    xmlns:loc="clr-namespace:PAM.App"
+    Title="{loc:Loc CommandExampleGuide}"
     Width="720"
     Height="640"
     MinWidth="560"
@@ -28,7 +29,7 @@
 
         <ui:TitleBar
             Grid.Row="0"
-            Title="示例 / 指南"
+            Title="{loc:Loc CommandExampleGuide}"
             Icon="{ui:SymbolIcon BookQuestionMark24}"
             ShowMaximize="False"
             ShowMinimize="False" />
@@ -42,13 +43,13 @@
                 <TextBlock
                     FontSize="13"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                    Text="把下面的命令复制后，点「新建命令」，粘贴到命令代码里，设置好命令名称，保存并生效即可。"
+                    Text="{loc:Loc CommandGuideIntro}"
                     TextWrapping="Wrap" />
                 <TextBlock
                     Margin="0,8,0,0"
                     FontSize="12"
                     Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                    Text="命令名称就是将来在终端里输入的名字；代码只写要执行的命令，不需要写 function。"
+                    Text="{loc:Loc CommandGuideNameHint}"
                     TextWrapping="Wrap" />
 
                 <!-- 示例列表：每条给出功能说明、建议别名与可直接复制的代码（支持多行）。 -->
@@ -101,7 +102,7 @@
                                         VerticalAlignment="Center"
                                         Appearance="Secondary"
                                         Click="CopyExampleButton_Click"
-                                        Content="复制"
+                                        Content="{loc:Loc Copy}"
                                         Icon="{ui:SymbolIcon Copy24}" />
                                 </Grid>
                             </Border>
@@ -121,7 +122,7 @@
                 HorizontalAlignment="Right"
                 Appearance="Primary"
                 Click="CloseButton_Click"
-                Content="关闭"
+                Content="{loc:Loc Close}"
                 IsCancel="True" />
         </Grid>
     </Grid>

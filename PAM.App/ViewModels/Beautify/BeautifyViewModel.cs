@@ -34,9 +34,10 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
     private int _refreshing;
 
     private bool _isBusy;
-    private string _starshipStatusSource = "检测中…";
+    private bool _starshipDetected;
+    private string _starshipVersion = string.Empty;
     private bool _isStarshipInstalled;
-    private string _scoopStatusSource = "检测中…";
+    private bool _scoopDetected;
     private bool _isScoopInstalled;
     private string? _currentWtFont;
     private bool _hasWtSettings;
@@ -54,7 +55,7 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
     private bool _promptCustomized;
     private bool _hasPromptBackup;
     private string _promptConfigPath = string.Empty;
-    private string _promptStatusSource = "检测中…";
+    private LocKey _promptStatusKey = LocKey.Detecting;
     private string _promptFormat = string.Empty;
     private bool _promptAddNewline;
     private bool _promptUseForwardSlash = true;
@@ -229,6 +230,7 @@ public sealed partial class BeautifyViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(AppearanceStatusText));
         OnPropertyChanged(nameof(WtBackupText));
         RaiseStatusChanged();
+        OnPropertyChanged(nameof(PromptStatusText));
         FeedbackMessage = Loc.F(_feedbackSource, _feedbackArgs);
     }
 

@@ -13,6 +13,9 @@ public enum StatusType { Info, Saved, Dirty, Written, Warning, Error }
 
 public sealed class MainViewModel : INotifyPropertyChanged
 {
+    // 状态栏按中文原文保存消息，LocTable 的 zh → en 映射负责给出对应语言的文案。
+    private const string LanguageSwitchStatus = "语言切换成功，部分设置重启后生效。";
+
     private readonly ProfileService _profileService = new();
 
     private string _searchText = string.Empty;
@@ -433,6 +436,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         EditorErrorText = _editorErrorTextRaw;
         EditorPathHintText = _editorPathHintTextRaw;
         OnPropertyChanged(nameof(EditorTitle));
+        SetStatus(StatusType.Saved, LanguageSwitchStatus);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
@@ -15,13 +16,33 @@ public sealed class LocExtension : MarkupExtension
 {
     public LocExtension() { }
 
-    public LocExtension(LocKey key) => Key = key;
+    /// <summary>
+    /// 单一 object 参数：能解析为 <see cref="LocKey"/> 的按枚举键处理（如 <c>SaveApply</c>），
+    /// 其余按中文原文处理（如 <c>美化</c>）。两种用法共用一个构造，避免 WPF 在多个单参构造间产生歧义。
+    /// </summary>
+    public LocExtension(object value)
+    {
+        if (value is LocKey key)
+        {
+            Key = key;
+        }
+        else if (value is string text && Enum.TryParse<LocKey>(text, ignoreCase: true, out var parsed))
+        {
+            Key = parsed;
+        }
+        else
+        {
+            Source = value?.ToString();
+        }
+    }
 
     public LocKey Key { get; set; }
 
+    public string? Source { get; set; }
+
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
-        var localized = new LocalizedText { Key = Key };
+        var localized = new LocalizedText { Key = Key, Source = Source };
 
         if (serviceProvider.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget target
             && target.TargetObject is FrameworkElement element)
@@ -63,32 +84,75 @@ internal sealed class LocalizedText : DependencyObject
         set => SetValue(KeyProperty, value);
     }
 
+    /// <summary>以中文原文为资源键时的源串；为空则回退到 <see cref="Key"/>。</summary>
+    public string? Source
+    {
+        get => (string?)GetValue(SourceProperty);
+        set => SetValue(SourceProperty, value);
+    }
+
+    public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(
+        nameof(Source),
+        typeof(string),
+        typeof(LocalizedText),
+        new PropertyMetadata(string.Empty, OnSourceChanged));
+
     public string Text
     {
         get => (string)GetValue(TextProperty);
         private set => SetValue(TextProperty, value);
     }
 
-    private FrameworkElement? _element;
-
-    public void Attach(FrameworkElement element)
+    public LocalizedText()
     {
-        _element = element;
-        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
-        element.Unloaded += OnElementUnloaded;
+        // 构造即订阅：无论 XAML 目标是 FrameworkElement 还是 Run / Span 等非 FrameworkElement，
+        // 语言切换时都能刷新。
+        Subscribe();
         Update();
     }
 
-    private void OnLanguageChanged(object? sender, EventArgs e) => Update();
-
-    private void OnElementUnloaded(object? sender, RoutedEventArgs e)
+    public void Attach(FrameworkElement element)
     {
-        if (_element is not null) _element.Unloaded -= OnElementUnloaded;
-        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
-        _element = null;
+        element.Loaded += OnElementLoaded;
+        element.Unloaded += OnElementUnloaded;
     }
+
+    private void Subscribe()
+    {
+        // 先退订再订阅，保证幂等：构造与 Loaded 两条路径都不会重复订阅。
+        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void Unsubscribe() => LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
+
+    private void OnElementLoaded(object? sender, RoutedEventArgs e)
+    {
+        Subscribe();
+        // 元素可能曾在卸载期间发生语言切换，重新加载时按当前语言重算文本。
+        Update();
+    }
+
+    private void OnElementUnloaded(object? sender, RoutedEventArgs e) => Unsubscribe();
+
+    private void OnLanguageChanged(object? sender, EventArgs e) => Update();
 
     private static void OnKeyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((LocalizedText)d).Update();
 
-    private void Update() => Text = LocalizationService.Instance.T(Key);
+    private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((LocalizedText)d).Update();
+
+    private void Update()
+    {
+        try
+        {
+            Text = string.IsNullOrEmpty(Source)
+                ? LocalizationService.Instance.T(Key)
+                : LocalizationService.Instance.T(Source);
+        }
+        catch (KeyNotFoundException)
+        {
+            // 兜底：键缺失时显示原始内容，避免任何未收录键导致界面崩溃。
+            Text = string.IsNullOrEmpty(Source) ? Key.ToString() : Source;
+        }
+    }
 }

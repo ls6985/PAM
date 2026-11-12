@@ -12,10 +12,19 @@ namespace PAM.App.ViewModels;
 /// </summary>
 public sealed partial class BeautifyViewModel
 {
-    // --- 状态展示（保存原文，读取时翻译，语言切换零成本） ---
+    // --- 状态展示（按当前语言从 LocKey 即时生成） ---
 
-    public string StarshipStatusText => Loc.T(_starshipStatusSource);
-    public string ScoopStatusText => Loc.T(_scoopStatusSource);
+    public string StarshipStatusText => !_starshipDetected
+        ? Loc.T(LocKey.Detecting)
+        : _isStarshipInstalled
+            ? LocalizationService.Instance.F(LocKey.Installed0, _starshipVersion)
+            : Loc.T(LocKey.NotInstalled);
+
+    public string ScoopStatusText => !_scoopDetected
+        ? Loc.T(LocKey.Detecting)
+        : _isScoopInstalled
+            ? Loc.T(LocKey.ScoopIsReady)
+            : Loc.T(LocKey.ScoopNotDetected);
     public bool IsStarshipInstalled => _isStarshipInstalled;
     public bool IsScoopInstalled => _isScoopInstalled;
 
@@ -45,9 +54,10 @@ public sealed partial class BeautifyViewModel
             var state = await Task.Run(() => _starshipService.GetState(profilePath));
             var detectedPreset = await Task.Run(() => _starshipService.DetectAppliedPreset());
 
-            _starshipStatusSource = detect.Installed ? $"已安装 {detect.Version}" : "未安装";
+            _starshipDetected = true;
+            _starshipVersion = detect.Version;
             _isStarshipInstalled = detect.Installed;
-            _scoopStatusSource = scoopInstalled ? "Scoop 已就绪" : "未检测到 Scoop";
+            _scoopDetected = true;
             _isScoopInstalled = scoopInstalled;
             _currentWtFont = wtState.CurrentFont;
             _hasWtSettings = wtState.SettingsExists;

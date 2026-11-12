@@ -35,6 +35,8 @@ public partial class App : Application
     {
         if (e.LanguageChanged)
         {
+            // 即时切换语言：LocExtension / UiLocalizer 刷新静态文本，各 ViewModel 的
+            // LanguageChanged 处理程序刷新动态文本，状态栏同步显示切换结果。
             LocalizationService.Instance.SetLanguage(e.Current.Language);
         }
 

@@ -9,6 +9,7 @@
     xmlns:models="clr-namespace:PAM.Core.Models;assembly=PAM.Core"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:views="clr-namespace:PAM.App.Views"
+    xmlns:loc="clr-namespace:PAM.App"
     Title="PowerShell 管理器"
     Width="1160"
     Height="780"
@@ -130,7 +131,7 @@
                                     Margin="8,0,0,0"
                                     Appearance="Primary"
                                     Click="SaveButton_Click"
-                                    Content="保存并生效"
+                                    Content="{loc:Loc SaveApply}"
                                     Icon="{ui:SymbolIcon Save24}"
                                     IsEnabled="False" />
                             </StackPanel>
