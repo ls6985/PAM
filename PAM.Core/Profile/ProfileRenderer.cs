@@ -33,6 +33,10 @@ public static class ProfileRenderer
         @"^\s*function\s+(?<name>[^\s{]+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    private static readonly Regex LegacyAliasRegex = new(
+        @"^\s*Set-Alias\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     /// <summary>按数据快照重建托管区，返回本次生成的哈希与同名冲突列表。</summary>
     public static ProfileRenderResult Render(string profilePath, PamData data)
     {
@@ -58,7 +62,7 @@ public static class ProfileRenderer
         var oldManaged = markerIndex >= 0 ? allLines.Skip(markerIndex + 1).ToList() : [];
 
         var starshipBlock = ExtractStarshipBlock(userCandidate.Concat(oldManaged));
-        var userLines = StripGeneratedBlocks(userCandidate);
+        var userLines = StripLegacyAliasLines(StripGeneratedBlocks(userCandidate));
         TrimTrailingBlankLines(userLines);
 
         var managedLines = new List<string>
@@ -103,8 +107,8 @@ public static class ProfileRenderer
             FindConflictingNames(userLines, data.Aliases));
     }
 
-    /// <summary>托管区结构版本：新增或移除受控标记块时递增，触发下次启动强制重新检测。</summary>
-    public const string ManagedStructureVersion = "1";
+    /// <summary>托管区结构版本：新增或移除受控标记块、或调整托管区生成逻辑时递增，触发下次启动强制重新渲染（见 MainViewModel 的版本门控）。</summary>
+    public const string ManagedStructureVersion = "2";
 
     /// <summary>读取当前托管区的完整状态（一次读取，供哈希、标记块与边界检测共用）。</summary>
     private sealed record ManagedState(bool HasMarker, string Hash, bool HasCurrentMarkers);
@@ -299,6 +303,42 @@ public static class ProfileRenderer
         }
 
         return output;
+    }
+
+    /// <summary>
+    /// 剥离用户区里 PAM 旧版以「# @alias-meta 注释 + Set-Alias」成对形式遗留的别名定义，
+    /// 让托管区生成的「别名启动器」包装函数成为别名的唯一来源（方向 B：托管启动器真正接管）。
+    /// # @alias-meta 是 PAM 专属标记，用户自行编写的 Set-Alias（无此标记）不受影响。
+    /// </summary>
+    private static List<string> StripLegacyAliasLines(List<string> lines)
+    {
+        var result = new List<string>(lines.Count);
+        var i = 0;
+        while (i < lines.Count)
+        {
+            var line = lines[i];
+            if (line.TrimStart().StartsWith("# @alias-meta", StringComparison.OrdinalIgnoreCase))
+            {
+                // 跳过注释，以及紧随其后的空行与一条 Set-Alias（旧版成对格式）。
+                i++;
+                while (i < lines.Count && string.IsNullOrWhiteSpace(lines[i]))
+                {
+                    i++;
+                }
+
+                if (i < lines.Count && LegacyAliasRegex.IsMatch(lines[i]))
+                {
+                    i++;
+                }
+
+                continue;
+            }
+
+            result.Add(line);
+            i++;
+        }
+
+        return result;
     }
 
     private static int SkipToEnd(List<string> lines, int start, Func<string, bool> isEnd)

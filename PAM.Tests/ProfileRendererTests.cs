@@ -125,6 +125,28 @@ public sealed class ProfileRendererTests : IDisposable
     }
 
     [Fact]
+    public void Render_StripsLegacyAliasMetaPairsFromUserArea()
+    {
+        WriteProfile(string.Join("\n",
+            "# 我的配置",
+            "# @alias-meta blbl 打开哔哩哔哩",
+            "Set-Alias -Name blbl -Value 'C:\\legacy.exe'",
+            "Set-Alias ll 'Get-ChildItem'",
+            ""));
+
+        ProfileRenderer.Render(_profilePath, SampleData());
+        var text = ReadProfile();
+
+        // 旧版 # @alias-meta 配对被剥离，让托管启动器接管 blbl。
+        Assert.DoesNotContain("# @alias-meta blbl", text);
+        Assert.DoesNotContain("Set-Alias -Name blbl", text);
+        // 用户自行编写的 Set-Alias（无 @alias-meta）不受影响。
+        Assert.Contains("Set-Alias ll 'Get-ChildItem'", text);
+        // 托管启动器生成的包装函数仍然存在（接管别名）。
+        Assert.Contains("function blbl { Invoke-PamAlias", text);
+    }
+
+    [Fact]
     public void Render_PreservesStarshipBlockInsideManagedArea()
     {
         WriteProfile(string.Join("\n",
@@ -168,7 +190,8 @@ public sealed class ProfileRendererTests : IDisposable
         ProfileRenderer.Render(_profilePath, SampleData());
         var text = ReadProfile();
 
-        Assert.Contains("Get-Command -Name \"blbl\" -CommandType Alias,Function", text);
+        Assert.Contains("Test-Path \"function:blbl\"", text);
+        Assert.Contains("Test-Path \"alias:blbl\"", text);
         Assert.DoesNotContain("Remove-Item -Path \"Alias:", text);
         Assert.Contains("-Path \"C:\\App\\bilibili.exe\" -Remark \"打开哔哩哔哩\" -Rest $args", text);
     }

@@ -194,7 +194,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
             var needsRebuild = false;
             if (needsCheck)
             {
-                needsRebuild = managedPaths.Any(p => ProfileRenderer.NeedsRebuild(p, data.ManagedHash ?? string.Empty));
+                // 代码结构版本变了（受控标记块新增/移除或生成逻辑调整）直接重建；
+                // 否则仅在哈希/标记不符（外部改动、旧版代码写入）时重建。
+                needsRebuild = versionChanged ||
+                    managedPaths.Any(p => ProfileRenderer.NeedsRebuild(p, data.ManagedHash ?? string.Empty));
             }
 
             if (needsRebuild)

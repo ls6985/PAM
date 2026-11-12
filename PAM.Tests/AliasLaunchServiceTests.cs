@@ -20,7 +20,8 @@ public sealed class AliasLaunchServiceTests
         Assert.Equal(AliasLaunchService.StartMarker, lines[0]);
         Assert.Equal(AliasLaunchService.EndMarker, lines[^1]);
         Assert.Contains("function Invoke-PamAlias {", text);
-        Assert.Contains(@"Get-Command -Name ""bili"" -CommandType Alias,Function", text);
+        Assert.Contains(@"Test-Path ""function:bili""", text);
+        Assert.Contains(@"Test-Path ""alias:bili""", text);
         Assert.Contains(@"function bili { Invoke-PamAlias -Path ""C:\App\bili.exe"" -Remark ""哔哩哔哩"" -Rest $args }", text);
         Assert.Contains("aliasLaunchEnhanced", text);
         Assert.Contains("showAliasRemarkOnLaunch", text);
