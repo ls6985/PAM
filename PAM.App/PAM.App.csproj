@@ -26,6 +26,11 @@
     <Content Include="Assets\Fonts\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- 关于页头部使用 App 图标（64x64），作为托管资源供 XAML 通过 pack URI 引用。 -->
+  <ItemGroup>
+    <Resource Include="Assets\App.ico" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\PAM.Core\PAM.Core.csproj" />
   </ItemGroup>

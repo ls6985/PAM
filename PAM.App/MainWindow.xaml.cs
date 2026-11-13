@@ -459,6 +459,11 @@ public partial class MainWindow : FluentWindow
 
         _lastSelectedTab = MainTabs.SelectedItem as TabViewItem;
 
+        // 关于页不显示全局状态栏（与别名/命令/美化/设置无关）。
+        StatusBarBorder.Visibility = ReferenceEquals(MainTabs.SelectedItem, AboutTab)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
         if (IsAliasTabSelected)
         {
             ShowRestingStatus();

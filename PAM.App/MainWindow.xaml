@@ -501,10 +501,20 @@
                     VerticalContentAlignment="Stretch">
                     <views:SettingsView DataContext="{Binding Settings}" />
                 </ui:TabViewItem>
+
+                <!-- ===================== 关于 ===================== -->
+                <ui:TabViewItem
+                    x:Name="AboutTab"
+                    Header="关于"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch">
+                    <views:AboutView />
+                </ui:TabViewItem>
             </ui:TabView>
 
-            <!-- 状态栏（全局，三个页签共用） -->
+            <!-- 状态栏（全局，三个页签共用；关于页隐藏，见 MainWindow.xaml.cs） -->
             <Border
+                x:Name="StatusBarBorder"
                 Grid.Row="1"
                 Margin="0,14,0,0"
                 Padding="12,8"
