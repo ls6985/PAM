@@ -5,11 +5,13 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Width="440"
-    MinHeight="150"
-    SizeToContent="Height"
+    xmlns:loc="clr-namespace:PAM.App"
+    Width="640"
+    Height="400"
+    MinWidth="520"
+    MinHeight="300"
     ExtendsContentIntoTitleBar="True"
-    ResizeMode="NoResize"
+    ResizeMode="CanResize"
     WindowBackdropType="Mica"
     WindowCornerPreference="Round"
     WindowStartupLocation="CenterOwner"
@@ -17,6 +19,12 @@
     UseLayoutRounding="True"
     mc:Ignorable="d">
 
+    <!--
+        二级弹窗统一规范（与 CommandGuideWindow「示例 / 指南」同款）：
+        FluentWindow + Mica + 自定义 TitleBar（无最小化/最大化）+ 24 边距可滚动内容区
+        + 右下角 Primary「关闭」按钮。以后新增二级弹窗请以本窗口为模板，
+        避免再次出现系统 MessageBox 那种风格割裂。
+    -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -32,20 +40,35 @@
             ShowMaximize="False"
             ShowMinimize="False" />
 
-        <TextBlock
-            x:Name="MessageText"
+        <ScrollViewer
             Grid.Row="1"
-            Margin="24,10,24,4"
-            FontSize="13"
-            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-            TextWrapping="Wrap" />
+            Margin="24,4,24,0"
+            HorizontalScrollBarVisibility="Disabled"
+            VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- 主说明：与指南 intro 同款 13px 次要色 -->
+                <TextBlock
+                    x:Name="MessageText"
+                    FontSize="13"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap" />
+                <!-- 次要提示：与指南 hint 同款 12px 三级色，按需显示 -->
+                <TextBlock
+                    x:Name="HintText"
+                    Margin="0,8,0,0"
+                    FontSize="12"
+                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                    TextWrapping="Wrap"
+                    Visibility="Collapsed" />
+            </StackPanel>
+        </ScrollViewer>
 
         <Grid Grid.Row="2" Margin="24,12,24,20">
             <ui:Button
                 HorizontalAlignment="Right"
                 Appearance="Primary"
-                Click="OkButton_Click"
-                Content="确定"
+                Click="CloseButton_Click"
+                Content="{loc:Loc Close}"
                 IsCancel="True"
                 IsDefault="True" />
         </Grid>

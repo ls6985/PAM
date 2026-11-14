@@ -1,14 +1,14 @@
-using System;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using Wpf.Ui.Controls;
 
 namespace PAM.App.Views;
 
 /// <summary>
-/// 关于页（初版 / 占位实现）。
-/// 当前为信息展示 + 按钮占位，方便后续接入真实逻辑。
-/// 需替换的地方都标了 // TODO: 接入真实功能。
+/// 关于页：应用名片 + 帮助与反馈 + 开源与支持。
+/// 三个入口各自打开与「示例 / 指南」同款的二级弹窗；GitHub 仓库与查看许可证仍为占位，
+/// 待拿到真实链接 / 许可证全文后接入（见下方 TODO）。
 /// </summary>
 public partial class AboutView : UserControl
 {
@@ -17,15 +17,16 @@ public partial class AboutView : UserControl
         InitializeComponent();
     }
 
-    /// <summary>以统一风格的 Fluent 对话框替代系统 MessageBox。</summary>
-    private void ShowInfo(string title, string message)
+    /// <summary>打开一个二级弹窗并居中于主窗口。</summary>
+    private void ShowDialog(FluentWindow dialog)
     {
-        var dialog = new InfoDialogWindow(title, message)
-        {
-            Owner = Window.GetWindow(this)
-        };
+        dialog.Owner = Window.GetWindow(this);
         dialog.ShowDialog();
     }
+
+    /// <summary>简短信息提示（与「示例 / 指南」同款外壳）。</summary>
+    private void ShowInfo(string title, string message, string? hint = null)
+        => ShowDialog(new InfoDialogWindow(title, message, hint));
 
     private void View_Loaded(object sender, RoutedEventArgs e)
     {
@@ -36,40 +37,31 @@ public partial class AboutView : UserControl
         VersionBadge.Text = verText;
     }
 
-    // 模块二：帮助文档
+    // 模块二：帮助文档 —— 已填充内容
     private void HelpDocButton_Click(object sender, RoutedEventArgs e)
-    {
-        // TODO: 接入真实功能——可改为打开使用文档（本地文件或网页）。
-        ShowInfo("帮助文档", "（帮助文档 待接入：可在此打开使用说明或跳转在线文档）");
-    }
+        => ShowDialog(new HelpDocWindow());
 
-    // 模块二：提交反馈
+    // 模块二：提交反馈 —— 仅界面版
     private void SubmitFeedbackButton_Click(object sender, RoutedEventArgs e)
-    {
-        // TODO: 接入真实功能——可改为打开反馈表单窗口，或拉起邮件/issue 链接。
-        ShowInfo("提交反馈",
-            "感谢你的反馈！\n（提交反馈 入口待接入：可在此打开反馈表单或邮件/工单链接）");
-    }
+        => ShowDialog(new FeedbackWindow());
 
-    // 模块三：GitHub 仓库
+    // 模块三：GitHub 仓库 —— TODO: 拿到真实 URL 后改为打开浏览器链接
     private void RepoButton_Click(object sender, RoutedEventArgs e)
     {
-        // TODO: 接入真实功能——可改为用浏览器打开仓库地址（替换为真实 URL）。
-        ShowInfo("GitHub 仓库", "（GitHub 仓库 待接入：可在此用浏览器打开仓库地址）");
+        ShowInfo("GitHub 仓库",
+            "本项目基于 MIT 协议开源，欢迎查看源码、提 Issue 或参与贡献。",
+            "仓库入口待接入：拿到真实 URL 后改为点击直接用浏览器打开。");
     }
 
-    // 模块三：查看许可证
+    // 模块三：查看许可证 —— TODO: 拿到许可证全文后改为展示完整文本
     private void LicenseButton_Click(object sender, RoutedEventArgs e)
     {
-        // TODO: 接入真实功能——可改为打开许可证全文（本地文件或网页）。
-        ShowInfo("查看许可证", "（查看许可证 待接入：可在此打开许可证全文）");
+        ShowInfo("查看许可证",
+            "本软件基于 MIT 协议开源，可自由使用、修改与分发。",
+            "许可证全文待接入：后续可在此打开完整许可证文本。");
     }
 
-    // 模块三：赞助支持
+    // 模块三：赞助支持 —— 初版
     private void SponsorButton_Click(object sender, RoutedEventArgs e)
-    {
-        // TODO: 接入真实功能——可改为打开赞助/捐赠链接或二维码窗口。
-        ShowInfo("赞助支持",
-            "如果这个工具帮到了你，欢迎支持作者继续维护。\n（赞助入口待接入：可在此打开放置/捐赠链接）");
-    }
+        => ShowDialog(new SponsorWindow());
 }

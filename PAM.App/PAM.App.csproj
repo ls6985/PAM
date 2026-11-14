@@ -31,6 +31,12 @@
     <Resource Include="Assets\App.ico" />
   </ItemGroup>
 
+  <!-- 赞助窗口的两张收款码（微信 / 支付宝），作为托管资源供 XAML 通过 pack URI 引用。
+       换收款码时直接替换 Assets/Sponsor/ 下的同名 PNG 即可，无需改代码。 -->
+  <ItemGroup>
+    <Resource Include="Assets\Sponsor\*.png" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\PAM.Core\PAM.Core.csproj" />
   </ItemGroup>
