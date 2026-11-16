@@ -63,7 +63,7 @@ public sealed class AppSettings
     /// <summary>后台托盘是否在启动后延迟创建那个长期复用的隐藏终端窗口，省去首次按热键的冷启动等待。</summary>
     public bool WarmPoolEnabled { get; set; }
 
-    /// <summary>用别名成功启动软件后，是否先隐藏当前终端窗口再结束会话（Windows Terminal 随即关闭对应标签或窗口）。键名沿用 hide 前缀以保持既有配置兼容。</summary>
+    /// <summary>敲下别名并回车时，是否立即隐藏当前终端窗口并在后台完成启动；会话不结束、窗口不关闭。键名沿用 hide 前缀以保持既有配置兼容。</summary>
     public bool HideTerminalAfterAliasLaunch { get; set; }
 
     /// <summary>是否优先使用 PowerShell 7。</summary>

@@ -932,9 +932,9 @@ public enum LocKey
     HideTerminalOnFocusLost,
     /// <summary>失焦自动隐藏的说明文案。</summary>
     HideTerminalOnFocusLostHint,
-    /// <summary>启动成功后隐藏并关闭终端窗口</summary>
+    /// <summary>别名启动后立即隐藏终端窗口</summary>
     HideTerminalAfterAliasLaunch,
-    /// <summary>别名启动成功后隐藏并关闭的说明文案。</summary>
+    /// <summary>别名启动后立即隐藏的说明文案。</summary>
     HideTerminalAfterAliasLaunchHint,
     /// <summary>单窗口（隐藏标签栏）</summary>
     SingleWindowMode,
@@ -1422,8 +1422,8 @@ internal static class LocTable
             [LocKey.TerminalWindowCardTitle] = ("终端窗口", "Terminal window"),
             [LocKey.HideTerminalOnFocusLost] = ("失去焦点时隐藏终端窗口", "Hide terminal window when focus is lost"),
             [LocKey.HideTerminalOnFocusLostHint] = ("开启后切换到其它窗口时，Windows Terminal 会立即自动隐藏，并同时开启「最小化时在通知区域隐藏终端」；关闭时两项一起关掉。这两项是终端自带的行为，对所有 Windows Terminal 窗口生效，需要新开窗口后才起作用。", "When enabled, Windows Terminal hides itself as soon as you switch to another window, and also enables 'hide terminal in notification area when minimized'. Turning it off disables both. These are native Windows Terminal behaviors, apply to every Terminal window, and take effect after opening a new window."),
-            [LocKey.HideTerminalAfterAliasLaunch] = ("启动成功后隐藏并关闭终端窗口", "Hide and close terminal window after launching"),
-            [LocKey.HideTerminalAfterAliasLaunchHint] = ("用别名成功启动软件后，先把当前终端窗口隐藏（屏幕和 Alt-Tab 里立刻消失），再结束会话。多标签时只关当前标签，托盘运行时按热键可唤回隐藏的窗口；每个新终端首次使用会多几百毫秒编译。开关由 $PROFILE 运行时读取，需新开终端窗口。", "After an alias starts an app, the current terminal window is hidden first (gone from the screen and Alt-Tab), then the session ends. With multiple tabs only the current one closes; the hidden window comes back with the hotkey while the tray is running. The first use in a new terminal compiles a small helper and takes a few hundred milliseconds. The switch is read from settings by $PROFILE at runtime, so open a new terminal window."),
+            [LocKey.HideTerminalAfterAliasLaunch] = ("别名启动后立即隐藏终端窗口", "Hide terminal window immediately on alias launch"),
+            [LocKey.HideTerminalAfterAliasLaunchHint] = ("敲下别名并回车的瞬间，当前终端窗口立即隐藏（屏幕和 Alt-Tab 里消失），启动软件的动作在后台继续；窗口不关闭，会话与当前目录都保留，托盘运行时按热键可唤回。每个新终端首次使用会花几百毫秒编译一小段辅助代码，失败时跳过隐藏、照常启动。开关由 $PROFILE 运行时读取，需新开终端窗口。", "The moment you press Enter on an alias, the current terminal window is hidden (gone from the screen and Alt-Tab) while the app launch continues in the background. The window stays open, so the session, working directory and history are kept; press the hotkey to bring it back while the tray is running. The first use in a new terminal compiles a small helper and takes a few hundred milliseconds; if that fails, hiding is skipped and the app still launches. The switch is read from settings by $PROFILE at runtime, so open a new terminal window."),
             [LocKey.SingleWindowMode] = ("单窗口（隐藏标签栏）", "Single window (hide tab bar)"),
             [LocKey.SingleWindowModeHint] = ("开启后只有一个标签时隐藏整条标签栏，窗口看起来更像普通终端；多标签时标签栏仍会出现。写入 Windows Terminal 配置，打开新窗口后生效。", "When enabled, the tab bar is hidden while there is only one tab, making the window look like a plain terminal; it still appears with multiple tabs. Written to the Windows Terminal settings and takes effect after opening a new window."),
             [LocKey.CommonOptionsScopeUpdated] = ("前两项对主题预设和自定义提示符都生效；第三项单独写入 Windows Terminal 配置。", "The first two settings apply to both the theme preset and the custom prompt; the third one is written to the Windows Terminal settings."),

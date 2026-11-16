@@ -333,16 +333,21 @@ public sealed class ProfileRendererTests : IDisposable
     }
 
     [Fact]
-    public void NeedsRebuild_TrueWhenLauncherLacksCurrentHideSnippet()
+    public void NeedsRebuild_TrueWhenLauncherUsesLegacyHideAndCloseSnippet()
     {
-        // 旧版代码写入的别名启动器不带「先隐藏再关闭」片段；标记齐全且哈希吻合时也要重建。
+        // v5 的别名启动器在启动成功后才隐藏并执行 exit；标记齐全且哈希吻合时也要重建。
         WriteProfile(string.Join("\n",
             "# 我的配置",
             ProfileRenderer.StartMarker,
             "# 以下由 PowerShell 管理器自动生成；修改会在下次保存时被覆盖。",
             string.Empty,
             AliasLaunchService.StartMarker,
-            "function Invoke-PamAlias { }",
+            "function Invoke-PamAlias {",
+            "    $closeAfterLaunch = $false",
+            "    $pamWindow = [PAM.Win32]::GetForegroundWindow()",
+            "    [void][PAM.Win32]::ShowWindow($pamWindow, 0)",
+            "    exit",
+            "}",
             AliasLaunchService.EndMarker,
             string.Empty,
             CommandHintService.StartMarker,

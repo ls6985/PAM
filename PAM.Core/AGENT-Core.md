@@ -24,7 +24,7 @@
 - 别名的 `arguments` 是每次启动固定附带的参数字符串：按空白分词，双引号可包裹含空格的段；留空时生成的包装函数只传 `$args`。
 - 内置命令不写入数据文件，由 `CustomCommandService.BuiltinCommands` 定义表固定生成。
 - `settings.json` 只存设置，两者不合并：备份、迁移与版本演进互不绑定。`warmPoolEnabled` 等纯托盘行为开关不进入此文件、不参与 `ProfileRenderer` 渲染、不改变 `managedHash`，只在运行时由 PAM.Tray 读取。
-- 失焦隐藏与单窗口这两个开关不落在 `settings.json` / `pam-data.json`：状态由 Windows Terminal `settings.json` 的四个根级属性承载，界面按实际值读回。`hideTerminalAfterAliasLaunch` 是 `settings.json` 的普通布尔字段，默认关；键名沿用 hide 前缀以保持既有配置兼容，行为是先隐藏当前终端窗口再结束会话。
+- 失焦隐藏与单窗口这两个开关不落在 `settings.json` / `pam-data.json`：状态由 Windows Terminal `settings.json` 的四个根级属性承载，界面按实际值读回。`hideTerminalAfterAliasLaunch` 是 `settings.json` 的普通布尔字段，默认关；键名沿用 hide 前缀以保持既有配置兼容，行为是敲下别名回车即隐藏当前终端窗口，启动在后台继续，会话不结束。
 
 ### `settings.json`
 
@@ -37,7 +37,7 @@
 托管区内部固定顺序：
 
 1. `# >>> PAM Starship >>>` — 常驻；关闭主题时区块内每行加 `# ` 前缀（完整内容见 `StarshipService.InitBlockLines`）
-2. `# >>> PAM Alias Launcher >>>` — 公共函数 `Invoke-PamAlias` 与各别名的同名包装函数；别名清空时整块移除。公共函数运行时读 `hideTerminalAfterAliasLaunch`，在启动程序之前记录当前前台的 WT 窗口句柄，每条成功启动路径先隐藏该窗口、再以 `exit` 结束当前终端会话
+2. `# >>> PAM Alias Launcher >>>` — 公共函数 `Invoke-PamAlias` 与各别名的同名包装函数；别名清空时整块移除。公共函数运行时读 `hideTerminalAfterAliasLaunch`，一进入就隐藏当前前台的 WT 窗口，随后在后台完成启动，不结束会话
 3. `# >>> PAM Command Hint >>>` — 注册 `CommandNotFoundAction` 的未知命令友好提示
 4. `#region PAM-Custom` … `#endregion` — 始终存在（内置命令）
 
@@ -47,9 +47,9 @@
 - 别名包装函数借 `Get-Command` 避让同名项。公共函数借 `explorer.exe` 代启动（带参数经临时 `.lnk`，异常时退回普通 `Start-Process`），新进程完全脱离终端进程树：关终端不影响、日志不回显、UAC 正常。
 - 配置固定参数时 `-Rest` 以数组字面量开头，终端调用时临时传入的 `$args` 接在其后；未配置时仍是 `-Rest $args`。参数按字面量生成，不做变量展开。
 - `aliasLaunchEnhanced` / `showAliasRemarkOnLaunch` / `friendlyCommandNotFound` / `hideTerminalAfterAliasLaunch` 由托管区公共逻辑运行时读 `settings.json`，改设置即时生效、无需重写 `$PROFILE`。`$PROFILE` 只在终端启动时加载一次，保存后需新开终端窗口。
-- 「先隐藏再关闭」全在托管区完成：启动程序之前用 `GetForegroundWindow()` 记录前台窗口，按类名 `CASCADIA_HOSTING_WINDOW_CLASS` 校验它就是 Windows Terminal 窗口（否则不隐藏，避免误伤其它应用）；启动成功后先 `ShowWindow(SW_HIDE)` 让窗口瞬间消失，再 `exit` 结束会话，由 Windows Terminal 关闭对应标签或窗口。不经过托盘，托盘是否运行都不影响。Win32 声明用 `Add-Type -MemberDefinition` 按 `PAM.Win32` 类型名复用，每个新终端会话首次编译一次，编译失败时静默降级为只 `exit`。多标签时只关闭当前标签，隐藏的窗口在托盘运行时按热键可唤回；会话状态（当前目录、历史、变量）不保留。托管区文本变化不改变数据哈希，靠 `ManagedStructureVersion` 与标记检查触发重建。
+- 「按回车即隐藏」全在托管区完成：读完开关后立即用 `GetForegroundWindow()` 取当前前台窗口，按类名 `CASCADIA_HOSTING_WINDOW_CLASS` 校验它就是 Windows Terminal 窗口（否则不隐藏，避免误伤其它应用），随即 `ShowWindow(SW_HIDE)`；之后的备注输出与启动动作都在后台继续，窗口不关闭、会话不结束。隐藏不经过托盘，托盘是否运行都不影响；托盘持有该窗口时按热键可 `ShowWindow(SW_SHOW)` 唤回同一个会话，会话状态（当前目录、历史、变量）保留。Win32 声明用 `Add-Type -MemberDefinition` 按 `PAM.Win32` 类型名复用，每个新终端会话首次编译一次，失败时静默跳过隐藏、照常启动。托管区文本变化不改变数据哈希，靠 `ManagedStructureVersion` 与标记检查触发重建。
 - 未知命令提示只在 `friendlyCommandNotFound` 开启时接管：红色 `CommandNotFoundException` 被一段 `CommandNotFoundAction` 替换为单行友好提示（含命令名），并借 `CommandScriptBlock` 返回空块，使 `Get-Command` 等内部查找不产生提示。
-- 重建判定用 `ProfileRenderer.NeedsRebuild()`：哈希不符，或任一受管 `$PROFILE` 缺当前版本固定写入的标记块，即整体重建。Command Hint 与 PAM-Custom 两块始终检查；Alias Launcher 只在存在时检查它是否含当前版本的隐藏片段 `AliasLaunchService.HideBeforeCloseMarker`（没有别名时该块本就不写入）。`RenderToProfiles()` 按同一份数据写入多份 `$PROFILE`。渲染幂等。
+- 重建判定用 `ProfileRenderer.NeedsRebuild()`：哈希不符，或任一受管 `$PROFILE` 缺当前版本固定写入的标记块，即整体重建。Command Hint 与 PAM-Custom 两块始终检查；Alias Launcher 只在存在时检查它是否含当前版本的「进入即隐藏」片段 `AliasLaunchService.HideOnAliasMarker`（没有别名时该块本就不写入；旧版的 `exit` 片段不含此串）。`RenderToProfiles()` 按同一份数据写入多份 `$PROFILE`。渲染幂等。
 
 ### 自定义命令片段
 

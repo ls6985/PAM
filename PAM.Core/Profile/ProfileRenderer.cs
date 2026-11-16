@@ -108,7 +108,7 @@ public static class ProfileRenderer
     }
 
     /// <summary>托管区结构版本：新增或移除受控标记块、或调整托管区生成逻辑时递增，触发下次启动强制重新渲染（见 MainViewModel 的版本门控）。</summary>
-    public const string ManagedStructureVersion = "5";
+    public const string ManagedStructureVersion = "6";
 
     /// <summary>读取当前托管区的完整状态（一次读取，供哈希、标记块与边界检测共用）。</summary>
     private sealed record ManagedState(bool HasMarker, string Hash, bool HasCurrentMarkers);
@@ -165,12 +165,12 @@ public static class ProfileRenderer
 
         var managed = lines.Skip(markerIndex).ToList();
         var hash = ComputeHash(managed);
-        // 别名启动器只在有别名时生成；存在该块时还要确认它带有当前版本的「先隐藏再关闭」片段，
-        // 否则旧版代码写入的托管区即使哈希吻合也不会包含新逻辑。
+        // 别名启动器只在有别名时生成；存在该块时还要确认它带有当前版本的「进入即隐藏」片段，
+        // 否则旧版「先隐藏再关闭」代码写入的托管区即使哈希吻合也不会包含新逻辑。
         var hasCurrentMarkers = managed.Any(IsCommandHintStart)
             && managed.Any(PamCustomRegion.IsHeader)
             && (!managed.Any(IsLauncherStart) || managed.Any(static line =>
-                line.Contains(AliasLaunchService.HideBeforeCloseMarker, StringComparison.Ordinal)));
+                line.Contains(AliasLaunchService.HideOnAliasMarker, StringComparison.Ordinal)));
         return new ManagedState(true, hash, hasCurrentMarkers);
     }
 

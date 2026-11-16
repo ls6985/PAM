@@ -26,7 +26,7 @@ public sealed class AliasLaunchServiceTests
         Assert.Contains("aliasLaunchEnhanced", text);
         Assert.Contains("showAliasRemarkOnLaunch", text);
         Assert.Contains("hideTerminalAfterAliasLaunch", text);
-        Assert.Contains(AliasLaunchService.HideBeforeCloseMarker, text);
+        Assert.Contains(AliasLaunchService.HideOnAliasMarker, text);
         Assert.DoesNotContain("EventWaitHandle", text);
         Assert.Contains("Start-Process -FilePath 'explorer.exe'", text);
         Assert.Contains("New-Object -ComObject WScript.Shell", text);
@@ -37,20 +37,32 @@ public sealed class AliasLaunchServiceTests
     }
 
     [Fact]
-    public void BuildLines_HidesThenClosesOnEverySuccessfulLaunchPath()
+    public void BuildLines_HidesWindowImmediatelyAndKeepsSessionAlive()
     {
         var lines = AliasLaunchService.BuildLines([Entry("bili", @"C:\App\bili.exe")]);
         var text = string.Join("\n", lines);
 
-        Assert.Contains("$closeAfterLaunch = $false", text);
+        Assert.Contains(AliasLaunchService.HideOnAliasMarker, text);
         Assert.Contains("if ($null -ne $cfg.hideTerminalAfterAliasLaunch)", text);
         Assert.Contains("Add-Type -Namespace PAM -Name Win32", text);
         Assert.Contains("CASCADIA_HOSTING_WINDOW_CLASS", text);
-        Assert.Contains("ShowWindow($pamWindow, 0)", text);
-        Assert.Contains("exit", text);
-        Assert.Equal(
-            4,
-            lines.Count(static line => line.Contains("& $pamHideAndExit", StringComparison.Ordinal)));
+        Assert.Equal(1, lines.Count(static line =>
+            line.Contains("ShowWindow($pamWindow, 0)", StringComparison.Ordinal)));
+
+        // 隐藏发生在备注输出与任何启动动作之前，不依赖启动是否成功。
+        var hideIndex = lines.FindIndex(static line =>
+            line.Contains("ShowWindow($pamWindow, 0)", StringComparison.Ordinal));
+        var remarkIndex = lines.FindIndex(static line =>
+            line.Contains("Write-Host $Remark", StringComparison.Ordinal));
+        var firstLaunchIndex = lines.FindIndex(static line =>
+            line.Contains("Start-Process", StringComparison.Ordinal));
+        Assert.True(hideIndex < remarkIndex);
+        Assert.True(hideIndex < firstLaunchIndex);
+
+        // 会话不结束，也没有跨进程通知托盘的残留。
+        Assert.DoesNotContain(lines, static line => line.Trim() == "exit");
+        Assert.DoesNotContain("$pamHideAndExit", text);
+        Assert.DoesNotContain("$closeAfterLaunch", text);
         Assert.DoesNotContain("EventWaitHandle", text);
     }
 

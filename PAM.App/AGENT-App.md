@@ -67,7 +67,7 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 | 终端输入 | `switchImeToEnglish`（默认开）：托盘对新终端窗口切英文输入法，详见 [Tray](../PAM.Tray/AGENT-Tray.md)；日志 `%AppData%\PAM\ime-switch.log` |
 | 无托盘行为 | `KeepTrayOnClose`（默认开）：关窗口后托盘与热键保留，关闭则发退出信号；设置页可查看 / 启动 / 结束托盘 |
 | 开机自启 | `StartTrayWithWindows`（默认开）：由 `AppServices.Apply` / `Reload` 与 `OnStartup` 幂等同步 HKCU Run 项；设置页切换后回读注册表给出成功 / 失败反馈。目标 exe 不存在时不创建启动项，任务管理器留下的禁用标记会被清除 |
-| 别名启动 | `aliasLaunchEnhanced`（默认开）：借 explorer 脱离终端进程树启动；`showAliasRemarkOnLaunch`：启动前打印一行备注；`friendlyCommandNotFound`（默认开）：终端输入未找到的命令时用一行友好提示替代默认红色报错；`hideTerminalAfterAliasLaunch`（默认关）：启动成功后由托管区公共函数先隐藏当前终端窗口、再执行 `exit` 结束会话，不经过托盘；每个新终端首次使用会编译一小段 Win32 声明。四个开关由托管区公共逻辑运行时读取，即时生效但需新开终端窗口 |
+| 别名启动 | `aliasLaunchEnhanced`（默认开）：借 explorer 脱离终端进程树启动；`showAliasRemarkOnLaunch`：启动前打印一行备注；`friendlyCommandNotFound`（默认开）：终端输入未找到的命令时用一行友好提示替代默认红色报错；`hideTerminalAfterAliasLaunch`（默认关）：敲下别名并回车即由托管区公共函数隐藏当前终端窗口，启动在后台继续，会话不结束、窗口不关闭；隐藏不经过托盘，托盘运行时按热键可唤回；每个新终端首次使用会编译一小段 Win32 声明。四个开关由托管区公共逻辑运行时读取，即时生效但需新开终端窗口 |
 | 终端窗口 | 「失去焦点时隐藏终端窗口」不写 `settings.json`：开关按 WT 根级 `autoHideWindow` 的实际值回填，切换时把 `autoHideWindow` 与 `minimizeToNotificationArea` 两项一起写成同值；这是 WT 原生行为，作用于所有终端窗口，需新开窗口生效。「恢复默认设置」也会把两项复位为 false |
 | 终端预热 | `warmPoolEnabled`（默认关）：开启后托盘提前打开一个已加载 `$PROFILE` 的隐藏 Windows Terminal 窗口，按热键直接显示；关闭时第一次按热键才打开。两种情况下热键都复用同一个窗口，详见 [Tray](../PAM.Tray/AGENT-Tray.md) |
 | 恢复默认 | 二次确认后整份恢复默认值 |

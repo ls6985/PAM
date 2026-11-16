@@ -25,11 +25,11 @@
 
 ## 单窗口终端通道（`warmPoolEnabled`，默认关）
 
-- 托盘长期持有一个 `CASCADIA_HOSTING_WINDOW_CLASS` 窗口句柄。按热键只做 `ShowWindow` + `SetForegroundWindow`，不创建、不排队、不等待 PowerShell 启动；连续按键的响应时间恒定。窗口已在前台时调用是幂等的，不会隐藏或闪烁。
+- 托盘长期持有一个 `CASCADIA_HOSTING_WINDOW_CLASS` 窗口句柄。按热键只做 `ShowWindow` + `SetForegroundWindow`，不创建、不排队、不等待 PowerShell 启动；连续按键的响应时间恒定。窗口已在前台时调用是幂等的，不会隐藏或闪烁。`ShowAndFocus()` 对不可见窗口执行 `SW_SHOW`，因此 `$PROFILE` 用 `SW_HIDE` 隐藏该窗口后，按热键可直接唤回同一个会话。
 - `warmPoolEnabled` 只决定是否在启动后延迟几秒提前把这个窗口准备好：开启时用 `CreateProcess` + `STARTF_USESHOWWINDOW/SW_HIDE` 创建初始隐藏的 WT 窗口（不先显示再隐藏，不会闪），按热键时直接显示；关闭时不提前准备，第一次按热键才打开，之后同样复用。开关不决定窗口类型。
 - 窗口归属用 `SetProp`/`GetProp` 的跨进程窗口属性 `PAM.Tray.TerminalWindow` 标记，不依赖会随标签切换变化的窗口标题。托盘启动时按该属性枚举找回上一个实例持有的窗口并纳管；托盘退出不关闭窗口，因为它可能正被用户使用。多余的隐藏窗口会关闭，保证始终只有一个托盘窗口。
 - 单窗口不等于单会话：用户可在该 WT 窗口内用原生快捷键开多个标签页。窗口被用户关闭后，托盘在下一个 tick 发现句柄失效并按开关后台重建（或等下一次热键冷启动）。
-- 配置新鲜度采用粗粒度元数据比对：`settings.json` 与 `pam-data.json` 的写入时间和大小，任一变化即视为过期。设置页与别名／命令保存都落到这两个文件，因此不需要解析 `$PROFILE` 路径、也不需要在后台启动 PowerShell 进程。快照在窗口创建之前记录，创建期间发生的变化会在下一次 tick 触发重建。**只在从未显示过的预热隐藏窗口上**关闭并后台重建；`_hasBeenShown` 把「预热时创建为隐藏」与「显示过后被隐藏」区分开——WT 失焦自动隐藏会让窗口不可见，不能误判成预热窗口而重建。已显示过的窗口不主动关闭，配置在窗口下次重建时生效。
+- 配置新鲜度采用粗粒度元数据比对：`settings.json` 与 `pam-data.json` 的写入时间和大小，任一变化即视为过期。设置页与别名／命令保存都落到这两个文件，因此不需要解析 `$PROFILE` 路径、也不需要在后台启动 PowerShell 进程。快照在窗口创建之前记录，创建期间发生的变化会在下一次 tick 触发重建。**只在从未显示过的预热隐藏窗口上**关闭并后台重建；`_hasBeenShown` 把「预热时创建为隐藏」与「显示过后被隐藏」区分开——WT 失焦自动隐藏与别名启动后的托管区隐藏都会让窗口不可见，不能误判成预热窗口而重建。已显示过的窗口不主动关闭，配置在窗口下次重建时生效。
 - 创建与纳管在后台线程执行，`await` 延续回到 UI 线程后立即提交句柄，不等 700ms 定时器；`-NoProfile` 让 `$PROFILE` 只显式加载一次，省去自动加载与 dot-source 的重复执行。焦点沿用 `ShowWindow` / `SetForegroundWindow` 的尽力而为，不加 `AttachThreadInput`、不模拟 ALT。
 
 设置从哪来、谁负责写、两个进程怎么协作，见[总览](../AGENT-总览.md) 与 [App](../PAM.App/AGENT-App.md)。

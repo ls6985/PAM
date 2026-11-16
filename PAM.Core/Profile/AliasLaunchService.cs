@@ -23,18 +23,18 @@ namespace PAM.Core;
 /// <para>开关值在运行时由公共函数读取 settings.json，修改设置无需重写 $PROFILE。
 /// 标记块位于 PAM-Custom 之外，不受 CustomCommandService 整块重写影响。</para>
 ///
-/// <para>启用「启动成功后隐藏并关闭」时，公共函数在启动程序之前记录当前前台的 Windows Terminal
-/// 窗口句柄，成功启动后先以 <c>ShowWindow(SW_HIDE)</c> 隐藏它，再以 <c>exit</c> 结束当前终端会话，
-/// 由 Windows Terminal 关闭对应标签或窗口。前台窗口按类名校验，避免误隐藏其它应用的窗口；
-/// 采集与隐藏全在终端进程内完成，不依赖后台托盘。</para>
+/// <para>启用「按回车即隐藏」时，公共函数一进入就取当前前台窗口，按类名校验它是
+/// Windows Terminal 后以 <c>ShowWindow(SW_HIDE)</c> 隐藏，随后在后台完成启动工作。
+/// 会话不结束、窗口不关闭，托盘持有的窗口可由热键唤回。前台窗口按类名校验，
+/// 避免误隐藏其它应用的窗口；全部动作在终端进程内完成，不依赖后台托盘。</para>
 /// </summary>
 public static class AliasLaunchService
 {
     public const string StartMarker = "# >>> PAM Alias Launcher >>>";
     public const string EndMarker = "# <<< PAM Alias Launcher <<<";
 
-    /// <summary>「启动成功后先隐藏再关闭」片段的特征串，供托管区标记检查识别当前版本。</summary>
-    public const string HideBeforeCloseMarker = "GetForegroundWindow";
+    /// <summary>「别名进入即隐藏」片段的特征串，供托管区标记检查识别当前版本；生成与检查共用同一串。</summary>
+    public const string HideOnAliasMarker = "$hideAfterLaunch = $false";
 
     private static readonly string[] HelperFunctionLines =
     [
@@ -46,37 +46,31 @@ public static class AliasLaunchService
         @"    )",
         @"    $enhanced = $true",
         @"    $showRemark = $true",
-        @"    $closeAfterLaunch = $false",
+        $@"    {HideOnAliasMarker}",
         @"    try {",
             ..ProfileScriptSnippets.ReadSettingsJsonLines("configPath", "cfg"),
         @"            if ($null -ne $cfg.aliasLaunchEnhanced) { $enhanced = [bool] $cfg.aliasLaunchEnhanced }",
         @"            if ($null -ne $cfg.showAliasRemarkOnLaunch) { $showRemark = [bool] $cfg.showAliasRemarkOnLaunch }",
-        @"            if ($null -ne $cfg.hideTerminalAfterAliasLaunch) { $closeAfterLaunch = [bool] $cfg.hideTerminalAfterAliasLaunch }",
+        @"            if ($null -ne $cfg.hideTerminalAfterAliasLaunch) { $hideAfterLaunch = [bool] $cfg.hideTerminalAfterAliasLaunch }",
         @"        }",
         @"    } catch { }",
-        @"    # 启动程序之前记录前台窗口；命令由用户在终端敲入时，前台就是当前的 Windows Terminal 窗口。",
-        @"    $pamWindow = [IntPtr]::Zero",
-        @"    if ($closeAfterLaunch) {",
+        @"    # 别名命令一进入就隐藏当前终端窗口；启动工作在后台继续，会话不结束。",
+        @"    if ($hideAfterLaunch) {",
         @"        try {",
         @"            if (-not ('PAM.Win32' -as [type])) {",
         @"                Add-Type -Namespace PAM -Name Win32 -MemberDefinition '[System.Runtime.InteropServices.DllImport(""user32.dll"")] public static extern System.IntPtr GetForegroundWindow(); [System.Runtime.InteropServices.DllImport(""user32.dll"")] public static extern int GetClassName(System.IntPtr hWnd, System.Text.StringBuilder name, int max); [System.Runtime.InteropServices.DllImport(""user32.dll"")] public static extern bool ShowWindow(System.IntPtr hWnd, int cmd);' -ErrorAction Stop",
         @"            }",
-        @"            $pamCandidate = [PAM.Win32]::GetForegroundWindow()",
+        @"            $pamWindow = [PAM.Win32]::GetForegroundWindow()",
         @"            $pamClass = New-Object System.Text.StringBuilder 256",
-        @"            [void][PAM.Win32]::GetClassName($pamCandidate, $pamClass, $pamClass.Capacity)",
-        @"            if ($pamClass.ToString() -eq 'CASCADIA_HOSTING_WINDOW_CLASS') { $pamWindow = $pamCandidate }",
+        @"            [void][PAM.Win32]::GetClassName($pamWindow, $pamClass, $pamClass.Capacity)",
+        @"            if ($pamClass.ToString() -eq 'CASCADIA_HOSTING_WINDOW_CLASS') {",
+        @"                [void][PAM.Win32]::ShowWindow($pamWindow, 0)",
+        @"            }",
         @"        } catch { }",
-        @"    }",
-        @"    $pamHideAndExit = {",
-        @"        if ($pamWindow -ne [IntPtr]::Zero) {",
-        @"            try { [void][PAM.Win32]::ShowWindow($pamWindow, 0) } catch { }",
-        @"        }",
-        @"        exit",
         @"    }",
         @"    if ($showRemark -and $Remark) { Write-Host $Remark -ForegroundColor Cyan }",
         @"    if (-not $enhanced) {",
         @"        if ($Rest) { & $Path @Rest } else { & $Path }",
-        @"        if ($closeAfterLaunch) { & $pamHideAndExit }",
         @"        return",
         @"    }",
         @"    # 无参数时将路径直接传给 explorer.exe，由 ShellExecute 启动。",
@@ -84,7 +78,6 @@ public static class AliasLaunchService
         @"        if (Test-Path -LiteralPath $Path) {",
         @"            try {",
         @"                Start-Process -FilePath 'explorer.exe' -ArgumentList ('""' + $Path + '""') -ErrorAction Stop",
-        @"                if ($closeAfterLaunch) { & $pamHideAndExit }",
         @"                return",
         @"            } catch { }",
         @"        }",
@@ -103,14 +96,12 @@ public static class AliasLaunchService
         @"            $shortcut.WorkingDirectory = Split-Path -Parent $Path",
         @"            $shortcut.Save()",
         @"            Start-Process -FilePath 'explorer.exe' -ArgumentList ('""' + $lnk + '""') -ErrorAction Stop",
-        @"                if ($closeAfterLaunch) { & $pamHideAndExit }",
-        @"                return",
+        @"            return",
         @"        } catch { }",
         @"    }",
         @"    # 回退路径：路径不存在、COM 不可用或 explorer 启动失败时，以 Start-Process 直接启动。",
         @"    if ($Rest) { Start-Process -FilePath $Path -ArgumentList $Rest }",
         @"    else { Start-Process -FilePath $Path }",
-        @"    if ($closeAfterLaunch) { & $pamHideAndExit }",
         @"}",
     ];
 

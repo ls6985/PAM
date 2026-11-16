@@ -40,7 +40,7 @@
 | 自定义提示符 | [Core](PAM.Core/AGENT-Core.md) + [App](PAM.App/AGENT-App.md) | `StarshipPromptService`；美化页 |
 | 终端外观、字体、备份恢复 | [Core](PAM.Core/AGENT-Core.md) + [App](PAM.App/AGENT-App.md) | `WindowsTerminalService` · `FontInstaller`；美化页 |
 | 失焦隐藏、单窗口标签栏 | [Core](PAM.Core/AGENT-Core.md) + [App](PAM.App/AGENT-App.md) | WT 根级属性 `autoHideWindow` / `minimizeToNotificationArea` / `alwaysShowTabs` / `showTabsInTitlebar`；设置页与美化页通用设置 |
-| 别名启动成功后隐藏并关闭终端 | [Core](PAM.Core/AGENT-Core.md) | `hideTerminalAfterAliasLaunch` · 托管区 Win32 `ShowWindow(SW_HIDE)` → `exit` |
+| 别名启动后立即隐藏终端 | [Core](PAM.Core/AGENT-Core.md) + [Tray](PAM.Tray/AGENT-Tray.md) | `hideTerminalAfterAliasLaunch` · 托管区进入即 `ShowWindow(SW_HIDE)`、不结束会话；托盘热键唤回 |
 | 界面页签、设置页、主题画刷、快捷键 | [App](PAM.App/AGENT-App.md) | `MainWindow` · `SettingsView` · `ThemeService` · `AppServices` |
 | 开机自启 | [App](PAM.App/AGENT-App.md) | `AutoStartService` · `startTrayWithWindows` |
 | 全局热键、托盘行为、终端窗口复用、输入法切换 | [Tray](PAM.Tray/AGENT-Tray.md) | `TrayApplication` · `HotkeyManager` · `TerminalPool` · `ImeSwitcher` |
