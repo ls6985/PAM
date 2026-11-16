@@ -49,6 +49,7 @@ public sealed partial class BeautifyViewModel
             var scoopInstalled = await Task.Run(() => _starshipService.IsScoopInstalled());
             var wtState = await Task.Run(() => _terminalService.GetState());
             var wtAppearance = await Task.Run(() => _terminalService.ReadAppearance(wtState.SettingsPath));
+            var wtFlags = await Task.Run(() => _terminalService.ReadGlobalFlags(wtState.SettingsPath));
             var candidates = await Task.Run(() => FontInstaller.GetMonospaceCandidates());
             var bundledInstalled = await Task.Run(() => FontInstaller.IsBundledFontInstalled());
             var state = await Task.Run(() => _starshipService.GetState(profilePath));
@@ -72,7 +73,7 @@ public sealed partial class BeautifyViewModel
             RebuildPresetOptions();
             RefreshPromptState();
             RefreshCommonOptions();
-            ApplyAppearanceFromState(wtState, wtAppearance);
+            ApplyAppearanceFromState(wtState, wtAppearance, wtFlags);
 
             RaiseStatusChanged();
         }

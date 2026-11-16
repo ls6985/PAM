@@ -41,6 +41,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private const string FallbackHint = "未检测到 PowerShell 7，已回退到 Windows PowerShell 5.1。";
 
     private readonly ProfileService _profileService = new();
+    private readonly WindowsTerminalService _terminalService = new();
 
     private bool _isSyncing = true;
     private HotkeyChord? _pendingChord;
@@ -56,6 +57,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private bool _showAliasRemarkOnLaunch = true;
     private bool _friendlyCommandNotFound = true;
     private bool _warmPoolEnabled;
+    private bool _hideTerminalAfterAliasLaunch;
+    private bool _hideTerminalOnFocusLost;
     private string _hotkeyDisplay = AppSettings.DefaultHotkey;
     private string _pendingHotkeyDisplay = string.Empty;
     private bool _hasPendingHotkey;
@@ -172,6 +175,33 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         set { if (SetField(ref _warmPoolEnabled, value) && !_isSyncing) Commit(s => s.WarmPoolEnabled = value); }
     }
 
+    public bool HideTerminalAfterAliasLaunch
+    {
+        get => _hideTerminalAfterAliasLaunch;
+        set { if (SetField(ref _hideTerminalAfterAliasLaunch, value) && !_isSyncing) Commit(s => s.HideTerminalAfterAliasLaunch = value); }
+    }
+
+    /// <summary>
+    /// 失焦自动隐藏：状态以 Windows Terminal 的 settings.json 实际值为准，
+    /// 开启时把 autoHideWindow 与 minimizeToNotificationArea 两项一起写入。
+    /// </summary>
+    public bool HideTerminalOnFocusLost
+    {
+        get => _hideTerminalOnFocusLost;
+        set
+        {
+            if (_isSyncing || !SetField(ref _hideTerminalOnFocusLost, value)) return;
+            if (!ApplyFocusLostFlags(value))
+            {
+                _hideTerminalOnFocusLost = !value;
+                OnPropertyChanged(nameof(HideTerminalOnFocusLost));
+                return;
+            }
+
+            SetFeedback(StatusType.Saved, "已更新 Windows Terminal 的窗口行为设置，打开新终端窗口后生效。");
+        }
+    }
+
     /// <summary>已经生效并写入设置文件的热键。</summary>
     public string HotkeyDisplay { get => _hotkeyDisplay; private set => SetField(ref _hotkeyDisplay, value); }
     public string PendingHotkeyDisplay { get => _pendingHotkeyDisplay; private set => SetField(ref _pendingHotkeyDisplay, value); }
@@ -228,6 +258,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         _showAliasRemarkOnLaunch = settings.ShowAliasRemarkOnLaunch;
         _friendlyCommandNotFound = settings.FriendlyCommandNotFound;
         _warmPoolEnabled = settings.WarmPoolEnabled;
+        _hideTerminalAfterAliasLaunch = settings.HideTerminalAfterAliasLaunch;
         _hotkeyDisplay = settings.Hotkey;
         _pendingChord = null;
         _check = HotkeyConflictDetector.Idle();
@@ -246,12 +277,53 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ShowAliasRemarkOnLaunch));
         OnPropertyChanged(nameof(FriendlyCommandNotFound));
         OnPropertyChanged(nameof(WarmPoolEnabled));
+        OnPropertyChanged(nameof(HideTerminalAfterAliasLaunch));
+        OnPropertyChanged(nameof(HideTerminalOnFocusLost));
         OnPropertyChanged(nameof(HotkeyDisplay));
         RaiseCheckChanged();
 
         _isSyncing = false;
+        RefreshTerminalFlags();
         RefreshTrayState();
         _ = RefreshProfilePathAsync();
+    }
+
+    /// <summary>窗口行为开关不存 settings.json，按 WT 配置的实际值回填，避免界面与终端状态不一致。</summary>
+    private void RefreshTerminalFlags()
+    {
+        var wasSyncing = _isSyncing;
+        _isSyncing = true;
+        try
+        {
+            _hideTerminalOnFocusLost = _terminalService.ReadGlobalFlags().AutoHideWindow == true;
+            OnPropertyChanged(nameof(HideTerminalOnFocusLost));
+        }
+        finally
+        {
+            _isSyncing = wasSyncing;
+        }
+    }
+
+    /// <summary>两项原生设置一起写，避免其中一项单独存在时行为不确定。</summary>
+    private bool ApplyFocusLostFlags(bool enabled)
+    {
+        try
+        {
+            var result = _terminalService.ApplyAppearance(
+            [
+                TerminalAppearanceChange.SetBool(TerminalAppearanceKey.AutoHideWindow, enabled),
+                TerminalAppearanceChange.SetBool(TerminalAppearanceKey.MinimizeToNotificationArea, enabled),
+            ]);
+
+            if (result.Success) return true;
+            SetFeedback(StatusType.Error, "保存 Windows Terminal 设置失败：{0}", result.Message);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            SetFeedback(StatusType.Error, "保存 Windows Terminal 设置失败：{0}", ex.Message);
+            return false;
+        }
     }
 
     private void Commit(Action<AppSettings> change)
@@ -474,6 +546,9 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         {
             AppServices.Apply(new AppSettings());
             SyncFromSettings(AppServices.Settings);
+            if (!ApplyFocusLostFlags(false)) return;
+            _hideTerminalOnFocusLost = false;
+            OnPropertyChanged(nameof(HideTerminalOnFocusLost));
             SetFeedback(StatusType.Saved, "已恢复默认设置。");
         }
         catch (Exception ex)

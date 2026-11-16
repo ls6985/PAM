@@ -7,8 +7,9 @@ using Newtonsoft.Json.Linq;
 namespace PAM.Core;
 
 /// <summary>
-/// 外观设置的读写：把「字体 / 复古效果 / 光标 / 背景图 / 透明度」映射到
-/// <c>profiles.defaults</c> 的属性，用通用 JSONC 文本拼接逐项写入或删除。
+/// 设置项的读写：把「字体 / 复古效果 / 光标 / 背景图 / 透明度」映射到
+/// <c>profiles.defaults</c> 的属性，根级窗口行为与标签栏属性同样按 schema 里的单段路径写入，
+/// 统一用通用 JSONC 文本拼接逐项写入或删除。
 /// <para>只提交界面上有变化的项目；删除属性等于把该项交还给 Windows Terminal 默认值。</para>
 /// </summary>
 public sealed partial class WindowsTerminalService

@@ -382,6 +382,29 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 终端窗口 -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="终端窗口" Style="{StaticResource CardTitleStyle}" />
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="320" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="失去焦点时隐藏终端窗口" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock
+                                    Text="开启后切换到其它窗口时，Windows Terminal 会立即自动隐藏，并同时开启「最小化时在通知区域隐藏终端」；关闭时两项一起关掉。这两项是终端自带的行为，对所有 Windows Terminal 窗口生效，需要新开窗口后才起作用。"
+                                    Style="{StaticResource SettingHintStyle}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsChecked="{Binding HideTerminalOnFocusLost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- 别名启动 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
@@ -392,6 +415,8 @@
                                 <ColumnDefinition Width="320" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="14" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="14" />
                                 <RowDefinition Height="Auto" />
@@ -434,6 +459,18 @@
                                 Grid.Column="1"
                                 HorizontalAlignment="Right"
                                 IsChecked="{Binding FriendlyCommandNotFound, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <StackPanel Grid.Row="6" Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="启动成功后隐藏并关闭终端窗口" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock
+                                    Text="用别名成功启动软件后，先把当前终端窗口隐藏（屏幕和 Alt-Tab 里立刻消失），再结束会话。多标签时只关当前标签，托盘运行时按热键可唤回隐藏的窗口；每个新终端首次使用会多几百毫秒编译。开关由 $PROFILE 运行时读取，需新开终端窗口。"
+                                    Style="{StaticResource SettingHintStyle}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch
+                                Grid.Row="6"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsChecked="{Binding HideTerminalAfterAliasLaunch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
                     </StackPanel>
                 </Border>

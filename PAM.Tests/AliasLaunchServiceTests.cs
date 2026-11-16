@@ -25,12 +25,33 @@ public sealed class AliasLaunchServiceTests
         Assert.Contains(@"function bili { Invoke-PamAlias -Path ""C:\App\bili.exe"" -Remark ""哔哩哔哩"" -Rest $args }", text);
         Assert.Contains("aliasLaunchEnhanced", text);
         Assert.Contains("showAliasRemarkOnLaunch", text);
+        Assert.Contains("hideTerminalAfterAliasLaunch", text);
+        Assert.Contains(AliasLaunchService.HideBeforeCloseMarker, text);
+        Assert.DoesNotContain("EventWaitHandle", text);
         Assert.Contains("Start-Process -FilePath 'explorer.exe'", text);
         Assert.Contains("New-Object -ComObject WScript.Shell", text);
         Assert.Contains("'.lnk'", text);
         Assert.Contains("catch {", text);
         Assert.DoesNotContain("-RedirectStandardOutput", text);
         Assert.Contains("& $Path @Rest", text);
+    }
+
+    [Fact]
+    public void BuildLines_HidesThenClosesOnEverySuccessfulLaunchPath()
+    {
+        var lines = AliasLaunchService.BuildLines([Entry("bili", @"C:\App\bili.exe")]);
+        var text = string.Join("\n", lines);
+
+        Assert.Contains("$closeAfterLaunch = $false", text);
+        Assert.Contains("if ($null -ne $cfg.hideTerminalAfterAliasLaunch)", text);
+        Assert.Contains("Add-Type -Namespace PAM -Name Win32", text);
+        Assert.Contains("CASCADIA_HOSTING_WINDOW_CLASS", text);
+        Assert.Contains("ShowWindow($pamWindow, 0)", text);
+        Assert.Contains("exit", text);
+        Assert.Equal(
+            4,
+            lines.Count(static line => line.Contains("& $pamHideAndExit", StringComparison.Ordinal)));
+        Assert.DoesNotContain("EventWaitHandle", text);
     }
 
     [Fact]

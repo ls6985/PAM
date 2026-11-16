@@ -198,13 +198,18 @@ public sealed partial class BeautifyViewModel
             }
         }
 
-        ApplyAppearanceToUi(_terminalService.ReadAppearance(state.SettingsPath));
+        ApplyAppearanceToUi(
+            _terminalService.ReadAppearance(state.SettingsPath),
+            _terminalService.ReadGlobalFlags(state.SettingsPath));
         OnPropertyChanged(nameof(WtBackupText));
         OnPropertyChanged(nameof(WtBackupPathText));
     }
 
-    /// <summary>刷新状态时使用：已有 GetState / ReadAppearance 的结果，避免重复读盘。</summary>
-    private void ApplyAppearanceFromState(WindowsTerminalState state, TerminalAppearance appearance)
+    /// <summary>刷新状态时使用：已有 GetState / ReadAppearance / ReadGlobalFlags 的结果，避免重复读盘。</summary>
+    private void ApplyAppearanceFromState(
+        WindowsTerminalState state,
+        TerminalAppearance appearance,
+        WindowsTerminalGlobalFlags flags)
     {
         _wtBackupPath = state.BackupPath;
         _wtBackupCreatedAt = state.BackupCreatedAt;
@@ -217,10 +222,10 @@ public sealed partial class BeautifyViewModel
             return;
         }
 
-        ApplyAppearanceToUi(appearance);
+        ApplyAppearanceToUi(appearance, flags);
     }
 
-    private void ApplyAppearanceToUi(TerminalAppearance appearance)
+    private void ApplyAppearanceToUi(TerminalAppearance appearance, WindowsTerminalGlobalFlags flags)
     {
         ApplySnapshot(new AppearanceSnapshot(
             appearance.FontFace ?? _selectedFont,
@@ -232,7 +237,8 @@ public sealed partial class BeautifyViewModel
                 ? Math.Clamp((int)Math.Round(bg * 100), 0, 100)
                 : 100,
             appearance.Opacity ?? 100,
-            appearance.UseAcrylic ?? false));
+            appearance.UseAcrylic ?? false,
+            IsSingleWindow(flags)));
     }
 
     /// <summary>把一组值（读盘结果或已保存快照）整体回填控件，并重置「未修改」状态。</summary>
@@ -248,6 +254,7 @@ public sealed partial class BeautifyViewModel
             _backgroundImageOpacity = snapshot.BackgroundImageOpacity;
             _windowOpacity = snapshot.WindowOpacity;
             _useAcrylic = snapshot.UseAcrylic;
+            _singleWindowMode = snapshot.SingleWindow;
             if (snapshot.Font is not null)
             {
                 SelectedFont = snapshot.Font;
@@ -271,7 +278,8 @@ public sealed partial class BeautifyViewModel
         _backgroundImage,
         _backgroundImageOpacity,
         _windowOpacity,
-        _useAcrylic);
+        _useAcrylic,
+        _singleWindowMode);
 
     private void RaiseAppearanceChanged()
     {
@@ -282,6 +290,7 @@ public sealed partial class BeautifyViewModel
         OnPropertyChanged(nameof(BackgroundImageOpacity));
         OnPropertyChanged(nameof(WindowOpacity));
         OnPropertyChanged(nameof(UseAcrylic));
+        OnPropertyChanged(nameof(SingleWindowMode));
         OnPropertyChanged(nameof(BackgroundImageOpacityText));
         OnPropertyChanged(nameof(WindowOpacityText));
         OnPropertyChanged(nameof(IsAppearanceDirty));
@@ -455,6 +464,7 @@ public sealed partial class BeautifyViewModel
             changes.Add(TerminalAppearanceChange.SetBool(TerminalAppearanceKey.UseAcrylic, UseAcrylic));
         }
 
+        changes.AddRange(BuildSingleWindowChanges(_singleWindowMode, before.SingleWindow));
         return changes;
     }
 
@@ -467,9 +477,10 @@ public sealed partial class BeautifyViewModel
         string BackgroundImage,
         int BackgroundImageOpacity,
         int WindowOpacity,
-        bool UseAcrylic)
+        bool UseAcrylic,
+        bool SingleWindow)
     {
         public static AppearanceSnapshot Default { get; } =
-            new(null, false, string.Empty, string.Empty, string.Empty, 100, 100, false);
+            new(null, false, string.Empty, string.Empty, string.Empty, 100, 100, false, false);
     }
 }

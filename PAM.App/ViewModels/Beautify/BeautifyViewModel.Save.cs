@@ -41,6 +41,7 @@ public sealed partial class BeautifyViewModel
         if (IsBusy) return;
 
         ResetCommonOptions();
+        SingleWindowMode = false;
         if (UseCustomPrompt)
         {
             ResetPrompt();

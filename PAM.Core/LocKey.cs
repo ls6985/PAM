@@ -926,6 +926,26 @@ public enum LocKey
     PreWarmTerminalWindow,
     /// <summary>后台托盘提前打开一个已加载 $PROFILE 的终端窗口并隐藏；按热键时直接显示，省去首次打开的等待。热键始终复用同一个 Windows Terminal 窗口，不会重复新开。关闭时不提前准备，第一次按热键才打开，之后同样复用。</summary>
     PreWarmTerminalWindowHint,
+    /// <summary>终端窗口</summary>
+    TerminalWindowCardTitle,
+    /// <summary>失去焦点时隐藏终端窗口</summary>
+    HideTerminalOnFocusLost,
+    /// <summary>失焦自动隐藏的说明文案。</summary>
+    HideTerminalOnFocusLostHint,
+    /// <summary>启动成功后隐藏并关闭终端窗口</summary>
+    HideTerminalAfterAliasLaunch,
+    /// <summary>别名启动成功后隐藏并关闭的说明文案。</summary>
+    HideTerminalAfterAliasLaunchHint,
+    /// <summary>单窗口（隐藏标签栏）</summary>
+    SingleWindowMode,
+    /// <summary>单窗口的说明文案。</summary>
+    SingleWindowModeHint,
+    /// <summary>通用设置折叠区底部的适用范围说明。</summary>
+    CommonOptionsScopeUpdated,
+    /// <summary>已更新 Windows Terminal 的窗口行为设置，打开新终端窗口后生效。</summary>
+    TerminalWindowSettingsSaved,
+    /// <summary>保存 Windows Terminal 设置失败：{0}</summary>
+    SaveTerminalWindowSettingsFailed0,
 }
 
 /// <summary>LocKey 对应的 {zh, en} 语言表，以及中文→英文的兜底查表（供动态字符串与 XAML 桥接）。</summary>
@@ -1399,6 +1419,16 @@ internal static class LocTable
             [LocKey.LanguageSwitchTip] = ("语言切换成功，部分设置重启后生效。", "Language switched. Some settings will take effect after a restart."),
             [LocKey.PreWarmTerminalWindow] = ("预热终端窗口", "Pre-warm a terminal window"),
             [LocKey.PreWarmTerminalWindowHint] = ("后台托盘提前打开一个已加载 $PROFILE 的终端窗口并隐藏；按热键时直接显示，省去首次打开的等待。热键始终复用同一个 Windows Terminal 窗口，不会重复新开。关闭时不提前准备，第一次按热键才打开，之后同样复用。", "The tray opens one hidden Windows Terminal window with $PROFILE already loaded, so the hotkey can show it immediately instead of waiting for a cold start. The hotkey always reuses this single window instead of opening a new one. Turn it off to skip the pre-warm: the first press opens it, and later presses reuse it too."),
+            [LocKey.TerminalWindowCardTitle] = ("终端窗口", "Terminal window"),
+            [LocKey.HideTerminalOnFocusLost] = ("失去焦点时隐藏终端窗口", "Hide terminal window when focus is lost"),
+            [LocKey.HideTerminalOnFocusLostHint] = ("开启后切换到其它窗口时，Windows Terminal 会立即自动隐藏，并同时开启「最小化时在通知区域隐藏终端」；关闭时两项一起关掉。这两项是终端自带的行为，对所有 Windows Terminal 窗口生效，需要新开窗口后才起作用。", "When enabled, Windows Terminal hides itself as soon as you switch to another window, and also enables 'hide terminal in notification area when minimized'. Turning it off disables both. These are native Windows Terminal behaviors, apply to every Terminal window, and take effect after opening a new window."),
+            [LocKey.HideTerminalAfterAliasLaunch] = ("启动成功后隐藏并关闭终端窗口", "Hide and close terminal window after launching"),
+            [LocKey.HideTerminalAfterAliasLaunchHint] = ("用别名成功启动软件后，先把当前终端窗口隐藏（屏幕和 Alt-Tab 里立刻消失），再结束会话。多标签时只关当前标签，托盘运行时按热键可唤回隐藏的窗口；每个新终端首次使用会多几百毫秒编译。开关由 $PROFILE 运行时读取，需新开终端窗口。", "After an alias starts an app, the current terminal window is hidden first (gone from the screen and Alt-Tab), then the session ends. With multiple tabs only the current one closes; the hidden window comes back with the hotkey while the tray is running. The first use in a new terminal compiles a small helper and takes a few hundred milliseconds. The switch is read from settings by $PROFILE at runtime, so open a new terminal window."),
+            [LocKey.SingleWindowMode] = ("单窗口（隐藏标签栏）", "Single window (hide tab bar)"),
+            [LocKey.SingleWindowModeHint] = ("开启后只有一个标签时隐藏整条标签栏，窗口看起来更像普通终端；多标签时标签栏仍会出现。写入 Windows Terminal 配置，打开新窗口后生效。", "When enabled, the tab bar is hidden while there is only one tab, making the window look like a plain terminal; it still appears with multiple tabs. Written to the Windows Terminal settings and takes effect after opening a new window."),
+            [LocKey.CommonOptionsScopeUpdated] = ("前两项对主题预设和自定义提示符都生效；第三项单独写入 Windows Terminal 配置。", "The first two settings apply to both the theme preset and the custom prompt; the third one is written to the Windows Terminal settings."),
+            [LocKey.TerminalWindowSettingsSaved] = ("已更新 Windows Terminal 的窗口行为设置，打开新终端窗口后生效。", "Windows Terminal window behavior updated. Open a new terminal window to see the effect."),
+            [LocKey.SaveTerminalWindowSettingsFailed0] = ("保存 Windows Terminal 设置失败：{0}", "Failed to save Windows Terminal settings: {0}"),
         };
 
     public static readonly IReadOnlyDictionary<string, string> ZhToEn = BuildZhToEn();

@@ -32,6 +32,7 @@ internal sealed class TerminalPool : IDisposable
     private bool _showOnReady;
     private bool _orphansScanned;
     private bool _disposed;
+    private bool _hasBeenShown;
     private DateTime _warmupAfterUtc;
     private FileStamp[] _snapshot = [];
 
@@ -58,16 +59,20 @@ internal sealed class TerminalPool : IDisposable
         if (_windowHandle != IntPtr.Zero && !NativeMethods.IsWindow(_windowHandle))
         {
             _windowHandle = IntPtr.Zero;
+            _hasBeenShown = false;
             _snapshot = [];
         }
 
-        // 窗口仍处于预热隐藏态时才允许替换；已显示过的窗口不主动关闭，避免打断用户。
+        // 只有从未显示过的预热窗口才允许按配置变化替换；显示过之后被 Windows Terminal
+        // 自动隐藏的窗口不能当成预热态，否则会被误关重建。
         if (_windowHandle != IntPtr.Zero
+            && !_hasBeenShown
             && !NativeMethods.IsWindowVisible(_windowHandle)
             && IsStale())
         {
             CloseWindow(_windowHandle);
             _windowHandle = IntPtr.Zero;
+            _hasBeenShown = false;
             _snapshot = [];
         }
 
@@ -216,6 +221,7 @@ internal sealed class TerminalPool : IDisposable
         }
 
         _windowHandle = handle;
+        _hasBeenShown = NativeMethods.IsWindowVisible(handle);
         NativeMethods.MarkWindow(handle, WindowPropName);
 
         if (_showOnReady)
@@ -226,8 +232,9 @@ internal sealed class TerminalPool : IDisposable
     }
 
     /// <summary>显示并激活窗口；已在前台时调用是幂等的，不会隐藏或闪烁。</summary>
-    private static void ShowAndFocus(IntPtr handle)
+    private void ShowAndFocus(IntPtr handle)
     {
+        _hasBeenShown = true;
         if (NativeMethods.IsIconic(handle))
         {
             NativeMethods.ShowWindow(handle, NativeMethods.SwRestore);

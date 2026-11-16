@@ -472,6 +472,8 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="12" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="12" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="{loc:Loc '提示符前空一行'}" Style="{StaticResource SettingLabelStyle}" />
@@ -493,11 +495,22 @@
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
                                     IsChecked="{Binding PromptUseForwardSlash, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <StackPanel Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="{loc:Loc '单窗口（隐藏标签栏）'}" Style="{StaticResource SettingLabelStyle}" />
+                                    <TextBlock Text="{loc:Loc '开启后只有一个标签时隐藏整条标签栏，窗口看起来更像普通终端；多标签时标签栏仍会出现。写入 Windows Terminal 配置，打开新窗口后生效。'}" Style="{StaticResource SettingHintStyle}" />
+                                </StackPanel>
+                                <ui:ToggleSwitch
+                                    Grid.Row="4"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    IsEnabled="{Binding HasWtSettings}"
+                                    IsChecked="{Binding SingleWindowMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
                             <TextBlock
                                 Margin="0,8,0,0"
                                 Style="{StaticResource SettingHintStyle}"
-                                Text="{loc:Loc '主题预设和自定义提示符都会用这两个设置。'}" />
+                                Text="{loc:Loc '前两项对主题预设和自定义提示符都生效；第三项单独写入 Windows Terminal 配置。'}" />
                         </StackPanel>
 
                         <!-- 高级选项：主题卡内部，默认收起。 -->

@@ -333,6 +333,30 @@ public sealed class ProfileRendererTests : IDisposable
     }
 
     [Fact]
+    public void NeedsRebuild_TrueWhenLauncherLacksCurrentHideSnippet()
+    {
+        // 旧版代码写入的别名启动器不带「先隐藏再关闭」片段；标记齐全且哈希吻合时也要重建。
+        WriteProfile(string.Join("\n",
+            "# 我的配置",
+            ProfileRenderer.StartMarker,
+            "# 以下由 PowerShell 管理器自动生成；修改会在下次保存时被覆盖。",
+            string.Empty,
+            AliasLaunchService.StartMarker,
+            "function Invoke-PamAlias { }",
+            AliasLaunchService.EndMarker,
+            string.Empty,
+            CommandHintService.StartMarker,
+            CommandHintService.EndMarker,
+            string.Empty,
+            PamCustomRegion.Header,
+            PamCustomRegion.Footer,
+            ""));
+
+        var hash = ProfileRenderer.Inspect(_profilePath).Hash;
+        Assert.True(ProfileRenderer.NeedsRebuild(_profilePath, hash));
+    }
+
+    [Fact]
     public void NeedsRebuild_TrueWhenCurrentMarkersMissing()
     {
         WriteProfile(string.Join("\n",

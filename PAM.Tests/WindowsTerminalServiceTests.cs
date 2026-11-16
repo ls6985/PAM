@@ -497,6 +497,69 @@ public sealed class WindowsTerminalServiceTests : IDisposable
         Assert.Equal(before, File.ReadAllText(_settingsPath));
     }
 
+    // ---------------- 根级窗口属性 ----------------
+
+    [Fact]
+    public void ApplyAppearance_WritesRootWindowFlags_AndReadsThemBack()
+    {
+        WriteSettings(
+            """
+            // 用户注释：别删
+            {
+                "theme": "system",
+                "alwaysShowTabs": true,
+                "showTabsInTitlebar": true
+            }
+            """);
+
+        var result = _service.ApplyAppearance(
+            [
+                TerminalAppearanceChange.SetBool(TerminalAppearanceKey.AutoHideWindow, true),
+                TerminalAppearanceChange.SetBool(TerminalAppearanceKey.MinimizeToNotificationArea, true),
+                TerminalAppearanceChange.SetBool(TerminalAppearanceKey.AlwaysShowTabs, false),
+                TerminalAppearanceChange.SetBool(TerminalAppearanceKey.ShowTabsInTitlebar, false),
+            ],
+            _settingsPath);
+
+        Assert.True(result.Success, result.Message);
+        var flags = _service.ReadGlobalFlags(_settingsPath);
+        Assert.True(flags.AutoHideWindow);
+        Assert.True(flags.MinimizeToNotificationArea);
+        Assert.False(flags.AlwaysShowTabs);
+        Assert.False(flags.ShowTabsInTitlebar);
+
+        var text = File.ReadAllText(_settingsPath);
+        Assert.Contains("// 用户注释：别删", text);
+        Assert.Contains("\"theme\": \"system\"", text);
+        AssertNoTrailingCommaAdded(text);
+    }
+
+    [Fact]
+    public void ApplyAppearance_RootFlags_TurningOffWritesExplicitFalse()
+    {
+        WriteSettings("""{ "autoHideWindow": true, "minimizeToNotificationArea": true }""");
+
+        var result = _service.ApplyAppearance(
+            [
+                TerminalAppearanceChange.SetBool(TerminalAppearanceKey.AutoHideWindow, false),
+                TerminalAppearanceChange.SetBool(TerminalAppearanceKey.MinimizeToNotificationArea, false),
+            ],
+            _settingsPath);
+
+        Assert.True(result.Success, result.Message);
+        var flags = _service.ReadGlobalFlags(_settingsPath);
+        Assert.False(flags.AutoHideWindow);
+        Assert.False(flags.MinimizeToNotificationArea);
+    }
+
+    [Fact]
+    public void ReadGlobalFlags_WithMissingFile_ReturnsAllNull()
+    {
+        var flags = _service.ReadGlobalFlags(Path.Combine(_root, "absent.json"));
+
+        Assert.Equal(WindowsTerminalGlobalFlags.Empty, flags);
+    }
+
     // ---------------- 备份：安装本软件前的原始配置 ----------------
 
     [Fact]

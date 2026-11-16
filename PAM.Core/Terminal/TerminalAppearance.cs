@@ -5,8 +5,8 @@ using System.Text.Json;
 namespace PAM.Core;
 
 /// <summary>
-/// 美化页「外观」卡片能改动的 Windows Terminal 设置项。
-/// 全部落在 <c>profiles.defaults</c> 下（即 WT 设置里的「默认值 → 外观」），
+/// PAM 能改动的 Windows Terminal 设置项：前八项落在 <c>profiles.defaults</c>
+/// （WT 设置里的「默认值 → 外观」），后四项是根级的窗口行为 / 标签栏属性。
 /// 键名含点的 <c>experimental.retroTerminalEffect</c> 是 WT 的单个属性名，不是层级。
 /// </summary>
 public enum TerminalAppearanceKey
@@ -19,6 +19,10 @@ public enum TerminalAppearanceKey
     BackgroundImageOpacity,
     Opacity,
     UseAcrylic,
+    AutoHideWindow,
+    MinimizeToNotificationArea,
+    AlwaysShowTabs,
+    ShowTabsInTitlebar,
 }
 
 /// <summary>一次外观写入：JsonValue 为 JSON 字面量，null 表示删除该属性、交还终端默认值。</summary>
@@ -95,6 +99,10 @@ public static class TerminalAppearanceSchema
         [TerminalAppearanceKey.BackgroundImageOpacity] = ["profiles", "defaults", "backgroundImageOpacity"],
         [TerminalAppearanceKey.Opacity] = ["profiles", "defaults", "opacity"],
         [TerminalAppearanceKey.UseAcrylic] = ["profiles", "defaults", "useAcrylic"],
+        [TerminalAppearanceKey.AutoHideWindow] = ["autoHideWindow"],
+        [TerminalAppearanceKey.MinimizeToNotificationArea] = ["minimizeToNotificationArea"],
+        [TerminalAppearanceKey.AlwaysShowTabs] = ["alwaysShowTabs"],
+        [TerminalAppearanceKey.ShowTabsInTitlebar] = ["showTabsInTitlebar"],
     };
 
     public static string[] GetPath(TerminalAppearanceKey key) => Paths[key];
@@ -135,6 +143,10 @@ public static class TerminalAppearanceSchema
 
                 case TerminalAppearanceKey.RetroTerminalEffect:
                 case TerminalAppearanceKey.UseAcrylic:
+                case TerminalAppearanceKey.AutoHideWindow:
+                case TerminalAppearanceKey.MinimizeToNotificationArea:
+                case TerminalAppearanceKey.AlwaysShowTabs:
+                case TerminalAppearanceKey.ShowTabsInTitlebar:
                     return literal.ValueKind is JsonValueKind.True or JsonValueKind.False
                         ? null
                         : "开关值只能是 true / false。";
