@@ -21,6 +21,7 @@ internal sealed class TrayApplication : IDisposable
     private AppSettings _settings = new();
     private DateTime _lastSettingsWrite = DateTime.MinValue;
     private HotkeyManager? _hotkeyManager;
+    private TerminalPool? _terminalPool;
     private TrayBridge.Listener? _listener;
     private NotifyIcon? _notifyIcon;
     private Icon? _trayIcon;
@@ -75,6 +76,7 @@ internal sealed class TrayApplication : IDisposable
         LocalizationService.Instance.SetLanguage(_settings.Language);
 
         _hotkeyManager = new HotkeyManager();
+        _terminalPool = new TerminalPool();
         _hotkeyManager.Pressed += (_, _) => LaunchTerminal();
         ApplyHotkey(showBalloon: true);
 
@@ -211,6 +213,9 @@ internal sealed class TrayApplication : IDisposable
         {
             ImeSwitcher.CheckForegroundWindow();
         }
+
+        // 单窗口通道的找回、存活校验与配置新鲜度校验共用这一个定时器，不新增计时器。
+        _terminalPool?.Tick(_settings);
     }
 
     private void RefreshMenuTexts()
@@ -331,11 +336,25 @@ internal sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// 注册的热键触发时启动 Windows Terminal。
+    /// 热键触发时激活长期持有的终端窗口；窗口不存在时冷启动一个，
+    /// 随后由单窗口通道纳管，之后的按键都复用同一个窗口。两条路径都使用 Windows Terminal。
+    /// </summary>
+    private void LaunchTerminal()
+    {
+        if (_terminalPool is not null && _terminalPool.Activate())
+        {
+            return;
+        }
+
+        LaunchTerminalCold();
+    }
+
+    /// <summary>
+    /// 通过 <c>wt.exe</c> 冷启动默认终端。
     /// 通过 <c>-d</c> 显式指定工作目录为当前用户目录，避免默认落在 <c>C:\Windows\System32</c>。
     /// Shell 由设置里的默认终端决定（<see cref="ShellResolver"/>），未安装 PowerShell 7 时自动回退。
     /// </summary>
-    private void LaunchTerminal()
+    private void LaunchTerminalCold()
     {
         try
         {
@@ -344,8 +363,8 @@ internal sealed class TrayApplication : IDisposable
             var psi = new ProcessStartInfo
             {
                 FileName = ShellResolver.WindowsTerminalFileName,
-                // -d 指定终端启动的初始目录为 ~
-                Arguments = $"-d \"{userProfile}\" {shell} -NoExit -Command \". $PROFILE\"",
+                // -d 指定终端启动的初始目录为 ~；-NoProfile 与预热窗口共用同一份命令行形状
+                Arguments = $"-d \"{userProfile}\" {shell} -NoProfile -NoExit -Command \". $PROFILE\"",
                 UseShellExecute = true,
                 WorkingDirectory = userProfile,
             };
@@ -384,6 +403,8 @@ internal sealed class TrayApplication : IDisposable
 
         _monitor?.Stop();
         _monitor?.Dispose();
+        _terminalPool?.Dispose();
+        _terminalPool = null;
         if (_notifyIcon is not null)
         {
             _notifyIcon.Visible = false;

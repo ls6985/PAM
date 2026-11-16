@@ -453,6 +453,8 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="14" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="14" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
@@ -479,7 +481,19 @@
                                 HorizontalAlignment="Right"
                                 IsChecked="{Binding KeepTrayOnClose, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <StackPanel Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal">
+                            <StackPanel Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="预热终端窗口" Style="{StaticResource SettingLabelStyle}" />
+                                <TextBlock
+                                    Text="后台托盘提前打开一个已加载 $PROFILE 的终端窗口并隐藏；按热键时直接显示，省去首次打开的等待。热键始终复用同一个 Windows Terminal 窗口，不会重复新开。关闭时不提前准备，第一次按热键才打开，之后同样复用。"
+                                    Style="{StaticResource SettingHintStyle}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch
+                                Grid.Row="4"
+                                Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsChecked="{Binding WarmPoolEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <StackPanel Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal">
                                 <TextBlock Text="后台托盘状态" Style="{StaticResource SettingLabelStyle}" />
                                 <TextBlock
                                     Margin="8,0,0,0"
@@ -487,7 +501,7 @@
                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                     Text="{Binding TrayStatusText}" />
                             </StackPanel>
-                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
                                 <ui:Button
                                     Appearance="Secondary"
                                     Click="StartTrayButton_Click"

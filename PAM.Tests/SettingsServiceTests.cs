@@ -76,7 +76,7 @@ public sealed class SettingsServiceTests : IDisposable
 
         var names = document.RootElement.EnumerateObject().Select(static property => property.Name).ToArray();
         Assert.Equal(
-            new[] { "hotkey", "terminalType", "autoLaunchTerminal", "theme", "language", "keepTrayOnClose", "startTrayWithWindows", "switchImeToEnglish", "aliasLaunchEnhanced", "showAliasRemarkOnLaunch", "friendlyCommandNotFound" }
+            new[] { "hotkey", "terminalType", "autoLaunchTerminal", "theme", "language", "keepTrayOnClose", "startTrayWithWindows", "switchImeToEnglish", "aliasLaunchEnhanced", "showAliasRemarkOnLaunch", "friendlyCommandNotFound", "warmPoolEnabled" }
                 .OrderBy(static name => name, StringComparer.Ordinal).ToArray(),
             names.OrderBy(static name => name, StringComparer.Ordinal).ToArray());
 

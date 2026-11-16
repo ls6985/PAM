@@ -55,6 +55,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private bool _aliasLaunchEnhanced = true;
     private bool _showAliasRemarkOnLaunch = true;
     private bool _friendlyCommandNotFound = true;
+    private bool _warmPoolEnabled;
     private string _hotkeyDisplay = AppSettings.DefaultHotkey;
     private string _pendingHotkeyDisplay = string.Empty;
     private bool _hasPendingHotkey;
@@ -165,6 +166,12 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         set { if (SetField(ref _friendlyCommandNotFound, value) && !_isSyncing) Commit(s => s.FriendlyCommandNotFound = value); }
     }
 
+    public bool WarmPoolEnabled
+    {
+        get => _warmPoolEnabled;
+        set { if (SetField(ref _warmPoolEnabled, value) && !_isSyncing) Commit(s => s.WarmPoolEnabled = value); }
+    }
+
     /// <summary>已经生效并写入设置文件的热键。</summary>
     public string HotkeyDisplay { get => _hotkeyDisplay; private set => SetField(ref _hotkeyDisplay, value); }
     public string PendingHotkeyDisplay { get => _pendingHotkeyDisplay; private set => SetField(ref _pendingHotkeyDisplay, value); }
@@ -220,6 +227,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         _aliasLaunchEnhanced = settings.AliasLaunchEnhanced;
         _showAliasRemarkOnLaunch = settings.ShowAliasRemarkOnLaunch;
         _friendlyCommandNotFound = settings.FriendlyCommandNotFound;
+        _warmPoolEnabled = settings.WarmPoolEnabled;
         _hotkeyDisplay = settings.Hotkey;
         _pendingChord = null;
         _check = HotkeyConflictDetector.Idle();
@@ -237,6 +245,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(AliasLaunchEnhanced));
         OnPropertyChanged(nameof(ShowAliasRemarkOnLaunch));
         OnPropertyChanged(nameof(FriendlyCommandNotFound));
+        OnPropertyChanged(nameof(WarmPoolEnabled));
         OnPropertyChanged(nameof(HotkeyDisplay));
         RaiseCheckChanged();
 

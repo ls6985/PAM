@@ -60,6 +60,9 @@ public sealed class AppSettings
     /// <summary>终端中输入未找到的命令时，是否用一行友好提示替代 PowerShell 的默认报错。</summary>
     public bool FriendlyCommandNotFound { get; set; } = true;
 
+    /// <summary>后台托盘是否在启动后延迟创建那个长期复用的隐藏终端窗口，省去首次按热键的冷启动等待。</summary>
+    public bool WarmPoolEnabled { get; set; }
+
     /// <summary>是否优先使用 PowerShell 7。</summary>
     [JsonIgnore]
     public bool UsesPowerShell7 =>

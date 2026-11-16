@@ -922,6 +922,10 @@ public enum LocKey
     AliasExampleHint,
     /// <summary>语言切换后状态栏显示的结果提示。</summary>
     LanguageSwitchTip,
+    /// <summary>预热终端窗口</summary>
+    PreWarmTerminalWindow,
+    /// <summary>后台托盘提前打开一个已加载 $PROFILE 的终端窗口并隐藏；按热键时直接显示，省去首次打开的等待。热键始终复用同一个 Windows Terminal 窗口，不会重复新开。关闭时不提前准备，第一次按热键才打开，之后同样复用。</summary>
+    PreWarmTerminalWindowHint,
 }
 
 /// <summary>LocKey 对应的 {zh, en} 语言表，以及中文→英文的兜底查表（供动态字符串与 XAML 桥接）。</summary>
@@ -1393,6 +1397,8 @@ internal static class LocTable
             [LocKey.CommandGuidePing] = ("持续 ping 指定地址直到手动停止", "Ping an address continuously until stopped"),
             [LocKey.AliasExampleHint] = ("别名示例：{0}", "Alias example: {0}"),
             [LocKey.LanguageSwitchTip] = ("语言切换成功，部分设置重启后生效。", "Language switched. Some settings will take effect after a restart."),
+            [LocKey.PreWarmTerminalWindow] = ("预热终端窗口", "Pre-warm a terminal window"),
+            [LocKey.PreWarmTerminalWindowHint] = ("后台托盘提前打开一个已加载 $PROFILE 的终端窗口并隐藏；按热键时直接显示，省去首次打开的等待。热键始终复用同一个 Windows Terminal 窗口，不会重复新开。关闭时不提前准备，第一次按热键才打开，之后同样复用。", "The tray opens one hidden Windows Terminal window with $PROFILE already loaded, so the hotkey can show it immediately instead of waiting for a cold start. The hotkey always reuses this single window instead of opening a new one. Turn it off to skip the pre-warm: the first press opens it, and later presses reuse it too."),
         };
 
     public static readonly IReadOnlyDictionary<string, string> ZhToEn = BuildZhToEn();
