@@ -69,7 +69,7 @@
                         <TextBlock Text="关于" Style="{StaticResource SectionTitleStyle}" />
                         <TextBlock
                             Margin="0,4,0,0"
-                            Text="软件信息、帮助与开源支持入口。"
+                            Text="软件信息、更新检测、帮助与开源支持入口。"
                             Style="{StaticResource SecondaryTextStyle}" />
                     </StackPanel>
                     <Border Grid.Column="1" Style="{StaticResource PageTagBorderStyle}">
@@ -120,7 +120,35 @@
                     </Grid>
                 </Border>
 
-                <!-- ============ 模块二：帮助与反馈 ============ -->
+                <!-- ============ 模块二：更新检测 ============ -->
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="更新检测" Style="{StaticResource SettingLabelStyle}" />
+                            <TextBlock
+                                x:Name="UpdateStatusText"
+                                Margin="0,4,0,0"
+                                FontSize="12"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                Text="当前版本 v1.0.0"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:Button
+                            x:Name="CheckUpdateButton"
+                            Grid.Column="1"
+                            Margin="16,0,0,0"
+                            VerticalAlignment="Center"
+                            Appearance="Primary"
+                            Click="CheckUpdateButton_Click"
+                            Content="检查更新" />
+                    </Grid>
+                </Border>
+
+                <!-- ============ 模块三：帮助与支持 ============ -->
                 <Border Style="{StaticResource CardStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -152,7 +180,7 @@
                     </Grid>
                 </Border>
 
-                <!-- ============ 模块三：开源与支持 ============ -->
+                <!-- ============ 模块四：开源与支持 ============ -->
                 <Border Style="{StaticResource CardStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -161,10 +189,14 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                             <TextBlock Text="开源与支持" Style="{StaticResource SettingLabelStyle}" />
-                            <TextBlock
-                                Margin="0,4,0,0"
-                                Text="本软件基于 MIT 协议开源。Copyright © 2024 你的名字。"
-                                Style="{StaticResource SettingHintStyle}" />
+                            <!-- 许可证入口与说明同行，不单独占按钮位；该行用 Inlines 拼装，未登记本地化原文。 -->
+                            <TextBlock Margin="0,4,0,0" Style="{StaticResource SettingHintStyle}">
+                                <Run Text="本软件基于 MIT 协议开源。Copyright © 2026 white。" />
+                                <Run Text=" ・ " />
+                                <Hyperlink
+                                    Click="LicenseLink_Click"
+                                    Foreground="{DynamicResource AccentFillColorDefaultBrush}">查看许可证</Hyperlink>
+                            </TextBlock>
                         </StackPanel>
                         <StackPanel
                             Grid.Column="1"
@@ -175,11 +207,6 @@
                                 Appearance="Secondary"
                                 Click="RepoButton_Click"
                                 Content="GitHub 仓库" />
-                            <ui:Button
-                                Margin="8,0,0,0"
-                                Appearance="Secondary"
-                                Click="LicenseButton_Click"
-                                Content="查看许可证" />
                             <ui:Button
                                 Margin="8,0,0,0"
                                 Appearance="Secondary"

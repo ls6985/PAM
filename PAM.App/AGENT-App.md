@@ -96,6 +96,15 @@ WPF-UI (`FluentWindow`) 主界面，**用户唯一入口**，也是 `settings.js
 - 托盘对文件时间戳有轮询兜底，手工编辑 `settings.json` 也会生效。
 - PowerShell 7 与 5.1 的 `$PROFILE` 是两个不同文件（`Documents\PowerShell\` 与 `Documents\WindowsPowerShell\`）。PAM 每次保存与启动都把同一份托管区写入两个版本的 `$PROFILE`（已安装的版本各一份），因此友好提示等托管块在任意终端都生效。`MainViewModel.InitializeAsync()` 先比对 `lastBuiltVersion`（`ProfileRenderer.ManagedStructureVersion`）与 `profileStates` 里的文件元数据，仅当结构版本变更或文件被改动时才读取 `$PROFILE` 校验 `managedHash` 与标记块（缺任一块即视为需要重建），任一受管配置文件缺失 / 被改 / 缺块时按 `pam-data.json` 重建全部；`Inspect()` 只读取边界标记之后的内容。
 
+## 关于页
+
+`Views/AboutView` 自上而下是应用名片、更新检测、帮助与支持、开源与支持四张卡片；卡片样式与设置页一致，页脚常驻。
+
+- 仓库地址集中在 `Services/GitHubLinks.cs`（克隆地址、新建 Issue、许可证与两个更新检测端点），新增入口不要各自硬编码 URL。
+- 更新检测卡片只有标题、一行状态文字与「检查更新」按钮：初始显示当前版本，检查后显示「当前已是最新版本」或新版本号；仓库未发布版本与已是最新同义，检查失败只给简短原因，不引导到发布页。检测由 `Services/UpdateCheckService.cs` 发起：优先读 Releases API，接口不可达时改用 `releases/latest` 的跳转地址解析版本标记，与程序集版本比较后只回报状态。不自动检查、不下载、不安装、不写 `settings.json`。
+- 「提交反馈」只走 GitHub 新建 Issue 页：内容复制到剪贴板，标题与正文预填在 URL 上，由用户在浏览器确认发布；没有邮件通道。
+- 「开源与支持」右侧只放「GitHub 仓库」与「赞助支持」两个按钮；「查看许可证」是说明文字里的链接，由 `Views/LicenseWindow` 显示根目录 `LICENSE` 全文，该文件以 `LogicalName=PAM.App.LICENSE.txt` 内嵌进 PAM.App，改许可证只改根目录文件。该行用 Inlines 拼装、未登记本地化原文，避免界面遍历器覆盖链接。打开浏览器失败时统一用 `InfoDialogWindow` 给出可复制的地址。
+
 ## 其它
 
 - `Services/AppServices.cs`：设置读写唯一入口，广播变更字段；写入成功后按设置值同步登录启动项（注册表写入失败不影响 settings.json）；同时持有 `PamData` 内存快照，`SaveData()` 落盘并替换快照，别名页与自定义命令页都基于 `Clone()` 改写各自字段，避免互相覆盖。`ThemeService` / `UiLocalizer` / `HotkeyConflictDetector` / `Loc` 同目录。

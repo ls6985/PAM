@@ -37,6 +37,11 @@
     <Resource Include="Assets\Sponsor\*.png" />
   </ItemGroup>
 
+  <!-- 关于页「查看许可证」显示根目录 LICENSE 的原文，以内嵌资源随程序发布。 -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\LICENSE" LogicalName="PAM.App.LICENSE.txt" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\PAM.Core\PAM.Core.csproj" />
   </ItemGroup>

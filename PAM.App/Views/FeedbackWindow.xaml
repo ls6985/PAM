@@ -21,7 +21,7 @@
     mc:Ignorable="d">
 
     <!-- 二级弹窗统一规范：与 CommandGuideWindow「示例 / 指南」同款外壳。
-         提交时用 mailto 打开邮件客户端并预填内容，同时复制到剪贴板；不自动发送、不上传、不落盘。 -->
+         提交时打开 GitHub 新建 Issue 页并预填内容，同时复制到剪贴板；不自动发送、不上传、不落盘。 -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -51,7 +51,7 @@
                     Margin="0,8,0,0"
                     FontSize="12"
                     Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                    Text="点击提交会打开邮件客户端，主题与正文已自动填好，确认发送即可；内容同时复制到剪贴板。"
+                    Text="点击提交会打开 GitHub 的新建 Issue 页面，标题与正文已自动填好，确认发布即可；内容同时复制到剪贴板。"
                     TextWrapping="Wrap" />
 
                 <!-- 反馈类型 -->
@@ -94,7 +94,7 @@
                 <TextBlock Margin="0,16,0,6" Text="联系方式（选填）" Style="{StaticResource FieldLabelStyle}" />
                 <ui:TextBox
                     x:Name="ContactBox"
-                    PlaceholderText="邮箱或其他联系方式，方便回复你" />
+                    PlaceholderText="GitHub 账号或其他联系方式，方便回复你" />
 
                 <!-- 校验提示 -->
                 <TextBlock
