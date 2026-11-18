@@ -1,17 +1,18 @@
 # PowerShell 管理器（PAM）
 
-![Windows 10/11](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows\&logoColor=white)
+![Windows 10/11](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows&logoColor=white) ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white) ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet\&logoColor=white)
+PowerShell 管理器（PAM）是一款 Windows 图形化工具：用界面管理 PowerShell `$PROFILE` 里的别名与自定义命令，配置 Starship 提示符和 Windows Terminal 外观，并用全局热键随时唤起终端。
 
-![License: MIT](https://img.shields.io/badge/License-MIT-green)
+## 界面预览
 
-用图形界面管理 Windows Terminal / PowerShell 的日常配置：把常用程序登记成短别名、把常用操作写成自定义命令、配置 Starship 提示符与终端外观，再用一个全局热键随时唤起终端。
+![PAM 主界面 · 别名启动页](docs/screenshots/app-main.png)
 
-不用再手工编辑 `$PROFILE`：所有改动由 PAM 写入一段有明确边界的托管区，你自己写在配置文件里的内容原样保留。别名与命令在 PowerShell 7 和 Windows PowerShell 5.1 里都能用。软件完全在本机运行，界面支持简体中文 / English。
+![内置命令在终端里的效果（宣传演示画面）](docs/screenshots/terminal-demo.png)
 
 ## 目录
 
+- [界面预览](#界面预览)
 - [功能速览](#功能速览)
 - [快速开始](#快速开始)
 - [功能说明](#功能说明)
@@ -169,11 +170,11 @@ powershell -ExecutionPolicy Bypass -File .\publish.ps1    # 打包：产出 publ
 
 ## 隐私
 
-本地运行、开源免&#x8D39;*，不收集任何数据。程序不会向服务器发送你的别名、命令、路径或输入内容；只有你主动点击「一键安装 Starship（含 Scoop）」这类操作时才会联网下载对应组件。只想重置设置，可用设置页的「恢复默认」，别名与命令数据会保留。*
+本地运行、开源免费，不收集任何数据。程序不会向服务器发送你的别名、命令、路径或输入内容；只有你主动点击「一键安装 Starship（含 Scoop）」这类操作时才会联网下载对应组件。只想重置设置，可用设置页的「恢复默认」，别名与命令数据会保留。
 
-## *反馈与贡献*
+## 反馈与贡献
 
-*欢迎通过&#x20;*[*Issues*](https://github.com/ls6985/PAM/issues)*&#x20;反馈问题或建议，也欢迎提&#x20;*&#x50;R。改动 `PAM.Core` 的逻辑后请跑一遍 `dotnet test`；涉及 `$PROFILE` 托管区格式或配置字段时，请同步更新对应的测试断言。
+欢迎通过 [Issues](https://github.com/ls6985/PAM/issues) 反馈问题或建议，也欢迎提 PR。改动 `PAM.Core` 的逻辑后请跑一遍 `dotnet test`；涉及 `$PROFILE` 托管区格式或配置字段时，请同步更新对应的测试断言。
 
 ## 许可证
 
