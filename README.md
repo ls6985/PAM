@@ -20,6 +20,7 @@ PowerShell 管理器（PAM）是一款 Windows 图形化工具：用界面管理
 - [数据与文件](#数据与文件)
 - [常见问题](#常见问题)
 - [从源码构建](#从源码构建)
+- [发布 Release](#发布-release)
 - [隐私](#隐私)
 - [反馈与贡献](#反馈与贡献)
 - [许可证](#许可证)
@@ -40,20 +41,23 @@ PowerShell 管理器（PAM）是一款 Windows 图形化工具：用界面管理
 
 ### 环境要求
 
-| 必需                         | 说明                                          |
-| -------------------------- | ------------------------------------------- |
-| Windows 10 / 11            | —                                           |
-| .NET 10 桌面运行时              | [下载](https://dotnet.microsoft.com/download) |
-| Windows PowerShell 5.1     | 系统自带                                        |
-| Windows Terminal（`wt.exe`） | 热键唤醒与窗口效果依赖它                                |
+| 必需                         | 说明                     |
+| -------------------------- | ---------------------- |
+| Windows 10 / 11            | —                      |
+| Windows PowerShell 5.1     | 系统自带                   |
+| Windows Terminal（`wt.exe`） | 热键唤醒与窗口效果依赖它           |
+
+从 Releases 下载的安装包已内置 .NET 10 桌面运行时，无需另外安装；只有从源码运行 / 构建才需要 .NET 10 SDK。
 
 可选：PowerShell 7（未安装时自动回退 5.1 并在设置页提示）；Starship 与 Scoop（美化页提供一键安装）；Nerd Font（内置 Cascadia Code NF 可一键安装）。
 
 ### 安装
 
-从 [Releases](https://github.com/ls6985/PAM/releases) 下载打包好的文件夹，解压后双击 `PAM.App.exe`；若还没有可用版本，可按[从源码构建](#从源码构建)自己打包。
+从 [Releases](https://github.com/ls6985/PAM/releases) 下载 `PAM-Setup-*.exe`，双击安装：不需要管理员权限，也不需要预装 .NET 运行时，默认装到 `%LOCALAPPDATA%\Programs\PAM`，完成后从开始菜单打开「PowerShell 管理器」。
 
-`PAM.App.exe` 与 `PAM.Tray.exe` 必须放在同一目录：主界面会自动拉起同目录的托盘程序，托盘的右键菜单也要靠同目录的主界面 exe 打开。托盘平时不需要手动启动。
+不需要单独的卸载程序：装好之后，Windows「设置 → 应用 → 已安装的应用」和开始菜单里都会出现「卸载 PowerShell 管理器」。
+
+卸载：在「设置 → 应用 → 已安装的应用」或开始菜单选择「卸载 PowerShell 管理器」。卸载会结束运行中的实例、移除登录启动项，并清掉两份 `$PROFILE` 里的 PAM 托管区（原文件自动备份）；卸载时可以选择是否把 `%AppData%\PAM` 里的别名与设置改名留存。Windows Terminal 外观、Starship 配置和已安装的字体属于独立改动，卸载不会还原，可先在美化页用备份恢复。
 
 ### 第一次使用
 
@@ -151,13 +155,30 @@ PAM 把 `$PROFILE` 分成两段：`# >>> PAM Managed >>>` 标记之前是你自�
 
 ## 从源码构建
 
+改完代码想直接试，不用装一遍：
+
 ```powershell
-dotnet run --project PAM.App                              # 开发运行：主界面 + 后台托盘
-dotnet test                                               # 运行 PAM.Core 单元测试
-powershell -ExecutionPolicy Bypass -File .\publish.ps1    # 打包：产出 publish/
+powershell -ExecutionPolicy Bypass -File .\publish.ps1    # 产出 output\publish\，双击 PAM.App.exe 就能测
 ```
 
-`publish.ps1` 是唯一的发布入口：先把两个工程发布到全新的临时位置，再合并成 `publish/` 里完整的一对可执行文件并校验文件齐全。`publish/PAM.App.exe` 与 `publish/PAM.Tray.exe` 必须保持同目录。
+要出安装包再跑：
+
+```powershell
+dotnet run --project PAM.App                                                 # 开发运行：主界面 + 后台托盘
+dotnet test                                                                  # 运行 PAM.Core 单元测试
+powershell -ExecutionPolicy Bypass -File .\build\build-installer.ps1       # 产出 output\export\ 里的安装程序
+```
+
+所有生成物都在 `output/` 下（整目录已被 git 忽略）：
+
+| 目录 | 内容 |
+| --- | --- |
+| `output\publish\` | 本地测试用的散装程序 |
+| `output\installer\` | 内置 .NET 运行时的完整程序文件，给安装包打包用 |
+| `output\export\` | `PAM-Setup-<版本>.exe`，唯一要上传 Release 的成品 |
+| `output\promo\` | 宣传片工程 |
+
+`build\build-installer.ps1` 是发布入口：先把程序发布到 `output\installer`，再用 Inno Setup 编译成安装包。需要先装一次编译器：`winget install --id JRSoftware.InnoSetup -e --source winget`。`publish.ps1` 默认发布到 `output\publish`，加 `-SelfContained` 可发布内置运行时的版本。`PAM.App.exe` 与 `PAM.Tray.exe` 必须保持同目录：主界面会自动拉起同目录的托盘程序，托盘的右键菜单也要靠同目录的主界面 exe 打开。
 
 | 工程          | 职责                                                     |
 | ----------- | ------------------------------------------------------ |
@@ -167,6 +188,32 @@ powershell -ExecutionPolicy Bypass -File .\publish.ps1    # 打包：产出 publ
 | `PAM.Tests` | xUnit 测试，覆盖 `PAM.Core` 的纯逻辑                            |
 
 技术栈：.NET 10（`net10.0-windows`）、WPF + [WPF-UI](https://github.com/lepoco/wpfui) 4.3.0、WinForms 托盘、Newtonsoft.Json（用于 Windows Terminal `settings.json` 的 JSONC 精准拼接）。App / Tray 都只引用 `PAM.Core`，互不引用。
+
+## 发布 Release
+
+一句话：**提交 → 推送 → 打标签 → 推送标签**，剩下的 GitHub 会自己做。
+
+版本号写在 `PAM.App.csproj` 与 `PAM.Tray.csproj` 的 `<Version>` 里，两处必须一致；标签名就是 `v` + 这个版本号（当前是 `v1.0.0`）。关于页的更新检测读的是最新正式版 Release 的标签，所以别把它标成预发布。
+
+用 Sourcetree 发布：
+
+1. 改好两个 csproj 的版本号，在「文件状态」里提交（Commit）全部改动，点「推送」（Push）到 `main`。
+2. 在最新的那次提交上右键 → 「标签」（Tag），名称填 `v1.0.0`，**勾选「推送标签」**，确定。
+3. GitHub Actions 会自动在云端跑完单元测试、编译安装程序、创建 Release 并上传 `PAM-Setup-1.0.0.exe`。等仓库的 Actions 页面变绿即可。
+
+测试是在云端跑的，本机不用跑；跑不过会显示红叉，也不会生成 Release。想在本机自己确认一次，执行 `dotnet test` 即可。命令行等价写法：
+
+```powershell
+git add -A
+git commit -m "release: v1.0.0"
+git push origin main
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+也可以完全不走自动流程：在 GitHub 网页打开 Releases → 「Draft a new release」→ 选好标签 → 把本地 `output/export/PAM-Setup-1.0.0.exe` 拖进上传区 → 「Publish release」。GitHub 会自动附上该标签的源码压缩包，所以 Release 里只需要这一个 exe。两种方式选一种，别同时用，否则会出现两个 Release。需要重发时也可以在 Actions 页面手动触发工作流并填入已有标签。
+
+首次下载未签名的 exe 时 Windows 可能给出 SmartScreen 提示，选择「更多信息 → 仍要运行」即可；要消除提示需要代码签名证书。
 
 ## 隐私
 

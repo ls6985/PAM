@@ -14,11 +14,16 @@
 
 .PARAMETER Output
     Deliverable folder, relative to this script unless an absolute path is given.
-    Defaults to publish.
+    Defaults to output\publish, the local test build.
 
 .PARAMETER RestartTray
     Start the tray again from the deliverable folder after publishing. Off by
     default; logon startup will also launch it on the next sign-in.
+
+.PARAMETER SelfContained
+    Publish for win-x64 with the .NET Desktop Runtime included, so the
+    deliverable runs on machines without a system-wide .NET installation.
+    Used when building the installer; the default local test build is smaller.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\publish.ps1
@@ -26,8 +31,9 @@
 [CmdletBinding()]
 param(
     [string] $Configuration = 'Release',
-    [string] $Output = 'publish',
-    [switch] $RestartTray
+    [string] $Output = 'output\publish',
+    [switch] $RestartTray,
+    [switch] $SelfContained
 )
 
 $ErrorActionPreference = 'Stop'
@@ -100,6 +106,9 @@ try {
             '-p:PamSkipOutputPush=true',
             '-m:1', '--nologo', '-v', 'minimal', '-tl:off'
         )
+        if ($SelfContained) {
+            $publishArgs += @('-r', 'win-x64', '--self-contained', 'true')
+        }
         & dotnet publish @publishArgs
         if ($LASTEXITCODE -ne 0) {
             throw "dotnet publish failed for $($target.Project) (exit code $LASTEXITCODE)."
@@ -131,7 +140,7 @@ try {
         Start-Process -FilePath (Join-Path $outputPath 'PAM.Tray.exe') -WorkingDirectory $outputPath
         Write-Step 'Background tray restarted.'
     } else {
-        Write-Step 'Background tray is stopped. Run publish\PAM.Tray.exe to use the hotkey now, or sign in again (logon startup is registered).'
+        Write-Step 'Background tray is stopped. Run output\publish\PAM.Tray.exe to use the hotkey now, or sign in again (logon startup is registered).'
     }
 }
 finally {

@@ -7,9 +7,7 @@ PAM.Core/obj/
 PAM.Tray/obj/
 PAM.Tests/obj/
 .vs/
-publish/
-dist/
+output/
 .workbuddy/
 .vscode/
 .zcode/
-promo/
