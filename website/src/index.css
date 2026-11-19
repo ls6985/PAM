@@ -63,7 +63,7 @@
   }
 
   body {
-    @apply bg-[#08080d] text-slate-200 antialiased;
+    @apply overflow-x-hidden bg-[#08080d] text-slate-200 antialiased;
     font-family: Inter, "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI",
       "PingFang SC", "Microsoft YaHei", sans-serif;
   }
